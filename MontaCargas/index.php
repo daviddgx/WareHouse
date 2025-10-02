@@ -91,6 +91,7 @@ ob_end_flush();
                             window.location.replace('kiosk-instruction.html');
                         }
                     }, 300);
+
                 } else {
                     if (document.readyState === 'complete') {
                         requestFullscreen(document);

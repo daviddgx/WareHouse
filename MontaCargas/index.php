@@ -374,10 +374,10 @@ ob_end_flush();
                 <!-- ============================================================== -->
                 <ul class="navbar-nav float-right align-items-center">
                     <li class="nav-item d-flex align-items-center mr-3">
-                        <span id="status" class="online mb-0 mr-2">Online</span>
-                        <button type="button" class="btn btn-link text-muted p-0" id="montacargas-fullscreen-toggle" aria-label="Pantalla completa">
-                            <i data-feather="maximize-2" class="svg-icon"></i>
+                        <button type="button" class="btn btn-link text-muted p-0 mr-2" id="montacargas-fullscreen-toggle" aria-label="Pantalla completa">
+                            Pantalla Completa
                         </button>
+                        <span id="status" class="online mb-0">Online</span>
                     </li>
                     <!-- ============================================================== -->
                     <!-- Search -->

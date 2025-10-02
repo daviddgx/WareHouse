@@ -1435,9 +1435,6 @@ ORDER BY b.bodega + 0 desc";
     $Ocupadas = [];
     $Totales = [];
     $Libres = [];
-    $TotalProducion = 0;
-    $TotalDespacho = 0;
-    $Registros = 0;
    
     // Procesar los resultados
     if ($result->num_rows > 0) {
@@ -1445,10 +1442,6 @@ ORDER BY b.bodega + 0 desc";
 
         while ($row = $result->fetch_assoc()) {
             $labelsG3[] = $row['bodega_concatenada'];
-            $ToneladasProduccionG3[] = $row['ToneladasProduccion'];
-            $TotalProducion += $row['ToneladasProduccion'];
-            $Registros +=1;
-           
         }
     }
 
@@ -1464,8 +1457,7 @@ try {
     include '../LQS_EUQ/Connect.php';
 
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT Bodega,count(*) as Ocupadas FROM `posiciones` where Estado = 'Ocupada' GROUP by Bodega order by Bodega+0 desc
-  ";
+    $sql = "SELECT COUNT(*) AS Ocupadas FROM `posiciones` WHERE Estado = 'Ocupada' GROUP BY Bodega ORDER BY Bodega + 0 DESC";
 
 
     $result = $conn->query($sql);
@@ -1485,7 +1477,7 @@ try {
 
 
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT Bodega,count(*) as Libres FROM `posiciones` where Estado = 'Libre' GROUP by Bodega order by Bodega+0 desc";
+    $sql = "SELECT COUNT(*) AS Libres FROM `posiciones` WHERE Estado = 'Libre' GROUP BY Bodega ORDER BY Bodega + 0 DESC";
     $result = $conn->query($sql);
     if ($result->num_rows > 0) {
           while ($row = $result->fetch_assoc()) {
@@ -1495,7 +1487,7 @@ try {
 
 
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT Bodega,count(*) as Totales FROM `posiciones` GROUP by Bodega order by Bodega+0 desc";
+    $sql = "SELECT COUNT(*) AS Totales FROM `posiciones` GROUP BY Bodega ORDER BY Bodega + 0 DESC";
     $result = $conn->query($sql);
     if ($result->num_rows > 0) {
           while ($row = $result->fetch_assoc()) {
@@ -1664,45 +1656,25 @@ try {
 
    
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT DATE(FechaDespacho) AS Fecha, ROUND(SUM(PesoDeDespacho) /1000,2) AS TotalPesoDespacho
-    FROM (  SELECT DISTINCT
-    D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
-    DATE(PH.FechaProduccion) AS FechaProduccion, DATE(PH.FechaVencimiento) AS FechaVencimiento,
-    D.Operador, 'Turno', 'Tapado/Libre',G.NombreDestino, G.Transportista, D.Guia_Carga as Transporte, 
-    TIME(D.FechaRealizado) AS HoraDeDespacho, 'Notas', 
-    IFNULL(TIMESTAMPDIFF(MONTH, date(D.FechaRealizado), date(PH.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 
-    'Tapando/NoTapando', PH.EstatusUbicacion AS ProductoEsta, PR.CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA as PesoPorCaja,PR.CAJASXPALET as Cajas,0 as CajasPK, (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet)  as PesoDeDespacho,
-    D.FechaRealizado AS FechaDespacho, MONTHNAME(FechaRealizado) AS MES, DATE_FORMAT(FechaRealizado, '%W') AS nombre_dia,
-    CONCAT(
-        TIMESTAMPDIFF(DAY, D.FechaRealizado, D.FechaRealizado), ' días, ',
-        HOUR(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' horas, ',
-        MINUTE(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' minutos, ',
-        SECOND(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' segundos'
-    ) AS TiempoDeDespacho  
-FROM despachos D
-INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
-INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
-INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
-INNER JOIN productos PR ON PR.IDH = D.IDH
-WHERE D.FechaRealizado >= '$FechaHace9Dias' and D.FechaRealizado < '$FechaLimite'
+    $sql = "SELECT DATE(FechaDespacho) AS Fecha, ROUND(SUM(PesoDeDespacho) / 1000, 2) AS TotalPesoDespacho
+    FROM (
+        SELECT (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet) AS PesoDeDespacho,
+               D.FechaRealizado AS FechaDespacho
+        FROM despachos D
+        INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
+        INNER JOIN productos PR ON PR.IDH = D.IDH
+        WHERE D.FechaRealizado >= '$FechaHace9Dias' AND D.FechaRealizado < '$FechaLimite'
 
-union
+        UNION ALL
 
-SELECT DP.Estatus, CF.Ubicacion,'N/A',PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, 'N/A', 'N/A', GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado),'N/A', IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 'N/A', 'N/A','1', PR.LINEA, PR.PESOBRUTOCAJA, 0 as Cajas,
-sum(DP.UnidadesEnPallet) as CajasPK, (PR.PESOBRUTOCAJA * sum(DP.UnidadesEnPallet))  , DS.FechaRealizado,  DATE_FORMAT(DS.FechaRealizado, '%M') AS nombre_mes,
-        DATE_FORMAT(DS.FechaRealizado, '%W') AS nombre_dia,
-        CONCAT(
-        TIMESTAMPDIFF(DAY, DS.FechaRealizado, DS.FechaRealizado), ' días, ',
-        HOUR(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' horas, ',
-        MINUTE(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' minutos, ',
-        SECOND(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' segundos'
-    ) AS TiempoDeDespacho
-FROM `detalle_piking` DP
-INNER join productos PR     on DP.IDH = PR.IDH
-INNER join config_piking CF on DP.IDH = CF.IDH
-INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
-INNER join Guias GS			on DP.Transporte = GS.Transporte
-where DS.Fecha_Hora_Despacho >= '$FechaHace9Dias' and DS.Fecha_Hora_Despacho < '$FechaLimite'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
+        SELECT (PR.PESOBRUTOCAJA * SUM(DP.UnidadesEnPallet)) AS PesoDeDespacho,
+               DS.FechaRealizado AS FechaDespacho
+        FROM `detalle_piking` DP
+        INNER JOIN productos PR ON DP.IDH = PR.IDH
+        INNER JOIN despachos DS ON DP.Transporte = DS.Guia_Carga AND DP.IDH = DS.IDH
+        WHERE DS.Fecha_Hora_Despacho >= '$FechaHace9Dias' AND DS.Fecha_Hora_Despacho < '$FechaLimite' AND DS.Operador = 'Piking'
+        GROUP BY DS.FechaRealizado, DP.Transporte, DP.IDH
+    ) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
 
@@ -1855,7 +1827,8 @@ try {
    
     $conn = new mysqli($servername, $username, $password, $dbname);
     $sql = "SELECT fecha,  SUM(total_asignaciones) AS total_asignaciones,
-    SUM(total_despachos) AS total_despachos
+    SUM(total_despachos) AS total_despachos,
+    DATE_FORMAT(fecha, '%W') AS nombre_dia
   FROM (
     SELECT
       DATE(FechaRegistro) AS fecha,
@@ -1893,7 +1866,7 @@ try {
         // Almacena los nombres de las bodegas en un array
 
         while ($row = $result->fetch_assoc()) {
-            $labelsG4[] = date('d/m/Y', strtotime($row['fecha'])).' '.$row['nombre_dia'];
+            $labelsG4[] = date('d/m/Y', strtotime($row['fecha'])) . ' ' . $row['nombre_dia'];
             $TotalAsignacionesG4[] = $row['total_asignaciones'];
             $TotalDespachosG4[] = $row['total_despachos'];
 
@@ -2014,45 +1987,25 @@ try {
 
    
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT DATE(FechaDespacho) AS Fecha, SUM(Cajas)  AS SUMCajas, SUM(CajasPK)  AS SUMCajasPK
-    FROM(SELECT DISTINCT
-    D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
-    DATE(PH.FechaProduccion) AS FechaProduccion, DATE(PH.FechaVencimiento) AS FechaVencimiento,
-    D.Operador, 'Turno', 'Tapado/Libre',G.NombreDestino, G.Transportista, D.Guia_Carga as Transporte, 
-    TIME(D.FechaRealizado) AS HoraDeDespacho, 'Notas', 
-    IFNULL(TIMESTAMPDIFF(MONTH, date(D.FechaRealizado), date(PH.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 
-    'Tapando/NoTapando', PH.EstatusUbicacion AS ProductoEsta, PR.CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA as PesoPorCaja,PR.CAJASXPALET as Cajas,0 as CajasPK, (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet) /1000 as PesoDeDespacho,
-    D.FechaRealizado AS FechaDespacho, MONTHNAME(FechaRealizado) AS MES, DATE_FORMAT(FechaRealizado, '%W') AS nombre_dia,
-    CONCAT(
-        TIMESTAMPDIFF(DAY, D.FechaRealizado, D.FechaRealizado), ' días, ',
-        HOUR(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' horas, ',
-        MINUTE(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' minutos, ',
-        SECOND(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' segundos'
-    ) AS TiempoDeDespacho  
-FROM despachos D
-INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
-INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
-INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
-INNER JOIN productos PR ON PR.IDH = D.IDH
-WHERE D.FechaRealizado >= '$FechaHace9Dias' and D.FechaRealizado < '$FechaLimite'
+    $sql = "SELECT DATE(FechaDespacho) AS Fecha, SUM(Cajas) AS SUMCajas, SUM(CajasPK) AS SUMCajasPK
+    FROM (
+        SELECT PR.CAJASXPALET AS Cajas,
+               0 AS CajasPK,
+               D.FechaRealizado AS FechaDespacho
+        FROM despachos D
+        INNER JOIN productos PR ON PR.IDH = D.IDH
+        WHERE D.FechaRealizado >= '$FechaHace9Dias' AND D.FechaRealizado < '$FechaLimite'
 
-union
+        UNION ALL
 
-SELECT DP.Estatus, CF.Ubicacion,'N/A',PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, 'N/A', 'N/A', GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado),'N/A', IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 'N/A', 'N/A','1', PR.LINEA, PR.PESOBRUTOCAJA, 0 as Cajas,
-sum(DP.UnidadesEnPallet) as CajasPK, (PR.PESOBRUTOCAJA * sum(DP.UnidadesEnPallet)) / 1000 , DS.FechaRealizado,  DATE_FORMAT(DS.FechaRealizado, '%M') AS nombre_mes,
-        DATE_FORMAT(DS.FechaRealizado, '%W') AS nombre_dia,
-        CONCAT(
-        TIMESTAMPDIFF(DAY, DS.FechaRealizado, DS.FechaRealizado), ' días, ',
-        HOUR(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' horas, ',
-        MINUTE(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' minutos, ',
-        SECOND(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' segundos'
-    ) AS TiempoDeDespacho
-FROM `detalle_piking` DP
-INNER join productos PR     on DP.IDH = PR.IDH
-INNER join config_piking CF on DP.IDH = CF.IDH
-INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
-INNER join Guias GS			on DP.Transporte = GS.Transporte
-where DS.Fecha_Hora_Despacho >= '$FechaHace9Dias' and DS.Fecha_Hora_Despacho < '$FechaLimite'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
+        SELECT 0 AS Cajas,
+               SUM(DP.UnidadesEnPallet) AS CajasPK,
+               DS.FechaRealizado AS FechaDespacho
+        FROM `detalle_piking` DP
+        INNER JOIN despachos DS ON DP.Transporte = DS.Guia_Carga AND DP.IDH = DS.IDH
+        WHERE DS.Fecha_Hora_Despacho >= '$FechaHace9Dias' AND DS.Fecha_Hora_Despacho < '$FechaLimite' AND DS.Operador = 'Piking'
+        GROUP BY DS.FechaRealizado, DP.Transporte, DP.IDH
+    ) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
 
@@ -2376,7 +2329,7 @@ try {
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
 
-    $sql = "SELECT Top10aVencer.*, PR.Descripcion
+    $sql = "SELECT Top10aVencer.IDH, Top10aVencer.FechaVencimiento, Top10aVencer.Pallets, PR.Descripcion
 FROM `Top10aVencer`
 INNER JOIN productos PR ON PR.IDH = Top10aVencer.IDH
 WHERE FechaVencimiento <= DATE_ADD(CURDATE(), INTERVAL 1 YEAR)
@@ -2625,7 +2578,7 @@ where PK.Transporte is null  and PK.FechaVencimiento is not null and PK.FechaVen
             <?php
             include '../LQS_EUQ/Connect.php';
             $conn = new mysqli($servername, $username, $password, $dbname);
-            $sql = "SELECT Top10aVencer.*, PR.Descripcion FROM `Top10aVencer`
+            $sql = "SELECT Top10aVencer.IDH, Top10aVencer.FechaVencimiento, Top10aVencer.Pallets, PR.Descripcion FROM `Top10aVencer`
                     INNER JOIN productos PR ON PR.IDH = Top10aVencer.IDH
                     ORDER BY FechaVencimiento ASC";
             $result = $conn->query($sql);
@@ -2734,27 +2687,10 @@ try {
     $fecha_limite = $fechaFinRangoExclusivo;
 
     
-    $sql = "SELECT DATE(FechaDespacho) AS Fecha, SUM(Cajas)  AS TotalBultos
-FROM ( SELECT DISTINCT
-D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
-DATE(PH.FechaProduccion) AS FechaProduccion, DATE(PH.FechaVencimiento) AS FechaVencimiento,
-D.Operador, 'Turno', 'Tapado/Libre',G.NombreDestino, G.Transportista, D.Guia_Carga as Transporte, 
-TIME(D.FechaRealizado) AS HoraDeDespacho, 'Notas', 
-IFNULL(TIMESTAMPDIFF(MONTH, date(D.FechaRealizado), date(PH.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 
-'Tapando/NoTapando', PH.EstatusUbicacion AS ProductoEsta, PR.CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA as PesoPorCaja,PR.CAJASXPALET as Cajas, (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet)  as PesoDeDespacho,
-D.FechaRealizado AS FechaDespacho, MONTHNAME(FechaRealizado) AS MES, DATE_FORMAT(FechaRealizado, '%W') AS nombre_dia,
-CONCAT(
-TIMESTAMPDIFF(DAY, D.FechaRealizado, D.FechaRealizado), ' días, ',
-HOUR(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' horas, ',
-MINUTE(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' minutos, ',
-SECOND(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' segundos'
-) AS TiempoDeDespacho  
+    $sql = "SELECT DATE(D.FechaRealizado) AS Fecha, SUM(PR.CAJASXPALET) AS TotalBultos
 FROM despachos D
-INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
-INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
-INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
 INNER JOIN productos PR ON PR.IDH = D.IDH
-WHERE D.FechaRealizado >= '$fecha_hace_9_dias' AND D.FechaRealizado < '$fecha_limite') AS subquery
+WHERE D.FechaRealizado >= '$fecha_hace_9_dias' AND D.FechaRealizado < '$fecha_limite'
 GROUP BY Fecha
 ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -2877,24 +2813,10 @@ try {
     $fecha_limite = $fechaFinRangoExclusivo;
 
     
-    $sql = "SELECT DATE(FechaRealizado) AS Fecha, SUM(CajasPK)  AS TotalBultos
-    FROM (
-      SELECT DP.Estatus, CF.Ubicacion,'N/A' as Nivel,PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, 'N/A' as Turno, 'Tapado/Libre', GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado),'N/A' as Notas, IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 'Tapando/NoTapando' , 'N/A' as ProductoEsta,'1' as CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA, 
-sum(DP.UnidadesEnPallet) as CajasPK, (PR.PESOBRUTOCAJA * sum(DP.UnidadesEnPallet))  as PesoDeDespacho, DS.FechaRealizado,  DATE_FORMAT(DS.FechaRealizado, '%M') AS nombre_mes,
-        DATE_FORMAT(DS.FechaRealizado, '%W') AS nombre_dia,
-        CONCAT(
-        TIMESTAMPDIFF(DAY, DS.FechaRealizado, DS.FechaRealizado), ' días, ',
-        HOUR(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' horas, ',
-        MINUTE(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' minutos, ',
-        SECOND(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' segundos'
-    ) AS TiempoDeDespacho
-FROM `detalle_piking` DP
-INNER join productos PR     on DP.IDH = PR.IDH
-INNER join config_piking CF on DP.IDH = CF.IDH
-INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
-INNER join Guias GS			on DP.Transporte = GS.Transporte
-where DS.Fecha_Hora_Despacho >= '$fecha_hace_9_dias' AND DS.Fecha_Hora_Despacho < '$fecha_limite' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH)
-          AS subquery
+    $sql = "SELECT DATE(DS.FechaRealizado) AS Fecha, SUM(DP.UnidadesEnPallet) AS TotalBultos
+    FROM `detalle_piking` DP
+    INNER JOIN despachos DS ON DP.Transporte = DS.Guia_Carga AND DP.IDH = DS.IDH
+    WHERE DS.Fecha_Hora_Despacho >= '$fecha_hace_9_dias' AND DS.Fecha_Hora_Despacho < '$fecha_limite' AND DS.Operador = 'PIKING'
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -3014,22 +2936,11 @@ try {
     $fecha_limite = $fechaFinRangoExclusivo;
 
     
-    $sql = "SELECT DATE(FechaRealizado) AS Fecha, ROUND(SUM(PesoDeDespacho) /1000,2) AS TotalBultos
-    FROM (SELECT DP.Estatus, CF.Ubicacion,PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado), IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, PR.LINEA, PR.PESOBRUTOCAJA, 
-sum(DP.UnidadesEnPallet) as CajasPK, (PR.PESOBRUTOCAJA * sum(DP.UnidadesEnPallet))  as PesoDeDespacho, DS.FechaRealizado,  DATE_FORMAT(DS.FechaRealizado, '%M') AS nombre_mes,
-        DATE_FORMAT(DS.FechaRealizado, '%W') AS nombre_dia,
-        CONCAT(
-        TIMESTAMPDIFF(DAY, DS.FechaRealizado, DS.FechaRealizado), ' días, ',
-        HOUR(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' horas, ',
-        MINUTE(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' minutos, ',
-        SECOND(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' segundos'
-    ) AS TiempoDeDespacho
-FROM `detalle_piking` DP
-INNER join productos PR     on DP.IDH = PR.IDH
-INNER join config_piking CF on DP.IDH = CF.IDH
-INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
-INNER join Guias GS			on DP.Transporte = GS.Transporte
-where DS.Fecha_Hora_Despacho >= '$fecha_hace_9_dias' AND DS.Fecha_Hora_Despacho < '$fecha_limite' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH) AS subquery
+    $sql = "SELECT DATE(DS.FechaRealizado) AS Fecha, ROUND(SUM(PR.PESOBRUTOCAJA * DP.UnidadesEnPallet) / 1000, 2) AS TotalBultos
+    FROM `detalle_piking` DP
+    INNER JOIN productos PR ON DP.IDH = PR.IDH
+    INNER JOIN despachos DS ON DP.Transporte = DS.Guia_Carga AND DP.IDH = DS.IDH
+    WHERE DS.Fecha_Hora_Despacho >= '$fecha_hace_9_dias' AND DS.Fecha_Hora_Despacho < '$fecha_limite' AND DS.Operador = 'PIKING'
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -3166,27 +3077,11 @@ try {
     $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
 
     
-    $sql = "SELECT DATE(FechaDespacho) AS Fecha, ROUND(SUM(PesoDeDespacho) / 1000,2)  AS TotalBultos
-    FROM (SELECT DISTINCT
-      D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
-      DATE(PH.FechaProduccion) AS FechaProduccion, DATE(PH.FechaVencimiento) AS FechaVencimiento,
-      D.Operador, 'Turno', 'Tapado/Libre',G.NombreDestino, G.Transportista, D.Guia_Carga as Transporte, 
-      TIME(D.FechaRealizado) AS HoraDeDespacho, 'Notas', 
-      IFNULL(TIMESTAMPDIFF(MONTH, date(D.FechaRealizado), date(PH.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 
-      'Tapando/NoTapando', PH.EstatusUbicacion AS ProductoEsta, PR.CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA as PesoPorCaja,PR.CAJASXPALET as Cajas, (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet)  as PesoDeDespacho,
-      D.FechaRealizado AS FechaDespacho, MONTHNAME(FechaRealizado) AS MES, DATE_FORMAT(FechaRealizado, '%W') AS nombre_dia,
-      CONCAT(
-          TIMESTAMPDIFF(DAY, D.FechaRealizado, D.FechaRealizado), ' días, ',
-          HOUR(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' horas, ',
-          MINUTE(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' minutos, ',
-          SECOND(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' segundos'
-      ) AS TiempoDeDespacho  
-  FROM despachos D
-  INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
-  INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
-  INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
-  INNER JOIN productos PR ON PR.IDH = D.IDH
-  WHERE D.FechaRealizado >= '$fecha_hace_9_dias' AND D.FechaRealizado < '$fecha_limite') AS subquery
+    $sql = "SELECT DATE(D.FechaRealizado) AS Fecha, ROUND(SUM(PR.PESOBRUTOCAJA * PH.UnidadesEnPallet) / 1000, 2) AS TotalBultos
+    FROM despachos D
+    INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
+    INNER JOIN productos PR ON PR.IDH = D.IDH
+    WHERE D.FechaRealizado >= '$fecha_hace_9_dias' AND D.FechaRealizado < '$fecha_limite'
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);

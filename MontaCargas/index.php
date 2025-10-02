@@ -85,6 +85,13 @@ ob_end_flush();
                         window.close();
                     } catch (e) {
                     }
+
+                    setTimeout(function () {
+                        if (!window.closed) {
+                            window.location.replace('kiosk-instruction.html');
+                        }
+                    }, 300);
+
                 } else {
                     if (document.readyState === 'complete') {
                         requestFullscreen(document);

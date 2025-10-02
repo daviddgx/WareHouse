@@ -353,8 +353,8 @@ function PorcentajeOcupacion(){
 
 
     include '../LQS_EUQ/Auth.php';
-    $sentencia = $pdo->prepare("SELECT 
-    (SELECT COUNT(*) FROM `posiciones` WHERE Estado = 'Ocupada' and bodega <> 9) / 
+    $sentencia = $pdo->prepare("SELECT
+    (SELECT COUNT(*) FROM `posiciones` WHERE Estado = 'Ocupada' and bodega <> 9) /
     (SELECT COUNT(*) FROM `posiciones` where bodega  <> 9) * 100 AS Porcentaje
 ");
     $sentencia->execute();
@@ -366,6 +366,21 @@ function PorcentajeOcupacion(){
         return '0';
     }
 
+}
+
+function ObtenerUltimoEstatusBodegasConsolidado(){
+
+    include '../LQS_EUQ/Auth.php';
+
+    $sentencia = $pdo->prepare("SELECT Fecha, Cant_CapacidadTotal, Cant_Libres, Cant_Ocupadas FROM `gaf_capacidadbodegasdiaria` WHERE NombreBodega = 'Todas' ORDER BY Fecha DESC LIMIT 1;");
+    $sentencia->execute();
+    $Count = $sentencia->fetch(PDO::FETCH_ASSOC);
+
+    if ($Count) {
+        return $Count;
+    }
+
+    return null;
 }
 
 function Limpiar_EstatusDespachoMalos(){

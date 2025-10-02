@@ -43,19 +43,28 @@ switch ($accion) {
 include '../Innet_ADM/Innet_AMD.php';
 
 // Variables de resumen Grafica 1
-// Limpia las ubicaciones de produccion que viene en Null
-GraphEstatusBodegas();
-Limpiar_Nulls();
-//AgregarValorAsignaciones();
-LimpiarExesoPiking();
-// Bloquear carriles piking en bodebas
-BloquearCarrilesPiking();
-//Recalcular Pallets Completos
-$CapacidadTotal = CapacidadTotalFIFO();
-$UbicacionesLibres = UnidadesLibresFIFO();
+$datosConsolidadosDisponibles = true;
+$mensajeDatosConsolidados = '';
+$ultimaFechaConsolidado = null;
+
+$estatusBodegasConsolidado = ObtenerUltimoEstatusBodegasConsolidado();
+
+if ($estatusBodegasConsolidado) {
+    $CapacidadTotal = (int) $estatusBodegasConsolidado['Cant_CapacidadTotal'];
+    $UbicacionesLibres = (int) $estatusBodegasConsolidado['Cant_Libres'];
+    $UnidadesOcupadas = (int) $estatusBodegasConsolidado['Cant_Ocupadas'];
+    $PorOcupacionGR = $CapacidadTotal > 0 ? round(($UnidadesOcupadas / $CapacidadTotal) * 100, 2) : 0;
+    $ultimaFechaConsolidado = $estatusBodegasConsolidado['Fecha'];
+} else {
+    $datosConsolidadosDisponibles = false;
+    $CapacidadTotal = 0;
+    $UbicacionesLibres = 0;
+    $UnidadesOcupadas = 0;
+    $PorOcupacionGR = 0;
+    $mensajeDatosConsolidados = 'Los datos consolidados de estatus de bodegas aún no están disponibles. Verifique que el proceso programado se haya ejecutado correctamente.';
+}
+
 $Exactitud = "99%";
-$UnidadesOcupadas = UnidadesOcupadasFIFO();
-$PorOcupacionGR = PorcentajeOcupacion();
 
 ob_end_flush();
 ?>
@@ -553,12 +562,21 @@ ob_end_flush();
                                         <div class="card">
                                             <div class="card-body">
                                                 <h4 class="card-title">Capacidad de bodegas TOTAL por Dia.</h4>
+                                                <?php if (!$datosConsolidadosDisponibles): ?>
+                                                    <div class="alert alert-warning" role="alert">
+                                                        <?php echo $mensajeDatosConsolidados; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <?php if (!empty($ultimaFechaConsolidado)): ?>
+                                                        <p class="text-muted mb-2">Última actualización: <?php echo date('d/m/Y H:i', strtotime($ultimaFechaConsolidado)); ?></p>
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
                                                 <h5 class="card-subtitle"> Promedio de Almacenamiento: <span id="PromedioCapacidadBodegas"></span>%</h5>
                                                 <canvas id="Bod_Total_Diario"  height="100"></canvas>
                                             </div>
                                         </div>
                                     </div>
-                                
+
 
             </div>
             </div>

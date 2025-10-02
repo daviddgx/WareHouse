@@ -164,6 +164,48 @@ ob_end_flush();
             color: #b3b3b3;
         }
 
+        canvas.chart-loading {
+            position: relative;
+            background: linear-gradient(90deg, #f1f1f1 25%, #e2e2e2 37%, #f1f1f1 63%);
+            background-size: 400% 100%;
+            animation: chartSkeleton 1.4s ease infinite;
+        }
+
+        @keyframes chartSkeleton {
+            0% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0 50%;
+            }
+        }
+
+        .chart-status {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .chart-status.chart-error {
+            color: #dc3545;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-status button {
+            border: none;
+            background-color: #ed3131;
+            color: #fff;
+            border-radius: 4px;
+            padding: 4px 12px;
+            cursor: pointer;
+        }
+
+        .chart-status button:hover {
+            background-color: #c41f1f;
+        }
+
     </style>
 
 
@@ -1063,109 +1105,288 @@ ob_end_flush();
 
 
         <!-- Datos de las bodegas -->
-        
-        
-        <?php
-        include '../innet_CHARTS/Innet_CHARTS.php';
-        $NombreBodegas = GetNombreBodegas();
-        $PorOcupacion = GetPorcentajeOcupacion();
-        ?>
-
 
 
 <script>
-    // Función para obtener un color interpolado entre verde y rojo
-    function getColor(percentage) {
-        var green = [0, 200, 66]; // Color verde
-        var yellow = [255, 165, 0]; // Color amarillo
-        var red = [255, 0, 0];   // Color rojo
+    document.addEventListener('DOMContentLoaded', function () {
+        const fechaInicial = '<?php echo $fechaInicial; ?>';
+        const fechaFinal = '<?php echo $fechaFinal; ?>';
+        const charts = {};
 
-        var color = [];
-
-        if (percentage <= 50) {
-            // Interpolación entre verde y amarillo para porcentajes menores o iguales a 50
-            for (var i = 0; i < 3; i++) {
-                color[i] = Math.round(green[i] + (yellow[i] - green[i]) * (percentage / 50));
-            }
-        } else {
-            // Interpolación entre amarillo y rojo para porcentajes mayores a 50
-            for (var i = 0; i < 3; i++) {
-                color[i] = Math.round(yellow[i] + (red[i] - yellow[i]) * ((percentage - 50) / 50));
-            }
-        }
-
-        return 'rgb(' + color.join(',') + ')';
-    }
-
-    // Capaciodad de bodegas
-    var labels = <?php echo json_encode($NombreBodegas); ?>;
-    var Datos = <?php echo json_encode($PorOcupacion); ?>;
-
-    // Calcular los colores para cada barra
-    var backgroundColors = Datos.map(function (percentage) {
-        return getColor(percentage);
-    });
-
-    new Chart(document.getElementById("bar-chart").getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: "",
-                    backgroundColor: backgroundColors,
-                    data: Datos
-                }
-            ]
-        },
-        options: {
-    legend: { display: true },
-    title: {
-        display: true,
-        text: '% Capacidad por bodegas'
-    },
-    scales: {
-        yAxes: [{
-            ticks: {
-                beginAtZero: true,
-                max: 100 // Establecer el máximo del eje Y en 100
-            }
-        }]
-    },
-    plugins: {
-        datalabels: {
-            anchor: 'end',
-            align: 'end',
-            formatter: function (value, context) {
-                return value + '%';
+        const chartConfigs = {
+            'bar-chart': {
+                endpoint: 'capacidad-por-bodega',
+                render: renderCapacityByWarehouse
             },
-            font: {
-                size: 20 // Tamaño del texto
+            'Bod_Total_Diario': {
+                endpoint: 'capacidad-diaria',
+                render: renderDailyCapacity
             }
-        }
-    },
-    animation: {
-        onComplete: function () {
-            var ctx = this.chart.ctx;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "bottom";
-            ctx.font = "22px Arial";
+        };
 
-            this.data.datasets.forEach(function (dataset) {
-                for (var i = 0; i < dataset.data.length; i++) {
-                    var model = dataset._meta[Object.keys(dataset._meta)[0]].data[i]._model;
-                    ctx.fillStyle = '#7c8798'; // Color
-                    ctx.fillText(dataset.data[i] + '%', model.x, model.y - 5);
+        const promedioLabel = document.getElementById('PromedioCapacidadBodegas');
+        if (promedioLabel) {
+            promedioLabel.textContent = 'Cargando...';
+        }
+
+        Object.entries(chartConfigs).forEach(([id, config]) => {
+            const canvas = document.getElementById(id);
+            if (!canvas) {
+                return;
+            }
+
+            const status = ensureStatusElement(canvas);
+            loadChart(id, canvas, status, config);
+        });
+
+        function ensureStatusElement(canvas) {
+            const container = canvas.closest('.card-body');
+            if (!container) {
+                return null;
+            }
+
+            let status = container.querySelector('.chart-status');
+            if (!status) {
+                status = document.createElement('div');
+                status.className = 'chart-status';
+                container.appendChild(status);
+            }
+
+            return status;
+        }
+
+        function loadChart(id, canvas, status, config) {
+            canvas.classList.add('chart-loading');
+            if (status) {
+                status.textContent = 'Cargando datos...';
+                status.classList.remove('chart-error');
+            }
+
+            const params = new URLSearchParams({
+                chart: config.endpoint,
+                fechaInicial,
+                fechaFinal
+            });
+
+            fetch(`api/dashboard/data.php?${params.toString()}`, {
+                credentials: 'same-origin'
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Respuesta inesperada del servidor');
+                    }
+
+                    return response.json();
+                })
+                .then((payload) => {
+                    if (!payload.success) {
+                        throw new Error(payload.error || 'No se pudieron cargar los datos');
+                    }
+
+                    const data = payload.data[config.endpoint];
+                    if (!data) {
+                        throw new Error('Datos inválidos recibidos');
+                    }
+
+                    if (charts[id]) {
+                        charts[id].destroy();
+                    }
+
+                    canvas.classList.remove('chart-loading');
+                    if (status) {
+                        status.textContent = '';
+                    }
+
+                    charts[id] = config.render(canvas, data);
+                })
+                .catch((error) => {
+                    canvas.classList.remove('chart-loading');
+                    if (status) {
+                        status.classList.add('chart-error');
+                        status.innerHTML = `${error.message} <button type="button">Reintentar</button>`;
+                        const button = status.querySelector('button');
+                        if (button) {
+                            button.addEventListener('click', function () {
+                                loadChart(id, canvas, status, config);
+                            });
+                        }
+                    }
+
+                    console.error(error);
+                });
+        }
+
+        function getColor(percentage) {
+            const green = [0, 200, 66];
+            const yellow = [255, 165, 0];
+            const red = [255, 0, 0];
+            const color = [0, 0, 0];
+
+            if (percentage <= 50) {
+                for (let i = 0; i < 3; i++) {
+                    color[i] = Math.round(green[i] + (yellow[i] - green[i]) * (percentage / 50));
+                }
+            } else {
+                for (let i = 0; i < 3; i++) {
+                    color[i] = Math.round(yellow[i] + (red[i] - yellow[i]) * ((percentage - 50) / 50));
+                }
+            }
+
+            return `rgb(${color.join(',')})`;
+        }
+
+        function renderCapacityByWarehouse(canvas, data) {
+            const ctx = canvas.getContext('2d');
+            const labels = data.labels.slice();
+            const values = data.values.slice(0, labels.length);
+            const backgroundColors = values.map((percentage) => getColor(percentage));
+
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: '% Ocupación',
+                            backgroundColor: backgroundColors,
+                            data: values
+                        }
+                    ]
+                },
+                options: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: '% Capacidad por bodegas'
+                    },
+                    scales: {
+                        yAxes: [
+                            {
+                                ticks: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }
+                        ]
+                    },
+                    animation: {
+                        onComplete: function () {
+                            const chartInstance = this.chart;
+                            const ctx = chartInstance.ctx;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            ctx.fillStyle = '#7c8798';
+
+                            this.data.datasets.forEach(function (dataset, datasetIndex) {
+                                const meta = chartInstance.controller.getDatasetMeta(datasetIndex);
+                                meta.data.forEach(function (bar, index) {
+                                    ctx.fillText(dataset.data[index] + '%', bar._model.x, bar._model.y - 5);
+                                });
+                            });
+                        }
+                    }
                 }
             });
         }
-    }
-}
 
+        function renderDailyCapacity(canvas, data) {
+            const ctx = canvas.getContext('2d');
+            const labels = data.labels.slice().reverse();
+            const capacidad = data.capacidad.slice().reverse();
+            const ocupadas = data.ocupadas.slice().reverse();
+            const porcentaje = data.porcentaje.slice().reverse();
 
+            const promedioSpan = document.getElementById('PromedioCapacidadBodegas');
+            if (promedioSpan) {
+                promedioSpan.textContent = data.promedio;
+            }
+
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: '% Ocupación',
+                            type: 'line',
+                            fill: false,
+                            backgroundColor: '#5c5c5b',
+                            borderColor: '#5c5c5b',
+                            borderWidth: 3,
+                            yAxisID: 'porcentaje-axis',
+                            data: porcentaje
+                        },
+                        {
+                            label: 'Capacidad Total',
+                            backgroundColor: '#F4EB95',
+                            borderColor: '#D4C35E',
+                            borderWidth: 3,
+                            data: capacidad
+                        },
+                        {
+                            label: 'Ubicaciones Ocupadas',
+                            backgroundColor: '#FFB4A1',
+                            borderColor: '#FF867F',
+                            borderWidth: 3,
+                            data: ocupadas
+                        }
+                    ]
+                },
+                options: {
+                    legend: { display: true },
+                    title: {
+                        display: true,
+                        text: 'Capacidad de bodegas TOTAL por Día.'
+                    },
+                    scales: {
+                        yAxes: [
+                            {
+                                id: 'cantidad-axis',
+                                type: 'linear',
+                                position: 'left',
+                                ticks: {
+                                    beginAtZero: false
+                                }
+                            },
+                            {
+                                id: 'porcentaje-axis',
+                                type: 'linear',
+                                position: 'right',
+                                ticks: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    callback: function (value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    animation: {
+                        onComplete: function () {
+                            const chartInstance = this.chart;
+                            const ctx = chartInstance.ctx;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            ctx.fillStyle = '#3D3D3D';
+
+                            this.data.datasets.forEach(function (dataset, datasetIndex) {
+                                const meta = chartInstance.controller.getDatasetMeta(datasetIndex);
+                                meta.data.forEach(function (bar, index) {
+                                    let value = dataset.data[index];
+                                    if (dataset.yAxisID === 'porcentaje-axis') {
+                                        value = value + '%';
+                                    }
+                                    ctx.fillText(value, bar._model.x, bar._model.y - 5);
+                                });
+                            });
+                        }
+                    }
+                }
+            });
+        }
     });
 </script>
-
 
 <!-- Grafica de cantidad por bodega-->
 <?php
@@ -1366,161 +1587,7 @@ try {
 
 
 
-<?php
-// Establecer la conexión a la base de datos (reemplaza con tus propios datos)
-$PromedioAlmacenes = 0;
-$Registros = 0;
-try {
-
-    // Metodo tradicional
-    include '../LQS_EUQ/Connect.php';
-
-    $FechaActual = date('Y-m-d', strtotime($fechaFinal));
-    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
-
-
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT Fecha,Cant_CapacidadTotal,Cant_Ocupadas, (Cant_Ocupadas/Cant_CapacidadTotal)*100 as Porcentaje FROM `gaf_capacidadbodegasdiaria` where NombreBodega = 'Todas' and date(Fecha) BETWEEN '$FechaHace9Dias' and '$FechaActual' order by date(Fecha) desc ";
-    $result = $conn->query($sql);
-
-    // Inicializar arrays para las etiquetas y los conjuntos de datos
-    $labelsG2 = [];
-    $capacidadTotalDataG2 = [];
-    $ocupadasDataG2 = [];
-    $porcentajeDataG2 = [];
-  
-
-    // Procesar los resultados
-    if ($result->num_rows > 0) {
-        // Almacena los nombres de las bodegas en un array
-
-        while ($row = $result->fetch_assoc()) {
-
-            $labelsG2[] = date('d/m/Y', strtotime($row['Fecha']));
-            $capacidadTotalDataG2[] = $row['Cant_CapacidadTotal'];
-            $ocupadasDataG2[] = $row['Cant_Ocupadas'];
-            $porcentajeDataG2[] = round($row['Cant_Ocupadas'] / $row['Cant_CapacidadTotal'] * 100);
-            $PromedioAlmacenes += round($row['Cant_Ocupadas'] / $row['Cant_CapacidadTotal'] * 100);
-            $Registros += 1;
-        }
-    }
-
-    $PromedioAlmacenes = round($PromedioAlmacenes / $Registros,2);
-
-} catch (Exception $e) {
-    echo 'Error: ' . $e->getMessage();
-}
-
-
-?>
-
-<script>
-    // Capacidad de bodegas TOTAL por Dia.
-    new Chart(document.getElementById("Bod_Total_Diario").getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: <?php echo json_encode(array_reverse($labelsG2)); ?>,
-        datasets: [
-            {
-                label: "% Ocupacion",
-                type: 'line',
-                fill: false,
-                backgroundColor: "#5c5c5b",
-                borderColor: "#5c5c5b",
-                borderWidth: 3,
-                yAxisID: 'porcentaje-axis',
-                data: <?php echo json_encode(array_reverse($porcentajeDataG2)); ?>
-            },
-            {
-                label: "Capacidad Total",
-                backgroundColor: "#F4EB95",
-                borderColor: "#D4C35E",
-                borderWidth: 3,
-                data: <?php echo json_encode(array_reverse($capacidadTotalDataG2)); ?>
-            },
-            {
-                label: "Ubicaciones Ocupadas",
-                backgroundColor: "#FFB4A1",
-                borderColor: "#FF867F",
-                borderWidth: 3,
-                data: <?php echo json_encode(array_reverse($ocupadasDataG2)); ?>
-            }
-            
-        ]
-    },
-    options: {
-        legend: { display: true },
-        title: {
-            display: true,
-            text: 'Capacidad de bodegas TOTAL por Dia.'
-        },
-        scales: {
-            yAxes: [
-                {
-                    id: 'cantidad-axis',
-                    type: 'linear',
-                    position: 'left',
-                    ticks: {
-                        beginAtZero: false
-                    }
-                },
-                {
-                    id: 'porcentaje-axis',
-                    type: 'linear',
-                    
-                    position: 'right',
-                    ticks: {
-                        beginAtZero: true,
-                        max: 100,
-                        callback: function(value) {
-                            return value + '%';
-                        }
-                    }
-                }
-            ]
-        },
-        plugins: {
-        datalabels: {
-            anchor: 'end',
-            align: 'end',
-            formatter: function (value, context) {
-                return value ;
-            },
-            font: {
-                size: 13 // Tamaño del texto
-            }
-        }
-    },
-    animation: {
-    onComplete: function () {
-        var ctx = this.chart.ctx;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.font = "12px Arial";
-
-        this.data.datasets.forEach(function (dataset) {
-            for (var i = 0; i < dataset.data.length; i++) {
-                var model = dataset._meta[Object.keys(dataset._meta)[0]].data[i]._model;
-                ctx.fillStyle = '#3D3D3D'; // Color
-                var value = dataset.data[i];
-                if (value < 100) {
-                    value += "%";
-                }
-                ctx.fillText(value, model.x + 10 , model.y - 5);
-            }
-        });
-    }
-}
-
-    }
-});
-
-
-var toneladasElement = document.getElementById('PromedioCapacidadBodegas');
-var valorToneladas = <?php echo $PromedioAlmacenes; ?>;
-toneladasElement.textContent = valorToneladas;
-
-</script>
+<?php /* Data moved to AJAX */ ?>
 
 <?php
 // Establecer la conexión a la base de datos (reemplaza con tus propios datos)

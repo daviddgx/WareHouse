@@ -44,6 +44,89 @@ ob_end_flush();
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
+    <script>
+        (function () {
+            var isWindows = navigator.userAgent.indexOf('Windows') !== -1;
+            if (!isWindows) {
+                return;
+            }
+
+            var fullscreenWindowName = 'mc_fullscreen_window';
+
+            function requestFullscreen(doc) {
+                if (!doc) {
+                    return;
+                }
+
+                var element = doc.documentElement;
+                if (element.requestFullscreen) {
+                    element.requestFullscreen().catch(function () {
+                    });
+                } else if (element.mozRequestFullScreen) {
+                    element.mozRequestFullScreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                }
+            }
+
+            if (window.name !== fullscreenWindowName) {
+                var features = 'fullscreen=yes,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes';
+                var popup = window.open(window.location.href, fullscreenWindowName, features);
+
+                if (popup) {
+                    popup.focus();
+                    popup.onload = function () {
+                        requestFullscreen(popup.document);
+                    };
+
+                    try {
+                        window.close();
+                    } catch (e) {
+                    }
+                } else {
+                    if (document.readyState === 'complete') {
+                        requestFullscreen(document);
+                    } else {
+                        document.addEventListener('DOMContentLoaded', function () {
+                            requestFullscreen(document);
+                        });
+                    }
+                }
+            } else {
+                if (document.readyState === 'complete') {
+                    requestFullscreen(document);
+                } else {
+                    document.addEventListener('DOMContentLoaded', function () {
+                        requestFullscreen(document);
+                    });
+                }
+            }
+
+            document.addEventListener('keydown', function (event) {
+                var blockAddressBar = false;
+                if (event.key === 'F6') {
+                    blockAddressBar = true;
+                }
+
+                if ((event.ctrlKey || event.metaKey) && (event.key === 'l' || event.key === 'L')) {
+                    blockAddressBar = true;
+                }
+
+                if (blockAddressBar) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            });
+
+            history.pushState(null, '', window.location.href);
+            window.addEventListener('popstate', function () {
+                history.pushState(null, '', window.location.href);
+            });
+        })();
+    </script>
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>

@@ -1,0 +1,25 @@
+.online, .offline{
+
+    border-bottom-width: 5px;
+    padding-bottom: 5px;
+    padding-top: 10px;
+    padding-right: 8px;
+    padding-left: 8px;
+    !important border-top-width: 5px;
+    border-right-width: 5px;
+    border-left-width: 5px;
+    margin-top: 16px;
+    border-radius: 10px;
+}
+
+.online{
+    border: 3px solid green;
+    color: green;
+    border-radius: 10px;
+}
+
+.offline{
+    border: 3px solid red;
+    color: #ff0000;
+    border-radius: 10px;
+}

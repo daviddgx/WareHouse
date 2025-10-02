@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fondo Animado</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+        }
+
+        #fondo {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background-image: url('../assets/images/sertero/walpalerwarehose.jpeg'); /* Cambia esto a la ruta de tu imagen */
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+        #lienzo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="fondo">
+    <canvas id="lienzo"></canvas>
+</div>
+<script>
+    const canvas = document.getElementById('lienzo');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const montacargas = new Image();
+    montacargas.src = 'Montacargas.png'; // Cambia esto a la ruta de tu imagen
+
+    const posicionMontacargas = {
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height
+    };
+
+    const anchoMontacargas = 50; // Cambia esto al ancho deseado
+    const altoMontacargas = 50; // Cambia esto al alto deseado
+
+    let direccionX = Math.random() * 1 - 2; // Velocidad y dirección en X
+    let direccionY = Math.random() * 2 - 2; // Velocidad y dirección en Y
+
+    montacargas.onload = function() {
+        // Función de dibujo
+        function dibujar() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar el montacargas con el tamaño especificado
+            ctx.drawImage(montacargas, posicionMontacargas.x, posicionMontacargas.y, anchoMontacargas, altoMontacargas);
+
+            // Mover el montacargas
+            posicionMontacargas.x += direccionX;
+            posicionMontacargas.y += direccionY;
+
+            // Cambiar la dirección si el montacargas alcanza el borde del lienzo
+            if (posicionMontacargas.x <= 0 || posicionMontacargas.x + anchoMontacargas >= canvas.width) {
+                direccionX = -direccionX;
+            }
+            if (posicionMontacargas.y <= 0 || posicionMontacargas.y + altoMontacargas >= canvas.height) {
+                direccionY = -direccionY;
+            }
+
+            requestAnimationFrame(dibujar);
+        }
+
+        dibujar();
+    }
+</script>
+
+
+
+
+
+
+</body>
+</html>

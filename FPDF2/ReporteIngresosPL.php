@@ -1,0 +1,169 @@
+<?php
+
+require('./fpdf.php');
+
+$HoraTrabajoInicio = "";
+$HoraTrabajoFinal  = "";
+date_default_timezone_set('America/Guatemala');
+$HoraTrabajoInicio = $_GET["FInicio"];
+$HoraTrabajoFinal  = $_GET["FFinal"];
+
+
+$Turno1 = "06:00";
+$Turno2 = "18:00";
+
+class PDF extends FPDF
+{
+   // Cabecera de página
+   function Header()
+   {
+       $HoraTrabajoInicio = $_GET["FInicio"];
+       $HoraTrabajoFinal  = $_GET["FFinal"];
+
+
+
+      $this->Image('logo.png', 8, 13, 25); //logo de la empresa,moverDerecha,moverAbajo,tamañoIMG
+      $this->SetFont('Arial', 'B', 19); //tipo fuente, negrita(B-I-U-BIU), tamañoTexto
+
+      $this->SetTextColor(0, 0, 0); //color
+      //creamos una celda o fila
+       $this->Cell(25); // Movernos a la derecha
+      $this->Cell(110, 8, utf8_decode('INFORME DE PRODUCCION PL'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+      $this->Cell(55, 8, utf8_decode('Codigo RE-10-03'), 1, 1, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+
+       $this->SetFont('Arial', 'B', 7); //tipo fuente, negrita(B-I-U-BIU), tamañoTexto
+
+       $this->SetTextColor(0, 0, 0); //color
+       //creamos una celda o fila
+       $this->Cell(25); // Movernos a la derecha
+       $this->Cell(40, 7, utf8_decode('Procedimiento'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+       $this->Cell(70, 7, utf8_decode('(PR-10-01) Recepcion de produccion'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+       $this->Cell(55, 7, utf8_decode('Version 4'), 1, 1, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+
+
+
+
+      $this->SetTextColor(103); //color
+
+
+
+       /* Fecha Inicio */
+       $this->Cell(40);  // mover a la derecha
+       $this->SetFont('Arial', 'B', 10);
+
+       $this->Cell(60, 7, utf8_decode("Fecha Inicio : ". date('d-m-Y H:i:s', strtotime($HoraTrabajoInicio))), 0, 0, '', 0);
+
+
+       /* Fecha Final */
+       $this->Cell(5);  // mover a la derecha
+       $this->SetFont('Arial', 'B', 10);
+       $this->Cell(59, 7, utf8_decode("Fecha Final  : ". date('d-m-Y H:i:s', strtotime($HoraTrabajoFinal)) ), 0, 0, '', 0);
+       $this->Ln(5);
+       $this->Ln(3); // Salto de línea
+
+
+
+      /* CAMPOS DE LA TABLA */
+      //color
+      $this->SetFillColor(228, 0, 0); //colorFondo
+      $this->SetTextColor(255, 255, 255); //colorTexto
+      $this->SetDrawColor(163, 163, 163); //colorBorde
+      $this->SetFont('Arial', 'B', 7);
+      $this->Cell(21, 6, utf8_decode('IDH'), 1, 0, 'C', 1);
+      $this->Cell(51, 6, utf8_decode('DESCRIPCION'), 1, 0, 'C', 1);
+      $this->Cell(21, 6, utf8_decode('ESTADO'), 1, 0, 'C', 1);
+      $this->Cell(21, 6, utf8_decode('OPERADOR'), 1, 0, 'C', 1);
+      $this->Cell(21, 6, utf8_decode('VERIFICADOR'), 1, 0, 'C', 1);
+      $this->Cell(15, 6, utf8_decode('PALLETS'), 1, 0, 'C', 1);
+      $this->Cell(21, 6, utf8_decode('BULTOS'), 1, 0, 'C', 1);
+      $this->Cell(21, 6, utf8_decode('UNIDADES'), 1, 1, 'C', 1);
+
+   }
+
+
+   // Pie de página
+   function Footer()
+   {
+
+       $this->SetY(-180); // Posición: a 1,5 cm del final
+       $this->SetFont('Arial', 'B', 10); //tipo fuente, cursiva, tamañoTexto
+       $hoy = "_________________________________";
+       $this->Cell(120, 1, utf8_decode($hoy), 0, 0, 'C'); //
+
+       $this->SetY(-175); // Posición: a 1,5 cm del final
+       $this->SetFont('Arial', 'I', 8); //tipo fuente, cursiva, tamañoTexto
+       $hoy = "Nombre / Firma Supervisor de turno";
+       $this->Cell(120, 1, utf8_decode($hoy), 0, 0, 'C'); //
+
+
+       $this->SetY(-180); // Posición: a 1,5 cm del final
+       $this->SetFont('Arial', 'B', 10); //tipo fuente, cursiva, tamañoTexto
+       $hoy = "_________________________________";
+       $this->Cell(260, 1, utf8_decode($hoy), 0, 0, 'C'); //
+
+       $this->SetY(-175); // Posición: a 1,5 cm del final
+       $this->SetFont('Arial', 'I', 8); //tipo fuente, cursiva, tamañoTexto
+       $hoy = "Nombre / Firma Encargado de bodega";
+       $this->Cell(260, 1, utf8_decode($hoy), 0, 0, 'C'); //
+
+      $this->SetY(-175); // Posición: a 1,5 cm del final
+      $this->SetFont('Arial', 'I', 8); //tipo fuente, negrita(B-I-U-BIU), tamañoTexto
+      $this->Cell(0, 10, utf8_decode('La información registrada es propiedad de Henkel La Luz S.A. queda  ') , 0, 0, 'C'); //pie de pagina(numero de pagina)
+       $this->Ln(3);
+      $this->Cell(0, 10, utf8_decode('Prohibida su reproducción total o parcial  ') , 0, 0, 'C'); //pie de pagina(numero de pagina)
+
+      $this->SetY(-175); // Posición: a 1,5 cm del final
+      $this->SetFont('Arial', 'I', 8); //tipo fuente, cursiva, tamañoTexto
+      $hoy = date('d/m/Y');
+      $this->Cell(355, 10, utf8_decode($hoy), 0, 0, 'C'); // pie de pagina(fecha de pagina)
+   }
+}
+
+
+
+$pdf = new PDF();
+$pdf->AddPage(); /* aqui entran dos para parametros (horientazion,tamaño)V->portrait H->landscape tamaño (A3.A4.A5.letter.legal) */
+
+$pdf->AliasNbPages(); //muestra la pagina / y total de paginas
+
+$i = 0;
+$pdf->SetFont('Arial', '', 6.5);
+$pdf->SetDrawColor(163, 163, 163); //colorBorde
+include '../LQS_EUQ/Connect.php';
+$conn  = new PDO('mysql:host='.$servername.';dbname='.$dbname, $username, $password);
+$ejecutar_sentencia_Despachos = $conn->query("call dbs9098416.RepoirteIngresosPL('".$HoraTrabajoInicio."', '".$HoraTrabajoFinal."' );");
+$lista_DespachoPRODUCCION =$ejecutar_sentencia_Despachos->fetch(PDO::FETCH_ASSOC);
+
+
+for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
+    /* TABLA */
+    $pdf->Cell(21, 5, utf8_decode($lista_DespachoPRODUCCION['IDH']), 1, 0, 'C', 0);
+    $pdf->Cell(51, 5, utf8_decode($lista_DespachoPRODUCCION['Producto']), 1, 0, 'C', 0);
+    $pdf->Cell(21, 5, utf8_decode($lista_DespachoPRODUCCION['Estado']), 1, 0, 'C', 0);
+    $pdf->Cell(21, 5, utf8_decode($lista_DespachoPRODUCCION['Operador']), 1, 0, 'C', 0);
+    $pdf->Cell(21, 5, utf8_decode($lista_DespachoPRODUCCION['Verificador']), 1, 0, 'C', 0);
+    $pdf->Cell(15, 5, utf8_decode($lista_DespachoPRODUCCION['Cantidad']), 1, 0, 'C', 0);
+    $pdf->Cell(21, 5, utf8_decode($lista_DespachoPRODUCCION['Bultos']), 1, 0, 'C', 0);
+    $pdf->Cell(21, 5, utf8_decode($lista_DespachoPRODUCCION['Unidades']), 1, 1, 'C', 0);
+
+    $lista_DespachoPRODUCCION = $ejecutar_sentencia_Despachos->fetch(PDO::FETCH_ASSOC);
+}
+
+
+
+// Lineas de Firma
+
+# Agregar un salto de línea
+
+
+# Dibujar dos líneas para la firma
+// Inicio en X, Inicio en Y, Fin en X, Fin en Y
+//$pdf->line(20, 150, 85, 150);  # primera línea horizontal
+
+//$pdf->line(120, 150, 185, 150);  # segunda línea horizontal
+
+
+
+
+
+$pdf->Output('ReporteIngresos.pdf', 'I');//nombreDescarga, Visor(I->visualizar - D->descargar)

@@ -1,0 +1,48 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Imprimir cuadro rojo</title>
+    <style>
+        /* Estilo para el cuadro rojo */
+        .red-box {
+            background-color: red;
+            padding: 20px;
+            width: 5.5in;
+            height: 4.25in;
+            margin: 0 auto;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            box-sizing: border-box;
+            border: 3px solid black;
+        }
+
+        /* Estilo para las líneas de texto */
+        .line {
+            margin: 10px 0;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        /* Estilo para el código de barras */
+        .barcode {
+            display: block;
+            margin: 0 auto;
+            padding: 10px 0;
+            font-size: 28pt;
+            font-weight: bold;
+            font-family: "Code 128", Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+<div class="red-box">
+    <div class="line"><?php echo "Código de Producto: 1234567890 - Fecha de recepción: " . date("d/m/Y"); ?></div>
+    <div class="line">Nombre del Producto: Producto de Ejemplo</div>
+    <div class="line">Hora: <?php echo date("H:i:s"); ?> - Turno: 1 - Pallet: 1234 - Usuario: Juan - Montacarguista: Pedro - Lote: L12345</div>
+    <div class="line">Base: 10 cm - Alto: 20 cm - Bultos: 2 - Código de barras: <span class="barcode">123456789012</span></div>
+</div>
+</body>
+</html>

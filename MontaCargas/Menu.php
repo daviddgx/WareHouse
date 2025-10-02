@@ -7,7 +7,14 @@
 
 
             <!-- Sidebar navigation-->
-            
+
+            <div class="sidebar-mini-toggle">
+                <button type="button" class="sidebar-toggle-btn" id="sidebar-mini-toggle">
+                    <i data-feather="menu"></i>
+                    <span>Menú</span>
+                </button>
+            </div>
+
             <nav class="sidebar-nav">
                 <ul id="sidebarnav">
                     <li class="sidebar-item "><a class="sidebar-link sidebar-link" href="index.php" aria-expanded="false"><i data-feather="home" class="feather-icon"></i><span class="hide-menu">Dashboard</span></a></li>
@@ -56,3 +63,72 @@
 
                 </ul>
             </nav>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var toggleBtn = document.getElementById('sidebar-mini-toggle');
+        var mainWrapper = document.getElementById('main-wrapper');
+        var leftSidebar = document.querySelector('.left-sidebar');
+
+        if (!toggleBtn || !mainWrapper || !leftSidebar) {
+            return;
+        }
+
+        function isMiniSidebar() {
+            return mainWrapper.getAttribute('data-sidebartype') === 'mini-sidebar' || mainWrapper.classList.contains('mini-sidebar');
+        }
+
+        function openSidebar() {
+            leftSidebar.classList.add('sidebar-touch-expanded');
+            mainWrapper.classList.add('touch-sidebar-open');
+        }
+
+        function closeSidebar() {
+            leftSidebar.classList.remove('sidebar-touch-expanded');
+            mainWrapper.classList.remove('touch-sidebar-open');
+        }
+
+        function toggleSidebar() {
+            if (!isMiniSidebar()) {
+                closeSidebar();
+                return;
+            }
+
+            if (leftSidebar.classList.contains('sidebar-touch-expanded')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        }
+
+        toggleBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleSidebar();
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!leftSidebar.contains(event.target) && mainWrapper.classList.contains('touch-sidebar-open')) {
+                closeSidebar();
+            }
+        });
+
+        window.addEventListener('resize', function () {
+            if (!isMiniSidebar()) {
+                closeSidebar();
+            }
+        });
+
+        leftSidebar.addEventListener('click', function (event) {
+            if (!isMiniSidebar() || !leftSidebar.classList.contains('sidebar-touch-expanded')) {
+                return;
+            }
+
+            var link = event.target.closest('a');
+            if (link && !link.classList.contains('has-arrow')) {
+                closeSidebar();
+            }
+        });
+    });
+</script>

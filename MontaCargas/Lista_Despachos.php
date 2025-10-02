@@ -73,6 +73,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -282,12 +284,12 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn">
+        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
             <div class="row">
                 <div class="col-sm-12">
-                    <div class="card">
+                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
-                        <div class="card-body">
+                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
                             <h4 class="card-title">Lista de Despachos a Realizar</h4>
                             <h6 class="card-subtitle">Estos son los despachos que debe realizar en este turno </h6>
 
@@ -389,10 +391,10 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                 </div>
                             </nav>
 
-                            <div class="card-body">
+                            <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="150">
 
                                 <h4 class="card-title mb-3">Despachando Guia: <?php echo $GuiaDeCarga ?> y Engrega: <?php echo $Entrega?> </h4>
-                                <table id="example" class="table table-striped  " cellspacing="0" width="100%">
+                                <table id="example" class="table table-striped skeleton-target" cellspacing="0" width="100%" data-aos="fade-up" data-aos-delay="200">
                                     <thead>
                                     <th>IDH</th>
                                     <th>Descripcion</th>
@@ -443,7 +445,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                         echo "</td>";
 
                                         echo "<td>";
-                                        echo '<a href="DespacharProducto.php?Guia='.$IDGUIA .'&IDH='.$IDIDH.'&Ubicacion='.$Posicion.'&Transporte='.$Transporte.'&Entrega='.$Entrega.'" class="	btn btn-primary ">Despachar</a>';
+                                        echo '<a href="DespacharProducto.php?Guia='.$IDGUIA .'&IDH='.$IDIDH.'&Ubicacion='.$Posicion.'&Transporte='.$Transporte.'&Entrega='.$Entrega.'" class="btn btn-primary action-button">Despachar</a>';
                                         echo "</td>";
 
                                         echo "</tr>";
@@ -520,6 +522,9 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         });
     });
 </script>
+
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="../dist/js/Custom/pageEnhancements.js"></script>
 
 
 </body>

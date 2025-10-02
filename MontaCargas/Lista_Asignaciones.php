@@ -70,6 +70,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -279,10 +281,10 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn">
+        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
             <div class="row">
                 <div class="col-12">
-                    <div class="card">
+                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
                         <div class="card-body">
                            <!--  <h4 class="card-title">Lista de ingresos a Realizar</h4>
@@ -365,13 +367,13 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
                             -->
 
-                            <div class="card-body">
+                            <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
 
                                 <h4 class="card-title mb-3">Guias a Despachar</h4>
 <br>
                                 <a class="btn btn btn-outline-danger" style="margin-left: 2rem" href="Lista_AsignacionesIDH.php"><span > Regresar al listado de IDHs 📦 </span></a>
 <br>
-                                <table id="example" class="table table-striped  " cellspacing="0" width="100%">
+                                <table id="example" class="table table-striped skeleton-target" cellspacing="0" width="100%" data-aos="fade-up" data-aos-delay="150">
                                     <thead>
 
 
@@ -431,7 +433,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
 
                                         echo "<td>";
-                                        echo '<a href="UbicarProducto.php?Guia='.$IDGUIA.'&IDH='.$IDIDH.'&Ubicacion='.$Posicion.'" class="btn btn-success" onclick="ocultarBoton(this)">Ingresar ✔️</a>';
+                                        echo '<a href="UbicarProducto.php?Guia='.$IDGUIA.'&IDH='.$IDIDH.'&Ubicacion='.$Posicion.'" class="btn btn-success action-button">Ingresar ✔️</a>';
                                         echo "</td>";
 
                                         
@@ -442,15 +444,6 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                     ?>
                                     </tbody>
                                 </table>
-
-                                <script>
-function ocultarBoton(boton) {
-    boton.style.display = 'none';
-}
-</script>
-
-
-
 
                                 <br>
                             </div>
@@ -529,6 +522,9 @@ function ocultarBoton(boton) {
         $( table.column( 2 ).nodes() ).addClass( 'bolded' );
     } );
 </script>
+
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="../dist/js/Custom/pageEnhancements.js"></script>
 
 
 </body>

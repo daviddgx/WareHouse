@@ -68,6 +68,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -255,18 +257,18 @@ r
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn">
+        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
             <div class="row">
                 <div class="col-sm-12">
-                    <div class="card">
+                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
-                        <div class="card-body">
+                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
                             <h4 class="card-title">Lista de Reubicaciones a Realizar</h4>
                             <h6 class="card-subtitle">Estos son las Reubicaciones que debe realizar en este turno </h6>
                             <br>
                             <!-- Start First Cards -->
                             <!-- *************************************************************** -->
-                            <div class="card-group">
+                            <div class="card-group skeleton-target" data-aos="fade-up" data-aos-delay="150">
                                 <div class="card border-right">
                                     <div class="card-body">
                                         <div class="d-flex d-lg-flex d-md-block align-items-center">
@@ -347,7 +349,7 @@ r
 
 
 
-                            <table id="example" class="table table-striped  " cellspacing="0" width="100%">
+                            <table id="example" class="table table-striped skeleton-target" cellspacing="0" width="100%" data-aos="fade-up" data-aos-delay="200">
                                 <thead>
 
 
@@ -391,20 +393,10 @@ r
 
 
                                     echo "<td>";
-                                    echo '<a href="MoverProducto.php?Guia='.$IDGUIA.'&Origen='.$Origen.'&Destino='.$Destino.'&IDH='.$IDH.'" id="btn-mover-'.$IDH.'" class="btn btn-primary" onclick="disableButton(this)">Mover</a>';
+                                    echo '<a href="MoverProducto.php?Guia='.$IDGUIA.'&Origen='.$Origen.'&Destino='.$Destino.'&IDH='.$IDH.'" class="btn btn-primary action-button">Mover</a>';
                                     echo "</td>";
 
-                                    echo "<script>";
-                                    echo "
-    $(document).ready(function() {
-        $('#btn-mover-$IDH').on('click', function() {
-            var btn = $(this);
-            btn.html('<span class=\"spinner-border spinner-border-sm\" role=\"status\" aria-hidden=\"true\"></span> ').prop('disabled', true);
-            btn.hide(); // Oculta el botón después de deshabilitarlo y cambiar su contenido
-        });
-    });
-";
-                                    echo "</script>";
+                                    
 
 
 
@@ -490,6 +482,8 @@ r
         $(table.column(3).nodes()).addClass('bolded');
     });
 </script>
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="../dist/js/Custom/pageEnhancements.js"></script>
 </body>
 
 </html>

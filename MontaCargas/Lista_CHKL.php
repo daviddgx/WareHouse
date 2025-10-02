@@ -47,6 +47,8 @@ $Num_Asignaciones= darValorAsignaciones($_SESSION['Usuario']);
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -231,12 +233,12 @@ $Num_Asignaciones= darValorAsignaciones($_SESSION['Usuario']);
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn">
+        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
             <div class="row">
                 <div class="col-12">
-                    <div class="card">
+                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
-                        <div class="card-body">
+                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
                             <h4 class="card-title">Ingresar Manualmente Check List</h4>
                             <h6 class="card-subtitle">Registre Check list de forma manual </h6>
                             <br>
@@ -295,6 +297,8 @@ $Num_Asignaciones= darValorAsignaciones($_SESSION['Usuario']);
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="../dist/js/Custom/pageEnhancements.js"></script>
 </body>
 
 </html>

@@ -73,6 +73,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -255,18 +257,18 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn">
+        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
             <div class="row">
                 <div class="col-sm-12">
-                    <div class="card">
+                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
-                        <div class="card-body">
+                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
                             <h4 class="card-title">Movimientos de re Abastecimiento de Piking</h4>
                             <h6 class="card-subtitle">Estos son los movimientos que debe hacer para Piking </h6>
                             <br>
                             <!-- Start First Cards -->
                             <!-- *************************************************************** -->
-                            <div class="card-group">
+                            <div class="card-group skeleton-target" data-aos="fade-up" data-aos-delay="150">
                                 <div class="card border-right">
                                     <div class="card-body">
                                         <div class="d-flex d-lg-flex d-md-block align-items-center">
@@ -353,7 +355,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
 
 
-                            <table id="example" class="table table-striped  " cellspacing="0" width="100%">
+                            <table id="example" class="table table-striped skeleton-target" cellspacing="0" width="100%" data-aos="fade-up" data-aos-delay="200">
                                 <thead>
 
 
@@ -400,7 +402,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                     echo "</td>";
 
                                     echo "<td>";
-                                    echo '<a href="MoverProductoPiking.php?Guia=' . $IDGUIA . '&Origen=' . $Origen . '&Destino=' . $Destino . '&IDH=' . $IDH . '" class="btn btn-primary mover-boton">Mover</a>';
+                                    echo '<a href="MoverProductoPiking.php?Guia=' . $IDGUIA . '&Origen=' . $Origen . '&Destino=' . $Destino . '&IDH=' . $IDH . '" class="btn btn-primary mover-boton action-button">Mover</a>';
                                     echo "</td>";
 
                                     echo "</tr>";
@@ -408,30 +410,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                     $lista_Movimientos = $ejecutar_sentencia_Movimientos->fetch(PDO::FETCH_ASSOC);
                                 }
                                 ?>
-                                <script>
-                                    document.addEventListener("DOMContentLoaded", function () {
-                                        var botones = document.querySelectorAll('.mover-boton');
-
-                                        botones.forEach(function (boton) {
-                                            boton.addEventListener('click', function () {
-                                                // Mostrar el mensaje "Moviendo"
-                                                boton.innerText = "Moviendo";
-
-                                                // Deshabilitar el botón
-                                                boton.setAttribute("disabled", "true");
-
-                                                // Ocultar el botón
-                                                boton.style.display = "none";
-
-                                                // Aquí puedes realizar cualquier otra lógica que necesites al hacer clic en el botón
-                                                // ...
-
-                                                // Puedes redirigir al usuario a la página deseada si es necesario
-                                                // window.location.href = boton.href;
-                                            });
-                                        });
-                                    });
-                                </script>
+                                
 
                                 </tbody>
                             </table>
@@ -505,6 +484,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         $(table.column(3).nodes()).addClass('bolded');
     });
 </script>
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="../dist/js/Custom/pageEnhancements.js"></script>
 </body>
 
 </html>

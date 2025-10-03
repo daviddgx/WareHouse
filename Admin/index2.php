@@ -1,4 +1,3 @@
-
 <?php
 ob_start();
 session_start();
@@ -12,10 +11,10 @@ $TotalPiking=0;
 
 date_default_timezone_set('America/Guatemala');
 
-$fecha = date('Y-m-d');
+$fecha = date("d") . '-' . date("m") . '-' . date("Y");
 
 $fechaFinal = $fecha;
-$fechaInicial = date('Y-m-d', strtotime('-8 days'));
+$fechaInicial = date("d-m-Y", strtotime("-8 days"));
 
 
 
@@ -26,15 +25,10 @@ switch ($accion) {
     case "btnConsultar":
         $Fecha1 = (isset($_POST['txtFechaInicial'])) ? $_POST['txtFechaInicial'] : "";
         $Fecha2 = (isset($_POST['txtFechaFinal'])) ? $_POST['txtFechaFinal'] : "";
-
-        if ($Fecha1) {
-            $fechaInicial = date('Y-m-d', strtotime($Fecha1));
-        }
-
-        if ($Fecha2) {
-            $fechaFinal = date('Y-m-d', strtotime($Fecha2));
-        }
-
+       
+        $fechaInicial = $Fecha1;
+        $fechaFinal = $Fecha2;
+       
 
         break;
 
@@ -43,39 +37,25 @@ switch ($accion) {
         break;
 }
 
-$fechaInicialSql = date('Y-m-d', strtotime($fechaInicial));
-$fechaFinalSql = date('Y-m-d', strtotime($fechaFinal));
-$fechaInicioRango = $fechaInicialSql . ' 00:00:00';
-$fechaFinRangoExclusivo = date('Y-m-d', strtotime($fechaFinalSql . ' +1 day')) . ' 00:00:00';
-
 
 
 
 include '../Innet_ADM/Innet_AMD.php';
 
 // Variables de resumen Grafica 1
-$datosConsolidadosDisponibles = true;
-$mensajeDatosConsolidados = '';
-$ultimaFechaConsolidado = null;
-
-$estatusBodegasConsolidado = ObtenerUltimoEstatusBodegasConsolidado();
-
-if ($estatusBodegasConsolidado) {
-    $CapacidadTotal = (int) $estatusBodegasConsolidado['Cant_CapacidadTotal'];
-    $UbicacionesLibres = (int) $estatusBodegasConsolidado['Cant_Libres'];
-    $UnidadesOcupadas = (int) $estatusBodegasConsolidado['Cant_Ocupadas'];
-    $PorOcupacionGR = $CapacidadTotal > 0 ? round(($UnidadesOcupadas / $CapacidadTotal) * 100, 2) : 0;
-    $ultimaFechaConsolidado = $estatusBodegasConsolidado['Fecha'];
-} else {
-    $datosConsolidadosDisponibles = false;
-    $CapacidadTotal = 0;
-    $UbicacionesLibres = 0;
-    $UnidadesOcupadas = 0;
-    $PorOcupacionGR = 0;
-    $mensajeDatosConsolidados = 'Los datos consolidados de estatus de bodegas aún no están disponibles. Verifique que el proceso programado se haya ejecutado correctamente.';
-}
-
+// Limpia las ubicaciones de produccion que viene en Null
+GraphEstatusBodegas();
+Limpiar_Nulls();
+//AgregarValorAsignaciones();
+LimpiarExesoPiking();
+// Bloquear carriles piking en bodebas
+BloquearCarrilesPiking();
+//Recalcular Pallets Completos
+$CapacidadTotal = CapacidadTotalFIFO();
+$UbicacionesLibres = UnidadesLibresFIFO();
 $Exactitud = "99%";
+$UnidadesOcupadas = UnidadesOcupadasFIFO();
+$PorOcupacionGR = PorcentajeOcupacion();
 
 ob_end_flush();
 ?>
@@ -95,8 +75,6 @@ ob_end_flush();
     <!-- Custom CSS -->
     <link href="../assets/extra-libs/c3/c3.min.css" rel="stylesheet">
     <link href="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.css" rel="stylesheet" />
-    <link href="../assets/libs/chartist/dist/chartist.min.css" rel="stylesheet">
-    <link href="../assets/libs/chartist-plugin-tooltips/dist/chartist-plugin-tooltip.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
@@ -184,48 +162,6 @@ ob_end_flush();
         }
         .btn-enviar:hover{
             color: #b3b3b3;
-        }
-
-        canvas.chart-loading {
-            position: relative;
-            background: linear-gradient(90deg, #f1f1f1 25%, #e2e2e2 37%, #f1f1f1 63%);
-            background-size: 400% 100%;
-            animation: chartSkeleton 1.4s ease infinite;
-        }
-
-        @keyframes chartSkeleton {
-            0% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0 50%;
-            }
-        }
-
-        .chart-status {
-            margin-top: 12px;
-            font-size: 0.9rem;
-            color: #6c757d;
-        }
-
-        .chart-status.chart-error {
-            color: #dc3545;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .chart-status button {
-            border: none;
-            background-color: #ed3131;
-            color: #fff;
-            border-radius: 4px;
-            padding: 4px 12px;
-            cursor: pointer;
-        }
-
-        .chart-status button:hover {
-            background-color: #c41f1f;
         }
 
     </style>
@@ -575,21 +511,12 @@ ob_end_flush();
                                         <div class="card">
                                             <div class="card-body">
                                                 <h4 class="card-title">Capacidad de bodegas TOTAL por Dia.</h4>
-                                                <?php if (!$datosConsolidadosDisponibles): ?>
-                                                    <div class="alert alert-warning" role="alert">
-                                                        <?php echo $mensajeDatosConsolidados; ?>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <?php if (!empty($ultimaFechaConsolidado)): ?>
-                                                        <p class="text-muted mb-2">Última actualización: <?php echo date('d/m/Y H:i', strtotime($ultimaFechaConsolidado)); ?></p>
-                                                    <?php endif; ?>
-                                                <?php endif; ?>
                                                 <h5 class="card-subtitle"> Promedio de Almacenamiento: <span id="PromedioCapacidadBodegas"></span>%</h5>
                                                 <canvas id="Bod_Total_Diario"  height="100"></canvas>
                                             </div>
                                         </div>
                                     </div>
-
+                                
 
             </div>
             </div>
@@ -1129,8 +1056,6 @@ ob_end_flush();
         <script src="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.min.js"></script>
         <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
         <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script> 
-        <script src="../assets/libs/chartist/dist/chartist.min.js"></script>
-        <script src="../assets/libs/chartist-plugin-tooltips/dist/chartist-plugin-tooltip.min.js"></script>
         <script src="../dist/js/OnLine.js"></script>
         <!-- Chart JS -->
         <script src="../assets/libs/chart.js/dist/Chart.min.js"></script>
@@ -1138,288 +1063,109 @@ ob_end_flush();
 
 
         <!-- Datos de las bodegas -->
+        
+        
+        <?php
+        include '../innet_CHARTS/Innet_CHARTS.php';
+        $NombreBodegas = GetNombreBodegas();
+        $PorOcupacion = GetPorcentajeOcupacion();
+        ?>
+
 
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const fechaInicial = '<?php echo $fechaInicial; ?>';
-        const fechaFinal = '<?php echo $fechaFinal; ?>';
-        const charts = {};
+    // Función para obtener un color interpolado entre verde y rojo
+    function getColor(percentage) {
+        var green = [0, 200, 66]; // Color verde
+        var yellow = [255, 165, 0]; // Color amarillo
+        var red = [255, 0, 0];   // Color rojo
 
-        const chartConfigs = {
-            'bar-chart': {
-                endpoint: 'capacidad-por-bodega',
-                render: renderCapacityByWarehouse
+        var color = [];
+
+        if (percentage <= 50) {
+            // Interpolación entre verde y amarillo para porcentajes menores o iguales a 50
+            for (var i = 0; i < 3; i++) {
+                color[i] = Math.round(green[i] + (yellow[i] - green[i]) * (percentage / 50));
+            }
+        } else {
+            // Interpolación entre amarillo y rojo para porcentajes mayores a 50
+            for (var i = 0; i < 3; i++) {
+                color[i] = Math.round(yellow[i] + (red[i] - yellow[i]) * ((percentage - 50) / 50));
+            }
+        }
+
+        return 'rgb(' + color.join(',') + ')';
+    }
+
+    // Capaciodad de bodegas
+    var labels = <?php echo json_encode($NombreBodegas); ?>;
+    var Datos = <?php echo json_encode($PorOcupacion); ?>;
+
+    // Calcular los colores para cada barra
+    var backgroundColors = Datos.map(function (percentage) {
+        return getColor(percentage);
+    });
+
+    new Chart(document.getElementById("bar-chart").getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "",
+                    backgroundColor: backgroundColors,
+                    data: Datos
+                }
+            ]
+        },
+        options: {
+    legend: { display: true },
+    title: {
+        display: true,
+        text: '% Capacidad por bodegas'
+    },
+    scales: {
+        yAxes: [{
+            ticks: {
+                beginAtZero: true,
+                max: 100 // Establecer el máximo del eje Y en 100
+            }
+        }]
+    },
+    plugins: {
+        datalabels: {
+            anchor: 'end',
+            align: 'end',
+            formatter: function (value, context) {
+                return value + '%';
             },
-            'Bod_Total_Diario': {
-                endpoint: 'capacidad-diaria',
-                render: renderDailyCapacity
+            font: {
+                size: 20 // Tamaño del texto
             }
-        };
-
-        const promedioLabel = document.getElementById('PromedioCapacidadBodegas');
-        if (promedioLabel) {
-            promedioLabel.textContent = 'Cargando...';
         }
+    },
+    animation: {
+        onComplete: function () {
+            var ctx = this.chart.ctx;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.font = "22px Arial";
 
-        Object.entries(chartConfigs).forEach(([id, config]) => {
-            const canvas = document.getElementById(id);
-            if (!canvas) {
-                return;
-            }
-
-            const status = ensureStatusElement(canvas);
-            loadChart(id, canvas, status, config);
-        });
-
-        function ensureStatusElement(canvas) {
-            const container = canvas.closest('.card-body');
-            if (!container) {
-                return null;
-            }
-
-            let status = container.querySelector('.chart-status');
-            if (!status) {
-                status = document.createElement('div');
-                status.className = 'chart-status';
-                container.appendChild(status);
-            }
-
-            return status;
-        }
-
-        function loadChart(id, canvas, status, config) {
-            canvas.classList.add('chart-loading');
-            if (status) {
-                status.textContent = 'Cargando datos...';
-                status.classList.remove('chart-error');
-            }
-
-            const params = new URLSearchParams({
-                chart: config.endpoint,
-                fechaInicial,
-                fechaFinal
-            });
-
-            fetch(`api/dashboard/data.php?${params.toString()}`, {
-                credentials: 'same-origin'
-            })
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error('Respuesta inesperada del servidor');
-                    }
-
-                    return response.json();
-                })
-                .then((payload) => {
-                    if (!payload.success) {
-                        throw new Error(payload.error || 'No se pudieron cargar los datos');
-                    }
-
-                    const data = payload.data[config.endpoint];
-                    if (!data) {
-                        throw new Error('Datos inválidos recibidos');
-                    }
-
-                    if (charts[id]) {
-                        charts[id].destroy();
-                    }
-
-                    canvas.classList.remove('chart-loading');
-                    if (status) {
-                        status.textContent = '';
-                    }
-
-                    charts[id] = config.render(canvas, data);
-                })
-                .catch((error) => {
-                    canvas.classList.remove('chart-loading');
-                    if (status) {
-                        status.classList.add('chart-error');
-                        status.innerHTML = `${error.message} <button type="button">Reintentar</button>`;
-                        const button = status.querySelector('button');
-                        if (button) {
-                            button.addEventListener('click', function () {
-                                loadChart(id, canvas, status, config);
-                            });
-                        }
-                    }
-
-                    console.error(error);
-                });
-        }
-
-        function getColor(percentage) {
-            const green = [0, 200, 66];
-            const yellow = [255, 165, 0];
-            const red = [255, 0, 0];
-            const color = [0, 0, 0];
-
-            if (percentage <= 50) {
-                for (let i = 0; i < 3; i++) {
-                    color[i] = Math.round(green[i] + (yellow[i] - green[i]) * (percentage / 50));
-                }
-            } else {
-                for (let i = 0; i < 3; i++) {
-                    color[i] = Math.round(yellow[i] + (red[i] - yellow[i]) * ((percentage - 50) / 50));
-                }
-            }
-
-            return `rgb(${color.join(',')})`;
-        }
-
-        function renderCapacityByWarehouse(canvas, data) {
-            const ctx = canvas.getContext('2d');
-            const labels = data.labels.slice();
-            const values = data.values.slice(0, labels.length);
-            const backgroundColors = values.map((percentage) => getColor(percentage));
-
-            return new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            label: '% Ocupación',
-                            backgroundColor: backgroundColors,
-                            data: values
-                        }
-                    ]
-                },
-                options: {
-                    legend: { display: false },
-                    title: {
-                        display: true,
-                        text: '% Capacidad por bodegas'
-                    },
-                    scales: {
-                        yAxes: [
-                            {
-                                ticks: {
-                                    beginAtZero: true,
-                                    max: 100
-                                }
-                            }
-                        ]
-                    },
-                    animation: {
-                        onComplete: function () {
-                            const chartInstance = this.chart;
-                            const ctx = chartInstance.ctx;
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
-                            ctx.fillStyle = '#7c8798';
-
-                            this.data.datasets.forEach(function (dataset, datasetIndex) {
-                                const meta = chartInstance.controller.getDatasetMeta(datasetIndex);
-                                meta.data.forEach(function (bar, index) {
-                                    ctx.fillText(dataset.data[index] + '%', bar._model.x, bar._model.y - 5);
-                                });
-                            });
-                        }
-                    }
+            this.data.datasets.forEach(function (dataset) {
+                for (var i = 0; i < dataset.data.length; i++) {
+                    var model = dataset._meta[Object.keys(dataset._meta)[0]].data[i]._model;
+                    ctx.fillStyle = '#7c8798'; // Color
+                    ctx.fillText(dataset.data[i] + '%', model.x, model.y - 5);
                 }
             });
         }
+    }
+}
 
-        function renderDailyCapacity(canvas, data) {
-            const ctx = canvas.getContext('2d');
-            const labels = data.labels.slice().reverse();
-            const capacidad = data.capacidad.slice().reverse();
-            const ocupadas = data.ocupadas.slice().reverse();
-            const porcentaje = data.porcentaje.slice().reverse();
 
-            const promedioSpan = document.getElementById('PromedioCapacidadBodegas');
-            if (promedioSpan) {
-                promedioSpan.textContent = data.promedio;
-            }
-
-            return new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            label: '% Ocupación',
-                            type: 'line',
-                            fill: false,
-                            backgroundColor: '#5c5c5b',
-                            borderColor: '#5c5c5b',
-                            borderWidth: 3,
-                            yAxisID: 'porcentaje-axis',
-                            data: porcentaje
-                        },
-                        {
-                            label: 'Capacidad Total',
-                            backgroundColor: '#F4EB95',
-                            borderColor: '#D4C35E',
-                            borderWidth: 3,
-                            data: capacidad
-                        },
-                        {
-                            label: 'Ubicaciones Ocupadas',
-                            backgroundColor: '#FFB4A1',
-                            borderColor: '#FF867F',
-                            borderWidth: 3,
-                            data: ocupadas
-                        }
-                    ]
-                },
-                options: {
-                    legend: { display: true },
-                    title: {
-                        display: true,
-                        text: 'Capacidad de bodegas TOTAL por Día.'
-                    },
-                    scales: {
-                        yAxes: [
-                            {
-                                id: 'cantidad-axis',
-                                type: 'linear',
-                                position: 'left',
-                                ticks: {
-                                    beginAtZero: false
-                                }
-                            },
-                            {
-                                id: 'porcentaje-axis',
-                                type: 'linear',
-                                position: 'right',
-                                ticks: {
-                                    beginAtZero: true,
-                                    max: 100,
-                                    callback: function (value) {
-                                        return value + '%';
-                                    }
-                                }
-                            }
-                        ]
-                    },
-                    animation: {
-                        onComplete: function () {
-                            const chartInstance = this.chart;
-                            const ctx = chartInstance.ctx;
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
-                            ctx.fillStyle = '#3D3D3D';
-
-                            this.data.datasets.forEach(function (dataset, datasetIndex) {
-                                const meta = chartInstance.controller.getDatasetMeta(datasetIndex);
-                                meta.data.forEach(function (bar, index) {
-                                    let value = dataset.data[index];
-                                    if (dataset.yAxisID === 'porcentaje-axis') {
-                                        value = value + '%';
-                                    }
-                                    ctx.fillText(value, bar._model.x, bar._model.y - 5);
-                                });
-                            });
-                        }
-                    }
-                }
-            });
-        }
     });
 </script>
+
 
 <!-- Grafica de cantidad por bodega-->
 <?php
@@ -1429,8 +1175,8 @@ try {
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
 
-    $FechaHace9Dias = $fechaInicioRango;
-    $FechaLimite = $fechaFinRangoExclusivo;
+    $FechaActual = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
 
     
     $conn = new mysqli($servername, $username, $password, $dbname);
@@ -1445,6 +1191,9 @@ ORDER BY b.bodega + 0 desc";
     $Ocupadas = [];
     $Totales = [];
     $Libres = [];
+    $TotalProducion = 0;
+    $TotalDespacho = 0;
+    $Registros = 0;
    
     // Procesar los resultados
     if ($result->num_rows > 0) {
@@ -1452,6 +1201,10 @@ ORDER BY b.bodega + 0 desc";
 
         while ($row = $result->fetch_assoc()) {
             $labelsG3[] = $row['bodega_concatenada'];
+            $ToneladasProduccionG3[] = $row['ToneladasProduccion'];
+            $TotalProducion += $row['ToneladasProduccion'];
+            $Registros +=1;
+           
         }
     }
 
@@ -1466,8 +1219,13 @@ try {
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
 
+    $FechaHoy = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+
+   
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT COUNT(*) AS Ocupadas FROM `posiciones` WHERE Estado = 'Ocupada' GROUP BY Bodega ORDER BY Bodega + 0 DESC";
+    $sql = "SELECT Bodega,count(*) as Ocupadas FROM `posiciones` where Estado = 'Ocupada' GROUP by Bodega order by Bodega+0 desc
+  ";
 
 
     $result = $conn->query($sql);
@@ -1487,7 +1245,7 @@ try {
 
 
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT COUNT(*) AS Libres FROM `posiciones` WHERE Estado = 'Libre' GROUP BY Bodega ORDER BY Bodega + 0 DESC";
+    $sql = "SELECT Bodega,count(*) as Libres FROM `posiciones` where Estado = 'Libre' GROUP by Bodega order by Bodega+0 desc";
     $result = $conn->query($sql);
     if ($result->num_rows > 0) {
           while ($row = $result->fetch_assoc()) {
@@ -1497,7 +1255,7 @@ try {
 
 
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT COUNT(*) AS Totales FROM `posiciones` GROUP BY Bodega ORDER BY Bodega + 0 DESC";
+    $sql = "SELECT Bodega,count(*) as Totales FROM `posiciones` GROUP by Bodega order by Bodega+0 desc";
     $result = $conn->query($sql);
     if ($result->num_rows > 0) {
           while ($row = $result->fetch_assoc()) {
@@ -1608,7 +1366,161 @@ try {
 
 
 
-<?php /* Data moved to AJAX */ ?>
+<?php
+// Establecer la conexión a la base de datos (reemplaza con tus propios datos)
+$PromedioAlmacenes = 0;
+$Registros = 0;
+try {
+
+    // Metodo tradicional
+    include '../LQS_EUQ/Connect.php';
+
+    $FechaActual = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+
+
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    $sql = "SELECT Fecha,Cant_CapacidadTotal,Cant_Ocupadas, (Cant_Ocupadas/Cant_CapacidadTotal)*100 as Porcentaje FROM `gaf_capacidadbodegasdiaria` where NombreBodega = 'Todas' and date(Fecha) BETWEEN '$FechaHace9Dias' and '$FechaActual' order by date(Fecha) desc ";
+    $result = $conn->query($sql);
+
+    // Inicializar arrays para las etiquetas y los conjuntos de datos
+    $labelsG2 = [];
+    $capacidadTotalDataG2 = [];
+    $ocupadasDataG2 = [];
+    $porcentajeDataG2 = [];
+  
+
+    // Procesar los resultados
+    if ($result->num_rows > 0) {
+        // Almacena los nombres de las bodegas en un array
+
+        while ($row = $result->fetch_assoc()) {
+
+            $labelsG2[] = date('d/m/Y', strtotime($row['Fecha']));
+            $capacidadTotalDataG2[] = $row['Cant_CapacidadTotal'];
+            $ocupadasDataG2[] = $row['Cant_Ocupadas'];
+            $porcentajeDataG2[] = round($row['Cant_Ocupadas'] / $row['Cant_CapacidadTotal'] * 100);
+            $PromedioAlmacenes += round($row['Cant_Ocupadas'] / $row['Cant_CapacidadTotal'] * 100);
+            $Registros += 1;
+        }
+    }
+
+    $PromedioAlmacenes = round($PromedioAlmacenes / $Registros,2);
+
+} catch (Exception $e) {
+    echo 'Error: ' . $e->getMessage();
+}
+
+
+?>
+
+<script>
+    // Capacidad de bodegas TOTAL por Dia.
+    new Chart(document.getElementById("Bod_Total_Diario").getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: <?php echo json_encode(array_reverse($labelsG2)); ?>,
+        datasets: [
+            {
+                label: "% Ocupacion",
+                type: 'line',
+                fill: false,
+                backgroundColor: "#5c5c5b",
+                borderColor: "#5c5c5b",
+                borderWidth: 3,
+                yAxisID: 'porcentaje-axis',
+                data: <?php echo json_encode(array_reverse($porcentajeDataG2)); ?>
+            },
+            {
+                label: "Capacidad Total",
+                backgroundColor: "#F4EB95",
+                borderColor: "#D4C35E",
+                borderWidth: 3,
+                data: <?php echo json_encode(array_reverse($capacidadTotalDataG2)); ?>
+            },
+            {
+                label: "Ubicaciones Ocupadas",
+                backgroundColor: "#FFB4A1",
+                borderColor: "#FF867F",
+                borderWidth: 3,
+                data: <?php echo json_encode(array_reverse($ocupadasDataG2)); ?>
+            }
+            
+        ]
+    },
+    options: {
+        legend: { display: true },
+        title: {
+            display: true,
+            text: 'Capacidad de bodegas TOTAL por Dia.'
+        },
+        scales: {
+            yAxes: [
+                {
+                    id: 'cantidad-axis',
+                    type: 'linear',
+                    position: 'left',
+                    ticks: {
+                        beginAtZero: false
+                    }
+                },
+                {
+                    id: 'porcentaje-axis',
+                    type: 'linear',
+                    
+                    position: 'right',
+                    ticks: {
+                        beginAtZero: true,
+                        max: 100,
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            ]
+        },
+        plugins: {
+        datalabels: {
+            anchor: 'end',
+            align: 'end',
+            formatter: function (value, context) {
+                return value ;
+            },
+            font: {
+                size: 13 // Tamaño del texto
+            }
+        }
+    },
+    animation: {
+    onComplete: function () {
+        var ctx = this.chart.ctx;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.font = "12px Arial";
+
+        this.data.datasets.forEach(function (dataset) {
+            for (var i = 0; i < dataset.data.length; i++) {
+                var model = dataset._meta[Object.keys(dataset._meta)[0]].data[i]._model;
+                ctx.fillStyle = '#3D3D3D'; // Color
+                var value = dataset.data[i];
+                if (value < 100) {
+                    value += "%";
+                }
+                ctx.fillText(value, model.x + 10 , model.y - 5);
+            }
+        });
+    }
+}
+
+    }
+});
+
+
+var toneladasElement = document.getElementById('PromedioCapacidadBodegas');
+var valorToneladas = <?php echo $PromedioAlmacenes; ?>;
+toneladasElement.textContent = valorToneladas;
+
+</script>
 
 <?php
 // Establecer la conexión a la base de datos (reemplaza con tus propios datos)
@@ -1617,15 +1529,15 @@ try {
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
 
-    $FechaHace9Dias = $fechaInicioRango;
-    $FechaLimite = $fechaFinRangoExclusivo;
+    $FechaActual = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
 
 
     
     $conn = new mysqli($servername, $username, $password, $dbname);
     $sql = "SELECT date(FechaRegistro) AS Fecha, round(sum(ASG.Cantidades * PR.PESOBRUTOCAJA /1000),2) AS ToneladasProduccion FROM `asignaciones` ASG
     inner join productos PR on PR.IDH = ASG.IDH
-    where ASG.Estado = 'Ingresado' and ASG.FechaRegistro >= '$FechaHace9Dias' and ASG.FechaRegistro < '$FechaLimite' GROUP by date(FechaRegistro) ORDER BY  date(FechaRegistro) desc ;  ";
+    where ASG.Estado = 'Ingresado' and date(ASG.FechaRegistro) between '$FechaHace9Dias' and '$FechaActual' GROUP by date(FechaRegistro) ORDER BY  date(FechaRegistro) desc ;  ";
     $result = $conn->query($sql);
     
 
@@ -1661,30 +1573,50 @@ try {
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
 
-    $FechaHace9Dias = $fechaInicioRango;
-    $FechaLimite = $fechaFinRangoExclusivo;
+    $FechaHoy = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
 
    
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT DATE(FechaDespacho) AS Fecha, ROUND(SUM(PesoDeDespacho) / 1000, 2) AS TotalPesoDespacho
-    FROM (
-        SELECT (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet) AS PesoDeDespacho,
-               D.FechaRealizado AS FechaDespacho
-        FROM despachos D
-        INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
-        INNER JOIN productos PR ON PR.IDH = D.IDH
-        WHERE D.FechaRealizado >= '$FechaHace9Dias' AND D.FechaRealizado < '$FechaLimite'
+    $sql = "SELECT DATE(FechaDespacho) AS Fecha, ROUND(SUM(PesoDeDespacho) /1000,2) AS TotalPesoDespacho
+    FROM (  SELECT DISTINCT
+    D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
+    DATE(PH.FechaProduccion) AS FechaProduccion, DATE(PH.FechaVencimiento) AS FechaVencimiento,
+    D.Operador, 'Turno', 'Tapado/Libre',G.NombreDestino, G.Transportista, D.Guia_Carga as Transporte, 
+    TIME(D.FechaRealizado) AS HoraDeDespacho, 'Notas', 
+    IFNULL(TIMESTAMPDIFF(MONTH, date(D.FechaRealizado), date(PH.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 
+    'Tapando/NoTapando', PH.EstatusUbicacion AS ProductoEsta, PR.CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA as PesoPorCaja,PR.CAJASXPALET as Cajas,0 as CajasPK, (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet)  as PesoDeDespacho,
+    D.FechaRealizado AS FechaDespacho, MONTHNAME(FechaRealizado) AS MES, DATE_FORMAT(FechaRealizado, '%W') AS nombre_dia,
+    CONCAT(
+        TIMESTAMPDIFF(DAY, D.FechaRealizado, D.FechaRealizado), ' días, ',
+        HOUR(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' horas, ',
+        MINUTE(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' minutos, ',
+        SECOND(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' segundos'
+    ) AS TiempoDeDespacho  
+FROM despachos D
+INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
+INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
+INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
+INNER JOIN productos PR ON PR.IDH = D.IDH
+WHERE DATE(D.FechaRealizado) BETWEEN '$FechaHace9Dias' and '$FechaHoy'  
 
-        UNION ALL
+union
 
-        SELECT (PR.PESOBRUTOCAJA * SUM(DP.UnidadesEnPallet)) AS PesoDeDespacho,
-               DS.FechaRealizado AS FechaDespacho
-        FROM `detalle_piking` DP
-        INNER JOIN productos PR ON DP.IDH = PR.IDH
-        INNER JOIN despachos DS ON DP.Transporte = DS.Guia_Carga AND DP.IDH = DS.IDH
-        WHERE DS.Fecha_Hora_Despacho >= '$FechaHace9Dias' AND DS.Fecha_Hora_Despacho < '$FechaLimite' AND DS.Operador = 'Piking'
-        GROUP BY DS.FechaRealizado, DP.Transporte, DP.IDH
-    ) AS subquery
+SELECT DP.Estatus, CF.Ubicacion,'N/A',PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, 'N/A', 'N/A', GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado),'N/A', IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 'N/A', 'N/A','1', PR.LINEA, PR.PESOBRUTOCAJA, 0 as Cajas,
+sum(DP.UnidadesEnPallet) as CajasPK, (PR.PESOBRUTOCAJA * sum(DP.UnidadesEnPallet))  , DS.FechaRealizado,  DATE_FORMAT(DS.FechaRealizado, '%M') AS nombre_mes,
+        DATE_FORMAT(DS.FechaRealizado, '%W') AS nombre_dia,
+        CONCAT(
+        TIMESTAMPDIFF(DAY, DS.FechaRealizado, DS.FechaRealizado), ' días, ',
+        HOUR(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' horas, ',
+        MINUTE(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' minutos, ',
+        SECOND(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' segundos'
+    ) AS TiempoDeDespacho
+FROM `detalle_piking` DP
+INNER join productos PR     on DP.IDH = PR.IDH
+INNER join config_piking CF on DP.IDH = CF.IDH
+INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
+INNER join Guias GS			on DP.Transporte = GS.Transporte
+where date(DS.Fecha_Hora_Despacho) BETWEEN '$FechaHace9Dias' and '$FechaHoy'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
 
@@ -1831,21 +1763,20 @@ try {
     include '../LQS_EUQ/Connect.php';
    
 
-    $FechaHace9Dias = $fechaInicioRango;
-    $FechaLimite = $fechaFinRangoExclusivo;
+    $FechaActual = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
 
    
     $conn = new mysqli($servername, $username, $password, $dbname);
     $sql = "SELECT fecha,  SUM(total_asignaciones) AS total_asignaciones,
-    SUM(total_despachos) AS total_despachos,
-    DATE_FORMAT(fecha, '%W') AS nombre_dia
+    SUM(total_despachos) AS total_despachos
   FROM (
     SELECT
       DATE(FechaRegistro) AS fecha,
            COUNT(*) AS total_asignaciones,
       0 AS total_despachos
     FROM asignaciones
-    WHERE PalletCompleto = 'Si' and FechaRegistro >= '$FechaHace9Dias' and FechaRegistro < '$FechaLimite' AND Estado = 'Ingresado' and cantidades > 0
+    WHERE PalletCompleto = 'Si' and date(FechaRegistro) between '$FechaHace9Dias' and '$FechaActual' AND Estado = 'Ingresado' and cantidades > 0  
     GROUP BY fecha
     UNION ALL
     SELECT
@@ -1853,7 +1784,7 @@ try {
            0 AS total_asignaciones,
       COUNT(*) AS total_despachos
     FROM despachos
-    WHERE Operador <> 'PIKING' and Fecha_Hora_Despacho >= '$FechaHace9Dias' and Fecha_Hora_Despacho < '$FechaLimite' AND Estado = 'Despachado'
+    WHERE Operador <> 'PIKING' and date(Fecha_Hora_Despacho) between '$FechaHace9Dias' and '$FechaActual' AND Estado = 'Despachado'
     GROUP BY fecha
   ) AS subquery
   GROUP BY fecha
@@ -1876,7 +1807,7 @@ try {
         // Almacena los nombres de las bodegas en un array
 
         while ($row = $result->fetch_assoc()) {
-            $labelsG4[] = date('d/m/Y', strtotime($row['fecha'])) . ' ' . $row['nombre_dia'];
+            $labelsG4[] = date('d/m/Y', strtotime($row['fecha'])).' '.$row['nombre_dia'];
             $TotalAsignacionesG4[] = $row['total_asignaciones'];
             $TotalDespachosG4[] = $row['total_despachos'];
 
@@ -1992,30 +1923,50 @@ try {
     include '../LQS_EUQ/Connect.php';
    
 
-    $FechaHace9Dias = $fechaInicioRango;
-    $FechaLimite = $fechaFinRangoExclusivo;
+    $FechaActual = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
 
    
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT DATE(FechaDespacho) AS Fecha, SUM(Cajas) AS SUMCajas, SUM(CajasPK) AS SUMCajasPK
-    FROM (
-        SELECT PR.CAJASXPALET AS Cajas,
-               0 AS CajasPK,
-               D.FechaRealizado AS FechaDespacho
-        FROM despachos D
-        INNER JOIN productos PR ON PR.IDH = D.IDH
-        WHERE D.FechaRealizado >= '$FechaHace9Dias' AND D.FechaRealizado < '$FechaLimite'
+    $sql = "SELECT DATE(FechaDespacho) AS Fecha, SUM(Cajas)  AS SUMCajas, SUM(CajasPK)  AS SUMCajasPK
+    FROM(SELECT DISTINCT
+    D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
+    DATE(PH.FechaProduccion) AS FechaProduccion, DATE(PH.FechaVencimiento) AS FechaVencimiento,
+    D.Operador, 'Turno', 'Tapado/Libre',G.NombreDestino, G.Transportista, D.Guia_Carga as Transporte, 
+    TIME(D.FechaRealizado) AS HoraDeDespacho, 'Notas', 
+    IFNULL(TIMESTAMPDIFF(MONTH, date(D.FechaRealizado), date(PH.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 
+    'Tapando/NoTapando', PH.EstatusUbicacion AS ProductoEsta, PR.CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA as PesoPorCaja,PR.CAJASXPALET as Cajas,0 as CajasPK, (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet) /1000 as PesoDeDespacho,
+    D.FechaRealizado AS FechaDespacho, MONTHNAME(FechaRealizado) AS MES, DATE_FORMAT(FechaRealizado, '%W') AS nombre_dia,
+    CONCAT(
+        TIMESTAMPDIFF(DAY, D.FechaRealizado, D.FechaRealizado), ' días, ',
+        HOUR(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' horas, ',
+        MINUTE(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' minutos, ',
+        SECOND(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' segundos'
+    ) AS TiempoDeDespacho  
+FROM despachos D
+INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
+INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
+INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
+INNER JOIN productos PR ON PR.IDH = D.IDH
+WHERE DATE(D.FechaRealizado) BETWEEN '$FechaHace9Dias' and '$FechaActual'  
 
-        UNION ALL
+union
 
-        SELECT 0 AS Cajas,
-               SUM(DP.UnidadesEnPallet) AS CajasPK,
-               DS.FechaRealizado AS FechaDespacho
-        FROM `detalle_piking` DP
-        INNER JOIN despachos DS ON DP.Transporte = DS.Guia_Carga AND DP.IDH = DS.IDH
-        WHERE DS.Fecha_Hora_Despacho >= '$FechaHace9Dias' AND DS.Fecha_Hora_Despacho < '$FechaLimite' AND DS.Operador = 'Piking'
-        GROUP BY DS.FechaRealizado, DP.Transporte, DP.IDH
-    ) AS subquery
+SELECT DP.Estatus, CF.Ubicacion,'N/A',PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, 'N/A', 'N/A', GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado),'N/A', IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 'N/A', 'N/A','1', PR.LINEA, PR.PESOBRUTOCAJA, 0 as Cajas,
+sum(DP.UnidadesEnPallet) as CajasPK, (PR.PESOBRUTOCAJA * sum(DP.UnidadesEnPallet)) / 1000 , DS.FechaRealizado,  DATE_FORMAT(DS.FechaRealizado, '%M') AS nombre_mes,
+        DATE_FORMAT(DS.FechaRealizado, '%W') AS nombre_dia,
+        CONCAT(
+        TIMESTAMPDIFF(DAY, DS.FechaRealizado, DS.FechaRealizado), ' días, ',
+        HOUR(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' horas, ',
+        MINUTE(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' minutos, ',
+        SECOND(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' segundos'
+    ) AS TiempoDeDespacho
+FROM `detalle_piking` DP
+INNER join productos PR     on DP.IDH = PR.IDH
+INNER join config_piking CF on DP.IDH = CF.IDH
+INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
+INNER join Guias GS			on DP.Transporte = GS.Transporte
+where date(DS.Fecha_Hora_Despacho) BETWEEN '$FechaHace9Dias' and '$FechaActual'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
 
@@ -2339,7 +2290,7 @@ try {
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
 
-    $sql = "SELECT Top10aVencer.IDH, Top10aVencer.FechaVencimiento, Top10aVencer.Pallets, PR.Descripcion
+    $sql = "SELECT Top10aVencer.*, PR.Descripcion
 FROM `Top10aVencer`
 INNER JOIN productos PR ON PR.IDH = Top10aVencer.IDH
 WHERE FechaVencimiento <= DATE_ADD(CURDATE(), INTERVAL 1 YEAR)
@@ -2444,7 +2395,7 @@ try {
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
 
-    $sql = "SELECT PK.IDH,PR.Descripcion,date(PK.FechaVencimiento) as Fecha, count(*) as Bultos FROM `detalle_piking` PK inner join productos PR on PK.IDH = PR.IDH where PK.Transporte is null  and PK.FechaVencimiento is not null and PK.FechaVencimiento < DATE_ADD(DATE_ADD(CURDATE(), INTERVAL 1 YEAR), INTERVAL 1 DAY) GROUP by PK.IDH,date(PK.FechaVencimiento) order by date(PK.FechaVencimiento) asc Limit 10;";
+    $sql = "SELECT PK.IDH,PR.Descripcion,date(PK.FechaVencimiento) as Fecha, count(*) as Bultos FROM `detalle_piking` PK inner join productos PR on PK.IDH = PR.IDH where PK.Transporte is null  and date(PK.FechaVencimiento) is not null and date(PK.FechaVencimiento) <= DATE_ADD(CURDATE(), INTERVAL 1 YEAR) GROUP by PK.IDH,date(PK.FechaVencimiento) order by date(PK.FechaVencimiento) asc Limit 10;";
     $result = $conn->query($sql);
 
     // Inicializar arrays para las etiquetas y los conjuntos de datos
@@ -2548,7 +2499,7 @@ try {
             $conn = new mysqli($servername, $username, $password, $dbname);
             $sql = "SELECT PK.IDH,PR.Descripcion,date(PK.FechaVencimiento) as Fecha, count(*) as Bultos FROM `detalle_piking` PK
 inner join productos PR on PK.IDH = PR.IDH
-where PK.Transporte is null  and PK.FechaVencimiento is not null and PK.FechaVencimiento < DATE_ADD(DATE_ADD(CURDATE(), INTERVAL 1 YEAR), INTERVAL 1 DAY) GROUP by PK.IDH,date(PK.FechaVencimiento) order by date(PK.FechaVencimiento) asc";
+where PK.Transporte is null  and date(PK.FechaVencimiento) is not null and date(PK.FechaVencimiento) <= DATE_ADD(CURDATE(), INTERVAL 1 YEAR) GROUP by PK.IDH,date(PK.FechaVencimiento) order by date(PK.FechaVencimiento) asc";
             $result = $conn->query($sql);
             if ($result->num_rows > 0) {
                 while ($row = $result->fetch_assoc()) {
@@ -2588,7 +2539,7 @@ where PK.Transporte is null  and PK.FechaVencimiento is not null and PK.FechaVen
             <?php
             include '../LQS_EUQ/Connect.php';
             $conn = new mysqli($servername, $username, $password, $dbname);
-            $sql = "SELECT Top10aVencer.IDH, Top10aVencer.FechaVencimiento, Top10aVencer.Pallets, PR.Descripcion FROM `Top10aVencer`
+            $sql = "SELECT Top10aVencer.*, PR.Descripcion FROM `Top10aVencer`
                     INNER JOIN productos PR ON PR.IDH = Top10aVencer.IDH
                     ORDER BY FechaVencimiento ASC";
             $result = $conn->query($sql);
@@ -2693,14 +2644,31 @@ try {
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
     
-    $fecha_hace_9_dias = $fechaInicioRango;
-    $fecha_limite = $fechaFinRangoExclusivo;
+    $fecha_hoy = date('Y-m-d', strtotime($fechaFinal));
+    $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
 
     
-    $sql = "SELECT DATE(D.FechaRealizado) AS Fecha, SUM(PR.CAJASXPALET) AS TotalBultos
+    $sql = "SELECT DATE(FechaDespacho) AS Fecha, SUM(Cajas)  AS TotalBultos
+FROM ( SELECT DISTINCT
+D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
+DATE(PH.FechaProduccion) AS FechaProduccion, DATE(PH.FechaVencimiento) AS FechaVencimiento,
+D.Operador, 'Turno', 'Tapado/Libre',G.NombreDestino, G.Transportista, D.Guia_Carga as Transporte, 
+TIME(D.FechaRealizado) AS HoraDeDespacho, 'Notas', 
+IFNULL(TIMESTAMPDIFF(MONTH, date(D.FechaRealizado), date(PH.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 
+'Tapando/NoTapando', PH.EstatusUbicacion AS ProductoEsta, PR.CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA as PesoPorCaja,PR.CAJASXPALET as Cajas, (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet)  as PesoDeDespacho,
+D.FechaRealizado AS FechaDespacho, MONTHNAME(FechaRealizado) AS MES, DATE_FORMAT(FechaRealizado, '%W') AS nombre_dia,
+CONCAT(
+TIMESTAMPDIFF(DAY, D.FechaRealizado, D.FechaRealizado), ' días, ',
+HOUR(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' horas, ',
+MINUTE(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' minutos, ',
+SECOND(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' segundos'
+) AS TiempoDeDespacho  
 FROM despachos D
+INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
+INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
+INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
 INNER JOIN productos PR ON PR.IDH = D.IDH
-WHERE D.FechaRealizado >= '$fecha_hace_9_dias' AND D.FechaRealizado < '$fecha_limite'
+WHERE DATE(D.FechaRealizado) BETWEEN '$FechaHace9Dias' AND '$FechaHoy') AS subquery
 GROUP BY Fecha
 ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -2819,14 +2787,28 @@ try {
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
     
-    $fecha_hace_9_dias = $fechaInicioRango;
-    $fecha_limite = $fechaFinRangoExclusivo;
+    $fecha_hoy = date('Y-m-d', strtotime($fechaFinal));
+    $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
 
     
-    $sql = "SELECT DATE(DS.FechaRealizado) AS Fecha, SUM(DP.UnidadesEnPallet) AS TotalBultos
-    FROM `detalle_piking` DP
-    INNER JOIN despachos DS ON DP.Transporte = DS.Guia_Carga AND DP.IDH = DS.IDH
-    WHERE DS.Fecha_Hora_Despacho >= '$fecha_hace_9_dias' AND DS.Fecha_Hora_Despacho < '$fecha_limite' AND DS.Operador = 'PIKING'
+    $sql = "SELECT DATE(FechaRealizado) AS Fecha, SUM(CajasPK)  AS TotalBultos
+    FROM (
+      SELECT DP.Estatus, CF.Ubicacion,'N/A' as Nivel,PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, 'N/A' as Turno, 'Tapado/Libre', GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado),'N/A' as Notas, IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 'Tapando/NoTapando' , 'N/A' as ProductoEsta,'1' as CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA, 
+sum(DP.UnidadesEnPallet) as CajasPK, (PR.PESOBRUTOCAJA * sum(DP.UnidadesEnPallet))  as PesoDeDespacho, DS.FechaRealizado,  DATE_FORMAT(DS.FechaRealizado, '%M') AS nombre_mes,
+        DATE_FORMAT(DS.FechaRealizado, '%W') AS nombre_dia,
+        CONCAT(
+        TIMESTAMPDIFF(DAY, DS.FechaRealizado, DS.FechaRealizado), ' días, ',
+        HOUR(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' horas, ',
+        MINUTE(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' minutos, ',
+        SECOND(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' segundos'
+    ) AS TiempoDeDespacho
+FROM `detalle_piking` DP
+INNER join productos PR     on DP.IDH = PR.IDH
+INNER join config_piking CF on DP.IDH = CF.IDH
+INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
+INNER join Guias GS			on DP.Transporte = GS.Transporte
+where date(DS.Fecha_Hora_Despacho) BETWEEN '$FechaHace9Dias' AND '$FechaHoy' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH)
+          AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -2942,15 +2924,26 @@ try {
     $conn = new mysqli($servername, $username, $password, $dbname);
     
     
-    $fecha_hace_9_dias = $fechaInicioRango;
-    $fecha_limite = $fechaFinRangoExclusivo;
+    $fecha_hoy = date('Y-m-d', strtotime($fechaFinal));
+    $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
 
     
-    $sql = "SELECT DATE(DS.FechaRealizado) AS Fecha, ROUND(SUM(PR.PESOBRUTOCAJA * DP.UnidadesEnPallet) / 1000, 2) AS TotalBultos
-    FROM `detalle_piking` DP
-    INNER JOIN productos PR ON DP.IDH = PR.IDH
-    INNER JOIN despachos DS ON DP.Transporte = DS.Guia_Carga AND DP.IDH = DS.IDH
-    WHERE DS.Fecha_Hora_Despacho >= '$fecha_hace_9_dias' AND DS.Fecha_Hora_Despacho < '$fecha_limite' AND DS.Operador = 'PIKING'
+    $sql = "SELECT DATE(FechaRealizado) AS Fecha, ROUND(SUM(PesoDeDespacho) /1000,2) AS TotalBultos
+    FROM (SELECT DP.Estatus, CF.Ubicacion,PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado), IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, PR.LINEA, PR.PESOBRUTOCAJA, 
+sum(DP.UnidadesEnPallet) as CajasPK, (PR.PESOBRUTOCAJA * sum(DP.UnidadesEnPallet))  as PesoDeDespacho, DS.FechaRealizado,  DATE_FORMAT(DS.FechaRealizado, '%M') AS nombre_mes,
+        DATE_FORMAT(DS.FechaRealizado, '%W') AS nombre_dia,
+        CONCAT(
+        TIMESTAMPDIFF(DAY, DS.FechaRealizado, DS.FechaRealizado), ' días, ',
+        HOUR(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' horas, ',
+        MINUTE(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' minutos, ',
+        SECOND(TIMEDIFF(DS.FechaRealizado, DS.FechaRealizado)), ' segundos'
+    ) AS TiempoDeDespacho
+FROM `detalle_piking` DP
+INNER join productos PR     on DP.IDH = PR.IDH
+INNER join config_piking CF on DP.IDH = CF.IDH
+INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
+INNER join Guias GS			on DP.Transporte = GS.Transporte
+where date(DS.Fecha_Hora_Despacho) BETWEEN '$FechaHace9Dias' AND '$FechaHoy' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -3087,11 +3080,27 @@ try {
     $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
 
     
-    $sql = "SELECT DATE(D.FechaRealizado) AS Fecha, ROUND(SUM(PR.PESOBRUTOCAJA * PH.UnidadesEnPallet) / 1000, 2) AS TotalBultos
-    FROM despachos D
-    INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
-    INNER JOIN productos PR ON PR.IDH = D.IDH
-    WHERE D.FechaRealizado >= '$fecha_hace_9_dias' AND D.FechaRealizado < '$fecha_limite'
+    $sql = "SELECT DATE(FechaDespacho) AS Fecha, ROUND(SUM(PesoDeDespacho) / 1000,2)  AS TotalBultos
+    FROM (SELECT DISTINCT
+      D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
+      DATE(PH.FechaProduccion) AS FechaProduccion, DATE(PH.FechaVencimiento) AS FechaVencimiento,
+      D.Operador, 'Turno', 'Tapado/Libre',G.NombreDestino, G.Transportista, D.Guia_Carga as Transporte, 
+      TIME(D.FechaRealizado) AS HoraDeDespacho, 'Notas', 
+      IFNULL(TIMESTAMPDIFF(MONTH, date(D.FechaRealizado), date(PH.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 
+      'Tapando/NoTapando', PH.EstatusUbicacion AS ProductoEsta, PR.CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA as PesoPorCaja,PR.CAJASXPALET as Cajas, (PR.PESOBRUTOCAJA * PH.UnidadesEnPallet)  as PesoDeDespacho,
+      D.FechaRealizado AS FechaDespacho, MONTHNAME(FechaRealizado) AS MES, DATE_FORMAT(FechaRealizado, '%W') AS nombre_dia,
+      CONCAT(
+          TIMESTAMPDIFF(DAY, D.FechaRealizado, D.FechaRealizado), ' días, ',
+          HOUR(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' horas, ',
+          MINUTE(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' minutos, ',
+          SECOND(TIMEDIFF(D.FechaRealizado, D.FechaRealizado)), ' segundos'
+      ) AS TiempoDeDespacho  
+  FROM despachos D
+  INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
+  INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
+  INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
+  INNER JOIN productos PR ON PR.IDH = D.IDH
+  WHERE DATE(D.FechaRealizado) BETWEEN '$FechaHace9Dias' AND '$FechaHoy') AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -3448,20 +3457,18 @@ try {
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $FechaInicio = $fechaInicioRango;
-    $FechaLimite = $fechaFinRangoExclusivo;
     $sql = "SELECT 'Agregadas' AS Color, IFNULL(A.Guias, 0) AS Guias
 FROM (
     SELECT COUNT(*) AS Guias
     FROM `Bitar_ConteoCiego`
-    WHERE Fecha >= '$FechaInicio' and Fecha < '$FechaLimite' AND Accion = 'Agregar'
+    WHERE DATE(Fecha) BETWEEN '$FechaHace9Dias' and '$FechaActual' AND Accion = 'Agregar'
 ) A
 UNION ALL
 SELECT 'Eliminadas' AS Color, IFNULL(E.Guias, 0) AS Guias
 FROM (
     SELECT COUNT(*) AS Guias
     FROM `Bitar_ConteoCiego`
-    WHERE Fecha >= '$FechaInicio' and Fecha < '$FechaLimite' AND Accion = 'Eliminar'
+    WHERE DATE(Fecha) BETWEEN '$FechaHace9Dias' and '$FechaActual' AND Accion = 'Eliminar'
 ) E";
     
     $result = $conn->query($sql);
@@ -3551,12 +3558,12 @@ try {
     $conn = new mysqli($servername, $username, $password, $dbname);
     include '../LQS_EUQ/Connect.php';
    
-    $FechaHace9Dias = $fechaInicioRango;
-    $FechaLimite = $fechaFinRangoExclusivo;
+    $FechaActual = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
 
    
   
-    $sql = "SELECT  Operador, count(*) as Pallets FROM `asignaciones` where FechaColocado >= '$FechaHace9Dias' and FechaColocado < '$FechaLimite' and Operador is not null GROUP by Operador order by count(*) Desc";
+    $sql = "SELECT  Operador, count(*) as Pallets FROM `asignaciones` where date(FechaColocado) BETWEEN '$FechaHace9Dias' and '$FechaActual' and Operador is not null GROUP by Operador order by count(*) Desc";
     $result = $conn->query($sql);
 
     // Inicializar arrays para las etiquetas y los conjuntos de datos
@@ -3656,11 +3663,11 @@ try {
     include '../LQS_EUQ/Connect.php';
     
     
-    $FechaHace9Dias = $fechaInicioRango;
-    $FechaLimite = $fechaFinRangoExclusivo;
+    $FechaActual = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
 
     
-    $sql = "SELECT  Operador, count(*) as Pallets FROM `despachos` where Fecha_hora_despacho >= '$FechaHace9Dias' and Fecha_hora_despacho < '$FechaLimite'  and Operador is not null and Operador <> 'PIKING' GROUP by Operador order by count(*) asc";
+    $sql = "SELECT  Operador, count(*) as Pallets FROM `despachos` where date(Fecha_hora_despacho) BETWEEN '$FechaHace9Dias' and '$FechaActual'  and Operador is not null and Operador <> 'PIKING' GROUP by Operador order by count(*) asc";
     $result = $conn->query($sql);
 
     // Inicializar arrays para las etiquetas y los conjuntos de datos
@@ -3961,4 +3968,6 @@ try {
         
 
 </body>
+
+
 </html>

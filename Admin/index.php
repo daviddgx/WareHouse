@@ -3219,17 +3219,19 @@ toneladasElement2.textContent = valorToneladas1;
 
 <?php
 // Establecer la conexión a la base de datos (reemplaza con tus propios datos)
+$toneladasPikeadasPorFecha = [];
+
 try {
 
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
-    
-    
+
+
     $fecha_hace_9_dias = $fechaInicioRango;
     $fecha_limite = $fechaFinRangoExclusivo;
 
-    
+
     $sql = "SELECT DATE(DS.FechaRealizado) AS Fecha, ROUND(SUM(PR.PESOBRUTOCAJA * DP.UnidadesEnPallet) / 1000, 2) AS TotalBultos
     FROM `detalle_piking` DP
     INNER JOIN productos PR ON DP.IDH = PR.IDH
@@ -3242,9 +3244,9 @@ try {
     // Inicializar arrays para las etiquetas y los conjuntos de datos
     $labelsG7 = [];
     $BultosG72 = [];
-    $Registros = 0;
+    $registrosToneladasPikeadas = 0;
     $TotalPiking = 0;
-  
+
 
     // Procesar los resultados
     if ($result->num_rows > 0) {
@@ -3255,17 +3257,19 @@ try {
             $labelsG7[] = date('d/m/Y', strtotime($row['Fecha']));
             $BultosG72[] = $row['TotalBultos'];
             $TotalPiking += $row['TotalBultos'];
-            $Registros += 1;
+            $registrosToneladasPikeadas += 1;
+            $toneladasPikeadasPorFecha[$row['Fecha']] = $row['TotalBultos'];
 
         }
     }
 
-    array_unshift($labelsG7, "Promedio");
-
-    
-    $PikingPromedio = round($TotalPiking / $Registros, 2);
-    
-    array_unshift($BultosG72, $PikingPromedio);
+    if ($registrosToneladasPikeadas > 0) {
+        array_unshift($labelsG7, "Promedio");
+        $PikingPromedio = round($TotalPiking / $registrosToneladasPikeadas, 2);
+        array_unshift($BultosG72, $PikingPromedio);
+    } else {
+        $PikingPromedio = 0;
+    }
 
 
 } catch (Exception $e) {
@@ -3360,17 +3364,19 @@ toneladasElement.textContent = valorToneladas;
 
 <?php
 // Establecer la conexión a la base de datos (reemplaza con tus propios datos)
+$toneladasDespachadasPorFecha = [];
+
 try {
 
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
-    
-    
+
+
     $fecha_hoy = date('Y-m-d', strtotime($fechaFinal));
     $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
 
-    
+
     $sql = "SELECT DATE(D.FechaRealizado) AS Fecha, ROUND(SUM(PR.PESOBRUTOCAJA * PH.UnidadesEnPallet) / 1000, 2) AS TotalBultos
     FROM despachos D
     INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
@@ -3383,9 +3389,9 @@ try {
     // Inicializar arrays para las etiquetas y los conjuntos de datos
     $labelsG7 = [];
     $BultosG7 = [];
-    $Registros = 0;
+    $registrosToneladasDespachadas = 0;
     $TotalPalletsDes = 0;
-  
+
 
     // Procesar los resultados
     if ($result->num_rows > 0) {
@@ -3396,17 +3402,19 @@ try {
             $labelsG7[] = date('d/m/Y', strtotime($row['Fecha']));
             $BultosG7[] = $row['TotalBultos'];
             $TotalPalletsDes += $row['TotalBultos'];
-            $Registros += 1;
+            $registrosToneladasDespachadas += 1;
+            $toneladasDespachadasPorFecha[$row['Fecha']] = $row['TotalBultos'];
 
         }
     }
 
-    array_unshift($labelsG7, "Promedio");
-
-    
-    $PikingPromedio = round($TotalPalletsDes / $Registros, 2);
-    
-    array_unshift($BultosG7, $PikingPromedio);
+    if ($registrosToneladasDespachadas > 0) {
+        array_unshift($labelsG7, "Promedio");
+        $PikingPromedio = round($TotalPalletsDes / $registrosToneladasDespachadas, 2);
+        array_unshift($BultosG7, $PikingPromedio);
+    } else {
+        $PikingPromedio = 0;
+    }
 
 
 } catch (Exception $e) {
@@ -3515,28 +3523,42 @@ toneladasElement.textContent = valorToneladas;
 
 
 <!-- Nueva Toneladas pallets vs Toneladas Piking -->
+<?php
+$labelsToneladasComparativo = [];
+$datosToneladasDespachadasComparativo = [];
+$datosToneladasPikeadasComparativo = [];
+
+$fechasComparativo = array_unique(array_merge(array_keys($toneladasDespachadasPorFecha), array_keys($toneladasPikeadasPorFecha)));
+sort($fechasComparativo);
+
+foreach ($fechasComparativo as $fechaISO) {
+    $labelsToneladasComparativo[] = date('d/m/Y', strtotime($fechaISO));
+    $datosToneladasDespachadasComparativo[] = isset($toneladasDespachadasPorFecha[$fechaISO]) ? $toneladasDespachadasPorFecha[$fechaISO] : 0;
+    $datosToneladasPikeadasComparativo[] = isset($toneladasPikeadasPorFecha[$fechaISO]) ? $toneladasPikeadasPorFecha[$fechaISO] : 0;
+}
+?>
 <script>
     // Capacidad de bodegas TOTAL por Dia.
     new Chart(document.getElementById("TONS-DespachadasvsPikeadas").getContext('2d'), {
         type: 'bar',
         data: {
-            labels: <?php echo json_encode(array_reverse($labelsG7)); ?>,
+            labels: <?php echo json_encode($labelsToneladasComparativo); ?>,
             datasets: [
                 {
                     label: "Toneladas Despachadas",
                     backgroundColor: "#E7A447",
                     borderColor: "#AE8F6C",
                     borderWidth: 3,
-                    data: <?php echo json_encode(array_reverse($BultosG7)); ?>
+                    data: <?php echo json_encode($datosToneladasDespachadasComparativo); ?>
                 },
                 {
                     label: "Toneladas Pikeadas",
                     backgroundColor: "#5adfe8",
                     borderColor: "#11848c",
                     borderWidth: 3,
-                    data: <?php echo json_encode(array_reverse($BultosG72)); ?>
+                    data: <?php echo json_encode($datosToneladasPikeadasComparativo); ?>
                 }
-                
+
             ]
         },
         options: {

@@ -39,10 +39,12 @@ if (!empty($_POST['Entrar'])) {
                 // Cambiamos los IF anidados  por Switch/Case para mejorar el rendimiento
 
                 while ($row = $result->fetch_assoc()) {
+                    $sessionDate = date('Y-m-d');
 
                     switch ($row['TipoUsuario']) {
                         case '1':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
                             header('Location: ../Admin/index.php');
@@ -50,6 +52,7 @@ if (!empty($_POST['Entrar'])) {
 
                         case '2':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
                             header('Location: ../MontaCargas/index.php');
@@ -57,6 +60,7 @@ if (!empty($_POST['Entrar'])) {
 
                         case '3':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
                             header('Location: ../Inventarios/index.php');
@@ -64,18 +68,21 @@ if (!empty($_POST['Entrar'])) {
 
                         case '4':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
                             header('Location: ../Picking/index.php');
                             break;
                         case '5':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
                             header('Location: ../DashBoard/index.php');
                             break;
                         case '6':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
                             header('Location: ../InventariosPL/index.php');

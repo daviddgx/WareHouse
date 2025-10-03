@@ -1,4 +1,11 @@
 <?php
+session_start();
+$currentDate = date('Y-m-d');
+
+if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
+    header('Location: ../Innet/505.html');
+    exit();
+}
 //header("Content-Type: text/html;charset=utf-8");
 $usuario  = "Conection_STR";
 $password = "Inicio94=";

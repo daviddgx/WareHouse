@@ -1148,7 +1148,11 @@ ob_end_flush();
         <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
         <script src="../assets/libs/chartist/dist/chartist.min.js"></script>
         <script src="../assets/libs/chartist-plugin-tooltips/dist/chartist-plugin-tooltip.min.js"></script>
-        <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
+        <!-- Removed dashboard1 demo script because the admin dashboard has its own
+             custom charts and the demo attempted to initialize Chartist and
+             jVectorMap widgets that do not exist on this page, producing
+             console errors. -->
+        <!-- <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script> -->
         <script src="../dist/js/OnLine.js"></script>
         <!-- Chart JS -->
         <script src="../assets/libs/chart.js/dist/Chart.min.js"></script>
@@ -1396,11 +1400,11 @@ ob_end_flush();
             });
 
             (function () {
-                if (!window.Chart || window.__scrollActivatedChartPlugin) {
+                if (!window.Chart || window.__chartAnimationDefaultsConfigured) {
                     return;
                 }
 
-                window.__scrollActivatedChartPlugin = true;
+                window.__chartAnimationDefaultsConfigured = true;
 
                 var globalDefaults = Chart.defaults && Chart.defaults.global;
                 if (globalDefaults && globalDefaults.animation) {
@@ -1411,52 +1415,6 @@ ob_end_flush();
                 } else if (Chart.defaults && Chart.defaults.animation) {
                     Chart.defaults.animation.duration = 1200;
                     Chart.defaults.animation.easing = 'easeOutQuart';
-                }
-
-                var chartObserver = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries, obs) {
-                    entries.forEach(function (entry) {
-                        if (entry.isIntersecting) {
-                            var canvas = entry.target;
-                            var chartInstance = canvas.__scrollAnimatedChart;
-
-                            if (chartInstance && typeof chartInstance.reset === 'function') {
-                                chartInstance.reset();
-                                chartInstance.update();
-                            }
-
-                            canvas.__scrollAnimatedChartPlayed = true;
-                            obs.unobserve(canvas);
-                        }
-                    });
-                }, {
-                    threshold: 0.35,
-                    rootMargin: '0px 0px -15% 0px'
-                }) : null;
-
-                var plugin = {
-                    id: 'scroll-activate-animation',
-                    afterInit: function (chart) {
-                        if (!chart || !chart.canvas) {
-                            return;
-                        }
-
-                        chart.canvas.__scrollAnimatedChart = chart;
-
-                        if (chartObserver) {
-                            chartObserver.observe(chart.canvas);
-                        } else if (typeof chart.reset === 'function') {
-                            chart.reset();
-                            setTimeout(function () {
-                                chart.update();
-                            }, 50);
-                        }
-                    }
-                };
-
-                if (Chart.pluginService && Chart.pluginService.register) {
-                    Chart.pluginService.register(plugin);
-                } else if (Chart.register) {
-                    Chart.register(plugin);
                 }
             })();
         </script>

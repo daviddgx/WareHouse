@@ -220,6 +220,18 @@ ob_end_flush();
             background-color: #c41f1f;
         }
 
+        .scroll-animate {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            will-change: opacity, transform;
+        }
+
+        .scroll-animate.scroll-animate--visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
     </style>
 
 
@@ -1124,7 +1136,110 @@ ob_end_flush();
         <script src="../dist/js/OnLine.js"></script>
         <!-- Chart JS -->
         <script src="../assets/libs/chart.js/dist/Chart.min.js"></script>
-   
+
+
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var defaultAnimation = 'animate__fadeInUp';
+                var targets = [];
+
+                function addTarget(element) {
+                    if (targets.indexOf(element) === -1) {
+                        targets.push(element);
+                    }
+                }
+
+                document.querySelectorAll('[data-animate-on-scroll]').forEach(function (element) {
+                    addTarget(element);
+                });
+
+                document.querySelectorAll('[class*="animate__"]').forEach(function (element) {
+                    addTarget(element);
+                });
+
+                document.querySelectorAll('.page-wrapper .container-fluid > .row, .page-wrapper .container-fluid .card').forEach(function (element) {
+                    addTarget(element);
+                });
+
+                if (!targets.length) {
+                    return;
+                }
+
+                var supportsIntersectionObserver = 'IntersectionObserver' in window;
+                var observer = null;
+
+                function revealElement(element) {
+                    var animationClasses = (element.dataset.scrollAnimateClasses || defaultAnimation)
+                        .split(/\s+/)
+                        .filter(Boolean);
+
+                    element.classList.add('scroll-animate--visible', 'animate__animated');
+
+                    animationClasses.forEach(function (animationClass) {
+                        if (animationClass !== 'animate__animated') {
+                            element.classList.add(animationClass);
+                        }
+                    });
+                }
+
+                function prepareElement(element) {
+                    var datasetClasses = (element.dataset.animateOnScroll || '').trim();
+                    var existingAnimationClasses = Array.from(element.classList).filter(function (className) {
+                        return className.indexOf('animate__') === 0;
+                    });
+
+                    var classesToUse;
+
+                    if (datasetClasses) {
+                        classesToUse = datasetClasses.split(/\s+/).filter(Boolean);
+                    } else if (existingAnimationClasses.length > 0) {
+                        classesToUse = existingAnimationClasses.filter(function (className) {
+                            return className !== 'animate__animated';
+                        });
+                    } else {
+                        classesToUse = [defaultAnimation];
+                    }
+
+                    if (!classesToUse.length) {
+                        classesToUse = [defaultAnimation];
+                    }
+
+                    if (existingAnimationClasses.length > 0) {
+                        element.classList.remove(...existingAnimationClasses);
+                    }
+
+                    element.dataset.scrollAnimateClasses = classesToUse.join(' ');
+                    element.classList.add('scroll-animate');
+
+                    if (!supportsIntersectionObserver) {
+                        revealElement(element);
+                        return;
+                    }
+
+                    observer.observe(element);
+                }
+
+                if (supportsIntersectionObserver) {
+                    observer = new IntersectionObserver(function (entries) {
+                        entries.forEach(function (entry) {
+                            if (entry.isIntersecting) {
+                                revealElement(entry.target);
+                                observer.unobserve(entry.target);
+                            }
+                        });
+                    }, {
+                        threshold: 0.2,
+                        rootMargin: '0px 0px -10% 0px'
+                    });
+                }
+
+                targets.forEach(function (element) {
+                    prepareElement(element);
+                });
+            });
+        </script>
+
 
 
         <!-- Datos de las bodegas -->

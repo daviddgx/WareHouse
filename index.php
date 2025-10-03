@@ -4,7 +4,7 @@ session_start();
 
 
 //ANCHOR -  Redireccion a HTPPS
-if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') {
+if ((!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') && php_sapi_name() !== 'cli-server') {
     echo "NO DISPONE DE CONEXIÓN HTTPS";
     header('Location: https://apps-sertero.com/');
 }
@@ -12,6 +12,9 @@ if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') {
 
 
 include 'LQS_EUQ/Auth.php';
+
+$error = $error ?? '';
+$mensajeExito = $mensajeExito ?? '';
 
 // FuncionLogin
 
@@ -129,114 +132,298 @@ ob_end_flush();
 <html lang="es">
 
 <head>
-    <!-- Requiered meta tags -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sertero CBP</title>
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
-    <link rel="stylesheet" href="FountAuson/css/font-awesome.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
-    <link rel="stylesheet" href="../dist/css/Custom/custom.css">
-    <link href="css/animate.css" rel="stylesheet" type="text/css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="../assets/images/sertero/LogoCBP.png" width="auto" height="auto">
-    <link href="../dist/css/Custom/admin.css" rel="stylesheet" type="text/css" />
-
-    <!-- Estilos en Css -->
     <style>
-        body {
-            background: url("../assets/images/sertero/Wallpaler.jpeg");
-            background-size: cover;
-            background-attachment: fixed;
-            overflow: scroll;
-            height: 100vh;
+        :root {
+            color-scheme: light dark;
         }
 
-        .myform-cont {
-            margin-top: 100px;
-            margin-bottom: 100px;
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, rgba(5, 31, 64, 0.92), rgba(3, 111, 171, 0.9)), url('../assets/images/Sertero/Wallpaler.jpg') no-repeat center/cover fixed;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #f4f7fb;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            backdrop-filter: blur(12px);
+            background: rgba(0, 0, 0, 0.35);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            gap: 1.5rem;
+        }
+
+        .top-info,
+        .weather-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+        }
+
+        .top-info span,
+        .weather-info span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 4vh 6vw;
+            align-items: center;
+        }
+
+        .brand-card {
+            padding: 2.5rem;
+            background: rgba(5, 25, 60, 0.55);
+            border-radius: 24px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            color: #f4f7fb;
+        }
+
+        .brand-card h1 {
+            margin: 0;
+            font-size: clamp(1.8rem, 2.8vw, 2.8rem);
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .brand-card p {
+            margin: 0;
+            font-size: 1rem;
+            color: rgba(244, 247, 251, 0.85);
+            line-height: 1.6;
+        }
+
+        .login-card {
+            padding: clamp(1.75rem, 2.5vw, 2.5rem);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .login-card h2 {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.9rem 1.1rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(3, 19, 41, 0.65);
+            color: #f4f7fb;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+
+        .form-control::placeholder {
+            color: rgba(244, 247, 251, 0.55);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: rgba(18, 194, 233, 0.9);
+            background: rgba(3, 19, 41, 0.85);
+        }
+
+        .effect-button {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 0.95rem 1.1rem;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #12c2e9, #c471ed, #f64f59);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.05rem;
+            cursor: pointer;
+            box-shadow: 0 16px 30px rgba(18, 194, 233, 0.35);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
+        }
+
+        .effect-button:hover,
+        .effect-button:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 22px 40px rgba(244, 79, 89, 0.32);
+            filter: brightness(1.05);
+        }
+
+        .message-container {
+            min-height: 1.2rem;
+            font-size: 0.95rem;
+        }
+
+        .footer-note {
+            text-align: center;
+            padding: 1.5rem;
+            font-size: 0.85rem;
+            color: rgba(244, 247, 251, 0.6);
         }
 
         @media (max-width: 768px) {
-            .myform-cont {
-                margin-top: 30px;
-                margin-bottom: 30px;
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1rem 1.5rem;
+            }
+
+            .main-content {
+                padding: 3vh 6vw;
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                padding: 2.5vh 1.5rem;
+            }
+
+            .top-bar {
+                border-radius: 0 0 18px 18px;
+            }
+
+            body {
+                background-attachment: scroll;
             }
         }
     </style>
 </head>
 
 <body>
-
-<!-- Preloader -->
-<div id="PreLoaderCont">
-    <div class="preloader">
-        <br></br>
-        <div class="logoPre">
-            <img src="../assets/images/Sertero/LogoHenkel.png" width="300px" height="auto">
-            
+    <div class="top-bar">
+        <div class="top-info">
+            <span>📅 <span id="current-date">--</span></span>
+            <span>🕒 <span id="current-time">--</span></span>
         </div>
-        <div class="loader-frame">
-            <div class="loader1" id="loader1"></div>
-            <div class="loader2" id="loader2"></div>
+        <div class="weather-info" id="weather-info">
+            <span>🌤️ <span id="weather-status">Cargando clima...</span></span>
         </div>
     </div>
-</div>
-<!-- Fin Preloader -->
 
-<!-- Contenido de la pagina -->
-<div class="hide" id="Contenido">
-    <!-- Inicia Formulario Login -->
-    <div class="my-content formulario">
-        <div class="container">
-            <div class="row">
-                <div class="col-sm-6 myform-cont centrado">
-                    <div class="myform-top">
-                        <div class="" style="text-align: center">
-                            <h4>Ingreso al sistema</h4>
-                        </div>
-                    </div>
-                    <div class="myform-botton">
-                        <form role="form" action="" method="post" class="">
-                            <div class="form-grup">
-                                <input type="text" name="UserLog" placeholder="Usuario" class="form-control" id="form-username">
-                            </div>
-                            <div class="saltito">
-                                <h1></h1>
-                            </div>
-                            <div class="form-group">
-                                <input type="password" name="ClaveLog" placeholder="Contaseña" class="form-control" id="form-password">
-                            </div>
-                            <br>
-                            <div> <?php echo $error . $mensajeExito; ?></div>
-                            <input type="submit" name="Entrar" value="Entrar" class="effect-button"></input>
-                            <!--<div  data-effect="flip" class="effect-button"><a class="nav-item nav-link formulario" href="DashboardAdministrador.php">Entrar </a></div>-->
-                            <!-- <input  type="submit" name="Entrar" class="mybtn "></input> -->
-                            <!-- Hacer que el boton nos dirija a la pagina de administracion -->
-                        </form>
-                    </div>
+    <main class="main-content">
+        <section class="brand-card">
+            <img src="../assets/images/Sertero/LogoHenkel.png" alt="Sertero" style="max-width: 180px; height: auto;">
+            <h1>Bienvenido al ecosistema logístico de Sertero</h1>
+            <p>
+                Centraliza tus operaciones y gestiona la información crítica de manera segura desde cualquier dispositivo.
+                Accede a herramientas de inventario, picking, control de montacargas y mucho más, ahora con una interfaz optimizada.
+            </p>
+            <p style="font-size: 0.9rem; color: rgba(244, 247, 251, 0.7);">
+                Optimizado para tabletas y móviles. Mantente productivo estés donde estés.
+            </p>
+        </section>
+
+        <section class="login-card">
+            <h2>Ingreso al sistema</h2>
+            <form role="form" action="" method="post">
+                <div>
+                    <input type="text" name="UserLog" placeholder="Usuario" class="form-control" id="form-username" required>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Fin Contenido -->
+                <div>
+                    <input type="password" name="ClaveLog" placeholder="Contraseña" class="form-control" id="form-password" required>
+                </div>
+                <div class="message-container"><?php echo $error . $mensajeExito; ?></div>
+                <button type="submit" name="Entrar" class="effect-button">Entrar</button>
+            </form>
+        </section>
+    </main>
 
-<!-- Script para Loader -->
-<script>
-    window.addEventListener('load', () => {
-        carga();
-        function carga() {
-            document.getElementById('PreLoaderCont').className = 'hide';
-            document.getElementById('Contenido').className = 'center animated pulse';
-        }
-    })
-</script>
-<!-- Fin Script de Loader -->
+    <footer class="footer-note">
+        © <?php echo date('Y'); ?> Sertero CBP. Todos los derechos reservados.
+    </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
-<script src="js/animated.js" type="text/javascript"></script>
+    <script>
+        const dateElement = document.getElementById('current-date');
+        const timeElement = document.getElementById('current-time');
+
+        const updateDateTime = () => {
+            const now = new Date();
+            const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Guatemala' };
+            const optionsTime = { hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: 'America/Guatemala' };
+
+            dateElement.textContent = now.toLocaleDateString('es-GT', optionsDate);
+            timeElement.textContent = now.toLocaleTimeString('es-GT', optionsTime);
+        };
+
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        const weatherStatus = document.getElementById('weather-status');
+
+        fetch('https://api.open-meteo.com/v1/forecast?latitude=14.6331&longitude=-90.6070&current_weather=true&timezone=America%2FGuatemala')
+            .then(response => response.ok ? response.json() : Promise.reject(response.statusText))
+            .then(data => {
+                if (data?.current_weather) {
+                    const { temperature, windspeed, weathercode } = data.current_weather;
+                    const descriptions = {
+                        0: 'Despejado',
+                        1: 'Mayormente despejado',
+                        2: 'Parcialmente nublado',
+                        3: 'Nublado',
+                        45: 'Niebla',
+                        48: 'Niebla helada',
+                        51: 'Llovizna ligera',
+                        53: 'Llovizna moderada',
+                        55: 'Llovizna intensa',
+                        61: 'Lluvia ligera',
+                        63: 'Lluvia moderada',
+                        65: 'Lluvia intensa',
+                        80: 'Chubascos ligeros',
+                        81: 'Chubascos moderados',
+                        82: 'Chubascos fuertes',
+                        95: 'Tormenta eléctrica'
+                    };
+                    const description = descriptions[weathercode] || 'Condición variable';
+                    weatherStatus.textContent = `${description} · ${temperature.toFixed(0)}°C · Viento ${windspeed.toFixed(0)} km/h`;
+                } else {
+                    weatherStatus.textContent = 'No se pudo obtener el clima.';
+                }
+            })
+            .catch(() => {
+                weatherStatus.textContent = 'Clima no disponible en este momento.';
+            });
+    </script>
 </body>
 
 </html>

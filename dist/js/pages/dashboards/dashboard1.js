@@ -37,6 +37,9 @@ $(function () {
                 '#ff4f70',
                 '#01caf1'
             ]
+        },
+        transition: {
+            duration: 600
         }
     });
 
@@ -79,7 +82,60 @@ $(function () {
             }
         }]
     ];
-    new Chartist.Bar('.net-income', data, options, responsiveOptions);
+    var incomeChart = new Chartist.Bar('.net-income', data, options, responsiveOptions);
+
+    incomeChart.on('draw', function (ctx) {
+        if (ctx.type === 'bar' && ctx.element.animate) {
+            var delay = ctx.index * 120;
+
+            ctx.element.animate({
+                y2: {
+                    begin: delay,
+                    dur: 600,
+                    from: ctx.y1,
+                    to: ctx.y2,
+                    easing: Chartist.Svg.Easing.easeOutQuart
+                },
+                opacity: {
+                    begin: delay,
+                    dur: 600,
+                    from: 0,
+                    to: 1,
+                    easing: Chartist.Svg.Easing.easeOutQuart
+                }
+            });
+        } else if (ctx.type === 'grid' && ctx.element.animate) {
+            var animations = {};
+            animations[ctx.axis.units.pos + '1'] = {
+                begin: 0,
+                dur: 400,
+                from: ctx[ctx.axis.units.pos + '1'] - 30,
+                to: ctx[ctx.axis.units.pos + '1'],
+                easing: Chartist.Svg.Easing.easeOutQuart
+            };
+            animations[ctx.axis.units.pos + '2'] = {
+                begin: 0,
+                dur: 400,
+                from: ctx[ctx.axis.units.pos + '2'] - 30,
+                to: ctx[ctx.axis.units.pos + '2'],
+                easing: Chartist.Svg.Easing.easeOutQuart
+            };
+            animations.opacity = {
+                begin: 0,
+                dur: 400,
+                from: 0,
+                to: 1
+            };
+
+            ctx.element.animate(animations);
+        }
+    });
+
+    incomeChart.on('created', function () {
+        if (incomeChart.container) {
+            incomeChart.container.__chartistInstance = incomeChart;
+        }
+    });
 
     // ============================================================== 
     // Visit By Location
@@ -116,7 +172,7 @@ $(function () {
     // ==============================================================
     // Earning Stastics Chart
     // ==============================================================
-    var chart = new Chartist.Line('.stats', {
+    var statsChart = new Chartist.Line('.stats', {
         labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
         series: [
             [11, 10, 15, 21, 14, 23, 12]
@@ -139,17 +195,17 @@ $(function () {
         },
     });
 
-    // Offset x1 a tiny amount so that the straight stroke gets a bounding box
-    chart.on('draw', function (ctx) {
-        if (ctx.type === 'area') {
-            ctx.element.attr({
-                x1: ctx.x1 + 0.001
-            });
-        }
-    });
+    var sequence = 0;
+    var sequenceDelay = 80;
+    var sequenceDuration = 500;
 
-    // Create the gradient definition on created event (always after chart re-render)
-    chart.on('created', function (ctx) {
+    statsChart.on('created', function (ctx) {
+        sequence = 0;
+
+        if (statsChart.container) {
+            statsChart.container.__chartistInstance = statsChart;
+        }
+
         var defs = ctx.svg.elem('defs');
         defs.elem('linearGradient', {
             id: 'gradient',
@@ -166,7 +222,84 @@ $(function () {
         });
     });
 
+    // Offset x1 a tiny amount so that the straight stroke gets a bounding box and animate entries
+    statsChart.on('draw', function (ctx) {
+        if (ctx.type === 'area') {
+            ctx.element.attr({
+                x1: ctx.x1 + 0.001
+            });
+        }
+
+        if (!ctx.element.animate) {
+            return;
+        }
+
+        sequence += 1;
+
+        if (ctx.type === 'line' || ctx.type === 'area') {
+            ctx.element.animate({
+                d: {
+                    begin: sequence * sequenceDelay,
+                    dur: sequenceDuration + 200,
+                    from: ctx.path.clone().scale(1, 0).translate(0, ctx.chartRect.height()).stringify(),
+                    to: ctx.path.clone().stringify(),
+                    easing: Chartist.Svg.Easing.easeOutQuint
+                }
+            });
+        } else if (ctx.type === 'point') {
+            ctx.element.animate({
+                x1: {
+                    begin: sequence * sequenceDelay,
+                    dur: sequenceDuration,
+                    from: ctx.x - 10,
+                    to: ctx.x,
+                    easing: Chartist.Svg.Easing.easeOutQuart
+                },
+                x2: {
+                    begin: sequence * sequenceDelay,
+                    dur: sequenceDuration,
+                    from: ctx.x - 10,
+                    to: ctx.x,
+                    easing: Chartist.Svg.Easing.easeOutQuart
+                },
+                opacity: {
+                    begin: sequence * sequenceDelay,
+                    dur: sequenceDuration,
+                    from: 0,
+                    to: 1,
+                    easing: Chartist.Svg.Easing.easeOutQuart
+                }
+            });
+        } else if (ctx.type === 'grid') {
+            var animations = {};
+            animations[ctx.axis.units.pos + '1'] = {
+                begin: sequence * sequenceDelay,
+                dur: sequenceDuration,
+                from: ctx[ctx.axis.units.pos + '1'] - 30,
+                to: ctx[ctx.axis.units.pos + '1'],
+                easing: Chartist.Svg.Easing.easeOutQuart
+            };
+            animations[ctx.axis.units.pos + '2'] = {
+                begin: sequence * sequenceDelay,
+                dur: sequenceDuration,
+                from: ctx[ctx.axis.units.pos + '2'] - 30,
+                to: ctx[ctx.axis.units.pos + '2'],
+                easing: Chartist.Svg.Easing.easeOutQuart
+            };
+            animations.opacity = {
+                begin: sequence * sequenceDelay,
+                dur: sequenceDuration,
+                from: 0,
+                to: 1,
+                easing: Chartist.Svg.Easing.easeOutQuart
+            };
+
+            ctx.element.animate(animations);
+        }
+    });
+
     $(window).on('resize', function () {
-        chart.update();
+        statsChart.update();
+        incomeChart.update();
     });
 })

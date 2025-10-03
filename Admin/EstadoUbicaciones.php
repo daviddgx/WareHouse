@@ -1,10 +1,12 @@
 <?php
 session_start();
 
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-}
+$currentDate = date('Y-m-d');
 
+if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
+    header('Location: ../Innet/505.html');
+    exit();
+}
 $txtUsuario = $_SESSION['Usuario'];
 
 include '../LQS_EUQ/Connect.php';

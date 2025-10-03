@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 $currentDate = date('Y-m-d');
 
@@ -101,3 +102,5 @@ function dashboard_daily_capacity(string $fechaInicial, string $fechaFinal): arr
         'promedio' => $promedio,
     ];
 }
+ob_end_flush();
+?>

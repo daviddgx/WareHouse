@@ -1,4 +1,5 @@
 <?php
+ob_start();
 
 declare(strict_types=1);
 
@@ -62,3 +63,5 @@ function build_dashboard_data(string $fechaInicial, string $fechaFinal, ?string 
 
     return $payload;
 }
+ob_end_flush();
+?>

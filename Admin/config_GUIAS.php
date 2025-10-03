@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 $currentDate = date('Y-m-d');
 
@@ -15,4 +16,5 @@ $con = mysqli_connect($servidor, $usuario, $password) or die("No se ha podido co
 mysqli_query($con,"SET SESSION collation_connection ='utf8_unicode_ci'");
 $db = mysqli_select_db($con, $basededatos) or die("Upps! Error en conectar a la Base de Datos");
 
+ob_end_flush();
 ?>

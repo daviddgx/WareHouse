@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 $currentDate = date('Y-m-d');
 
@@ -21,4 +22,5 @@ $FechaQRU = $fechaConsulta." ".$hora;
 
 echo $FechaQRU;
 
+ob_end_flush();
 ?>

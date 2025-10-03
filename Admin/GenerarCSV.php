@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 $currentDate = date('Y-m-d');
 
@@ -57,4 +58,5 @@ if (isset($_GET['IDH'])) {
 } else {
     echo "IDH no especificado.";
 }
+ob_end_flush();
 ?>

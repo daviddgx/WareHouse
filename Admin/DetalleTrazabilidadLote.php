@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 $currentDate = date('Y-m-d');
 
@@ -66,6 +67,7 @@ include '../LQS_EUQ/RPTTrazabilidadDetallePiking.php';
 
 
 
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

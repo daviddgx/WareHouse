@@ -1,4 +1,5 @@
 udu<?php
+ob_start();
 session_start();
 $currentDate = date('Y-m-d');
 
@@ -80,6 +81,7 @@ try {
 //fin comprovacion de datos
 // Fin de la conexion
 
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

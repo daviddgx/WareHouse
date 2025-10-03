@@ -136,7 +136,7 @@ switch ($accion) {
 
                 // Redireccionar a la página después de 7 segundos
                 header('Location: Mantenimiento_Productos.php');
-                exit();
+                
             }
 
 

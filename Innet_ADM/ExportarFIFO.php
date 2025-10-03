@@ -3,7 +3,7 @@ ob_start();
 session_start();
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');
-    exit();
+    
 }
 
 function exportToExcel() {

@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Auth.php';
 date_default_timezone_set('America/Guatemala');
@@ -163,6 +164,8 @@ switch ($accion) {
 }
 
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

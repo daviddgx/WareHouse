@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 
 
@@ -17,6 +18,8 @@ $Mensajeerror = '';
 
 
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

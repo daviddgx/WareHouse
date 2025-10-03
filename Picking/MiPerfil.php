@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
 include "../Innet_PKN/Innet_PKN.php";
@@ -160,6 +161,8 @@ switch ($accion) {
 }
 
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

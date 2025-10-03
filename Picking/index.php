@@ -1,5 +1,6 @@
 
 <?php
+ob_start();
 
 
 if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') {
@@ -23,6 +24,8 @@ if ($_SESSION['Usuario'] == '') {
     $Num_Despachos= darValorDespachos($_SESSION['Usuario']);
 }
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

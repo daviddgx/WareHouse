@@ -13,7 +13,7 @@ if ((!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') && php_sapi_name() 
 
 include 'LQS_EUQ/Auth.php';
 
-$error = $error ?? '';
+$errorMessage = $errorMessage ?? '';
 $mensajeExito = $mensajeExito ?? '';
 
 // FuncionLogin
@@ -26,8 +26,7 @@ if (!empty($_POST['Entrar'])) {
     $conn = new mysqli($servername, $username, $password, $dbname);
     if ($conn->connect_error) {
 
-        $error =
-            '<div class="alert alert-danger" role="alert"><p><strong>Existe un problema con la conexion entre el sistema y la base de datos ☹️! por favor contacte al administrador de la aplicacion e informele de este error.</div>';
+        $errorMessage = 'Existe un problema con la conexión entre el sistema y la base de datos ☹️. Por favor contacte al administrador de la aplicación e infórmele de este error.';
         // $row = $result->fetch_assoc();
     } else {
         // Obtencion de datos
@@ -106,17 +105,11 @@ if (!empty($_POST['Entrar'])) {
                     }
                 }
             } else {
-                $error =
-                    '<div class="alert alert-danger" role="alert"><p><strong> Usuario o Clave incorrecta, intentelo de nuevo o actualice su clave en la seccion de ayuda. </div>';
+                $errorMessage = 'Usuario o clave incorrecta. Inténtelo de nuevo o actualice su clave en la sección de ayuda.';
                 // $row = $result->fetch_assoc();
             }
         } catch (Exception $ex) {
-            $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
-                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                        <span aria-hidden="true">×</span>
-                                    </button>
-                                    <strong>Se encontro un error ☹️! -- </strong> ' . $ex . '
-                                </div>';
+            $errorMessage = 'Se encontró un error ☹️. ' . $ex->getMessage();
         }
         //comprovacion de dadtos
         //fin comprovacion de datos
@@ -293,6 +286,54 @@ ob_end_flush();
             font-size: 0.95rem;
         }
 
+        .floating-alert {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            max-width: min(360px, calc(100% - 3rem));
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+            background: rgba(220, 53, 69, 0.92);
+            color: #fff;
+            z-index: 20;
+            backdrop-filter: blur(12px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        .floating-alert.success {
+            background: rgba(40, 167, 69, 0.92);
+        }
+
+        .floating-alert.hidden {
+            opacity: 0;
+            transform: translateY(-12px);
+            pointer-events: none;
+        }
+
+        .floating-alert .alert-text {
+            flex: 1;
+            line-height: 1.45;
+        }
+
+        .floating-alert .alert-close {
+            border: none;
+            background: transparent;
+            color: inherit;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .floating-alert .alert-close:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+        }
+
         .footer-note {
             text-align: center;
             padding: 1.5rem;
@@ -331,6 +372,14 @@ ob_end_flush();
 </head>
 
 <body>
+    <?php if (!empty($errorMessage) || !empty($mensajeExito)) : ?>
+        <div class="floating-alert <?php echo empty($errorMessage) ? 'success' : 'error'; ?>" role="alert" aria-live="assertive">
+            <span class="alert-text">
+                <?php echo htmlspecialchars(empty($errorMessage) ? $mensajeExito : $errorMessage, ENT_QUOTES, 'UTF-8'); ?>
+            </span>
+            <button type="button" class="alert-close" aria-label="Cerrar notificación">×</button>
+        </div>
+    <?php endif; ?>
     <div class="top-bar">
         <div class="top-info">
             <span>📅 <span id="current-date">--</span></span>
@@ -363,7 +412,6 @@ ob_end_flush();
                 <div>
                     <input type="password" name="ClaveLog" placeholder="Contraseña" class="form-control" id="form-password" required>
                 </div>
-                <div class="message-container"><?php echo $error . $mensajeExito; ?></div>
                 <button type="submit" name="Entrar" class="effect-button">Entrar</button>
             </form>
         </section>
@@ -423,6 +471,22 @@ ob_end_flush();
             .catch(() => {
                 weatherStatus.textContent = 'Clima no disponible en este momento.';
             });
+
+        const floatingAlert = document.querySelector('.floating-alert');
+
+        if (floatingAlert) {
+            const closeButton = floatingAlert.querySelector('.alert-close');
+
+            const hideAlert = () => {
+                if (!floatingAlert.classList.contains('hidden')) {
+                    floatingAlert.classList.add('hidden');
+                    floatingAlert.addEventListener('transitionend', () => floatingAlert.remove(), { once: true });
+                }
+            };
+
+            closeButton?.addEventListener('click', hideAlert);
+            setTimeout(hideAlert, 7000);
+        }
     </script>
 </body>
 

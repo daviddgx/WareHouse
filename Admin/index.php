@@ -1400,11 +1400,11 @@ ob_end_flush();
             });
 
             (function () {
-                if (!window.Chart || window.__scrollActivatedChartPlugin) {
+                if (!window.Chart || window.__initialChartAnimationConfigured) {
                     return;
                 }
 
-                window.__scrollActivatedChartPlugin = true;
+                window.__initialChartAnimationConfigured = true;
 
                 var globalDefaults = Chart.defaults && Chart.defaults.global;
                 if (globalDefaults && globalDefaults.animation) {
@@ -1417,43 +1417,17 @@ ob_end_flush();
                     Chart.defaults.animation.easing = 'easeOutQuart';
                 }
 
-                var chartObserver = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries, obs) {
-                    entries.forEach(function (entry) {
-                        if (entry.isIntersecting) {
-                            var canvas = entry.target;
-                            var chartInstance = canvas.__scrollAnimatedChart;
-
-                            if (chartInstance && typeof chartInstance.reset === 'function') {
-                                chartInstance.reset();
-                                chartInstance.update();
-                            }
-
-                            canvas.__scrollAnimatedChartPlayed = true;
-                            obs.unobserve(canvas);
-                        }
-                    });
-                }, {
-                    threshold: 0.35,
-                    rootMargin: '0px 0px -15% 0px'
-                }) : null;
-
                 var plugin = {
-                    id: 'scroll-activate-animation',
+                    id: 'initial-render-animation',
                     afterInit: function (chart) {
-                        if (!chart || !chart.canvas) {
+                        if (!chart || typeof chart.reset !== 'function' || typeof chart.update !== 'function') {
                             return;
                         }
 
-                        chart.canvas.__scrollAnimatedChart = chart;
-
-                        if (chartObserver) {
-                            chartObserver.observe(chart.canvas);
-                        } else if (typeof chart.reset === 'function') {
-                            chart.reset();
-                            setTimeout(function () {
-                                chart.update();
-                            }, 50);
-                        }
+                        chart.reset();
+                        setTimeout(function () {
+                            chart.update();
+                        }, 50);
                     }
                 };
 

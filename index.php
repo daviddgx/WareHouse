@@ -2,90 +2,130 @@
 ob_start();
 session_start();
 
-// ANCHOR -  Redireccion a HTPPS
+
+//ANCHOR -  Redireccion a HTPPS
 if ((!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') && php_sapi_name() !== 'cli-server') {
     echo "NO DISPONE DE CONEXIÓN HTTPS";
     header('Location: https://apps-sertero.com/');
 }
 
+
+
 include 'LQS_EUQ/Auth.php';
 
-$errorMessage = $errorMessage ?? '';
+$error = $error ?? '';
 $mensajeExito = $mensajeExito ?? '';
 
+// FuncionLogin
+
 if (!empty($_POST['Entrar'])) {
-    $LUser = trim($_POST['UserLog'] ?? '');
-    $LClave = $_POST['ClaveLog'] ?? '';
+    $LUser = $_POST['UserLog'];
+    $LClave = $_POST['ClaveLog'];
+    // Creamos la conexion
 
-    if ($LUser === '' || $LClave === '') {
-        $errorMessage = 'Debe ingresar su usuario y contraseña.';
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    if ($conn->connect_error) {
+
+        $error =
+            '<div class="alert alert-danger" role="alert"><p><strong>Existe un problema con la conexion entre el sistema y la base de datos ☹️! por favor contacte al administrador de la aplicacion e informele de este error.</div>';
+        // $row = $result->fetch_assoc();
     } else {
-        $conn = @new mysqli($servername, $username, $password, $dbname);
+        // Obtencion de datos
+        $LClave = md5($LClave);
 
-        if ($conn->connect_errno) {
-            $errorMessage = 'Existe un problema con la conexión entre el sistema y la base de datos ☹️. Por favor contacte al administrador de la aplicación e infórmele de este error.';
-        } else {
-            $hashedPassword = md5($LClave);
-            $sql = "SELECT * FROM dbs9098416.usuarios_app WHERE Nombre_Usuario = ? AND Clave_Usuario = ?";
-            $stmt = $conn->prepare($sql);
 
-            if (!$stmt) {
-                $errorMessage = 'No fue posible validar sus credenciales en este momento. Intente de nuevo más tarde.';
-            } else {
-                $stmt->bind_param('ss', $LUser, $hashedPassword);
-                $stmt->execute();
-                $result = $stmt->get_result();
 
-                if ($result && $result->num_rows > 0) {
+        $sql = "SELECT * FROM dbs9098416.usuarios_app where Nombre_Usuario = '$LUser' and Clave_Usuario = '$LClave';";
+        $result = $conn->query($sql);
+        // Fin Obtencion de datos
+        try {
+
+
+
+            if ($result->num_rows > 0) {
+                //Salida de datos del query
+
+                // Cambiamos los IF anidados por Switch/Case para mejorar el rendimiento
+
+                while ($row = $result->fetch_assoc()) {
                     $sessionDate = date('Y-m-d');
 
-                    while ($row = $result->fetch_assoc()) {
-                        $_SESSION['Usuario'] = $row['Nombre_Usuario'];
-                        $_SESSION['UsuarioFecha'] = $sessionDate;
-                        $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
-                        $_SESSION['pic'] = $row['Foto'];
+                    switch ($row['TipoUsuario']) {
+                        case '1':
+                            $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
+                            $_SESSION['pic'] = $row['Foto'];
+                            header('Location: Admin/index.php');
+                            break;
 
-                        switch ($row['TipoUsuario']) {
-                            case '1':
-                                header('Location: Admin/index.php');
-                                break;
-                            case '2':
-                                header('Location: MontaCargas/index.php');
-                                break;
-                            case '3':
-                                header('Location: Inventarios/index.php');
-                                break;
-                            case '4':
-                                header('Location: Picking/index.php');
-                                break;
-                            case '5':
-                                header('Location: DashBoard/index.php');
-                                break;
-                            case '6':
-                                header('Location: InventariosPL/index.php');
-                                break;
-                            case '7':
-                                header('Location: InventariosDTG/index.php');
-                                break;
-                            default:
-                                header('Location: index.php');
-                                break;
-                        }
+                        case '2':
+                            $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
+                            $_SESSION['pic'] = $row['Foto'];
+                            header('Location: MontaCargas/index.php');
+                            break;
 
-                        exit;
+                        case '3':
+                            $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
+                            $_SESSION['pic'] = $row['Foto'];
+                            header('Location: Inventarios/index.php');
+                            break;
+
+                        case '4':
+                            $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
+                            $_SESSION['pic'] = $row['Foto'];
+                            header('Location: Picking/index.php');
+                            break;
+                        case '5':
+                            $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
+                            $_SESSION['pic'] = $row['Foto'];
+                            header('Location: DashBoard/index.php');
+                            break;
+                        case '6':
+                            $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
+                            $_SESSION['pic'] = $row['Foto'];
+                            header('Location: InventariosPL/index.php');
+                            break;
+                        case '7':
+                            $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
+                            $_SESSION['pic'] = $row['Foto'];
+                            header('Location: InventariosDTG/index.php');
+                            break;
                     }
-                } else {
-                    $errorMessage = 'Usuario o clave incorrecta. Inténtelo de nuevo o actualice su clave en la sección de ayuda.';
                 }
-
-                $stmt->close();
+            } else {
+                $error =
+                    '<div class="alert alert-danger" role="alert"><p><strong> Usuario o Clave incorrecta, intentelo de nuevo o actualice su clave en la seccion de ayuda. </div>';
+                // $row = $result->fetch_assoc();
             }
-
-            $conn->close();
+        } catch (Exception $ex) {
+            $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">×</span>
+                                    </button>
+                                    <strong>Se encontro un error ☹️! -- </strong> ' . $ex . '
+                                </div>';
         }
+        //comprovacion de dadtos
+        //fin comprovacion de datos
     }
+
+    // Fin de la conexion
 }
 
+// FinFuncionLogIN
 ob_end_flush();
 ?>
 <!DOCTYPE html>
@@ -110,77 +150,97 @@ ob_end_flush();
 
         body {
             margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, rgba(5, 31, 64, 0.92), rgba(3, 111, 171, 0.9)), url('../assets/images/Sertero/Wallpaler.jpg') no-repeat center/cover fixed;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Montserrat', sans-serif;
             color: #f4f7fb;
-            background: linear-gradient(135deg, rgba(5, 31, 64, 0.92), rgba(3, 111, 171, 0.9)), url('../assets/images/Sertero/Wallpaler.jpg') no-repeat center/cover fixed;
-            padding: 2rem 1.5rem;
         }
 
-        .page-wrapper {
-            width: min(920px, 100%);
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            align-items: stretch;
-        }
-
-        .brand-card,
-        .login-card {
-            border-radius: 24px;
-            padding: clamp(1.75rem, 2.5vw, 2.75rem);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            background: rgba(5, 25, 60, 0.6);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
-        }
-
-        .brand-card {
+        .top-bar {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            backdrop-filter: blur(12px);
+            background: rgba(0, 0, 0, 0.35);
+            position: sticky;
+            top: 0;
+            z-index: 5;
             gap: 1.5rem;
         }
 
-        .brand-card img {
-            width: min(220px, 70%);
-            height: auto;
+        .top-info,
+        .weather-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+        }
+
+        .top-info span,
+        .weather-info span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 4vh 6vw;
+            align-items: center;
+        }
+
+        .brand-card {
+            padding: 2.5rem;
+            background: rgba(5, 25, 60, 0.55);
+            border-radius: 24px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            color: #f4f7fb;
         }
 
         .brand-card h1 {
             margin: 0;
-            font-size: clamp(1.8rem, 2.8vw, 2.6rem);
+            font-size: clamp(1.8rem, 2.8vw, 2.8rem);
             font-weight: 700;
             line-height: 1.2;
         }
 
         .brand-card p {
             margin: 0;
-            font-size: 0.95rem;
+            font-size: 1rem;
+            color: rgba(244, 247, 251, 0.85);
             line-height: 1.6;
-            color: rgba(244, 247, 251, 0.82);
         }
 
         .login-card {
+            padding: clamp(1.75rem, 2.5vw, 2.5rem);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.16);
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
-            background: rgba(255, 255, 255, 0.08);
         }
 
         .login-card h2 {
             margin: 0;
-            font-size: 1.7rem;
+            font-size: 1.6rem;
             font-weight: 600;
             text-align: center;
-        }
-
-        form {
-            display: grid;
-            gap: 1rem;
         }
 
         .form-control {
@@ -188,7 +248,7 @@ ob_end_flush();
             padding: 0.9rem 1.1rem;
             border-radius: 14px;
             border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(3, 19, 41, 0.7);
+            background: rgba(3, 19, 41, 0.65);
             color: #f4f7fb;
             font-size: 1rem;
             transition: border-color 0.3s ease, background 0.3s ease;
@@ -228,120 +288,141 @@ ob_end_flush();
             filter: brightness(1.05);
         }
 
-        .floating-alert {
-            position: fixed;
-            top: 1.5rem;
-            right: 1.5rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            max-width: min(360px, calc(100% - 3rem));
-            padding: 1rem 1.25rem;
-            border-radius: 16px;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
-            background: rgba(220, 53, 69, 0.92);
-            color: #fff;
-            z-index: 20;
-            backdrop-filter: blur(12px);
-            transition: opacity 0.35s ease, transform 0.35s ease;
+        .message-container {
+            min-height: 1.2rem;
+            font-size: 0.95rem;
         }
 
-        .floating-alert.success {
-            background: rgba(40, 167, 69, 0.92);
-        }
-
-        .floating-alert.hidden {
-            opacity: 0;
-            transform: translateY(-12px);
-            pointer-events: none;
-        }
-
-        .floating-alert .alert-text {
-            flex: 1;
-            line-height: 1.45;
-        }
-
-        .floating-alert .alert-close {
-            border: none;
-            background: transparent;
-            color: inherit;
-            font-size: 1.1rem;
-            cursor: pointer;
-            padding: 0;
-            line-height: 1;
-        }
-
-        .floating-alert .alert-close:focus-visible {
-            outline: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 50%;
-        }
-
-        footer {
-            margin-top: 2.5rem;
-            font-size: 0.85rem;
-            color: rgba(244, 247, 251, 0.65);
+        .footer-note {
             text-align: center;
+            padding: 1.5rem;
+            font-size: 0.85rem;
+            color: rgba(244, 247, 251, 0.6);
+        }
+
+        @media (max-width: 768px) {
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1rem 1.5rem;
+            }
+
+            .main-content {
+                padding: 3vh 6vw;
+                gap: 1.5rem;
+            }
         }
 
         @media (max-width: 520px) {
-            body {
-                padding: 1.5rem 1rem;
+            .main-content {
+                grid-template-columns: 1fr;
+                padding: 2.5vh 1.5rem;
             }
 
-            .page-wrapper {
-                gap: 1.5rem;
+            .top-bar {
+                border-radius: 0 0 18px 18px;
+            }
+
+            body {
+                background-attachment: scroll;
             }
         }
     </style>
 </head>
 
 <body>
-    <?php if (!empty($errorMessage) || !empty($mensajeExito)) : ?>
-        <div class="floating-alert <?php echo empty($errorMessage) ? 'success' : 'error'; ?>" role="alert" aria-live="assertive">
-            <span class="alert-text">
-                <?php echo htmlspecialchars(empty($errorMessage) ? $mensajeExito : $errorMessage, ENT_QUOTES, 'UTF-8'); ?>
-            </span>
-            <button type="button" class="alert-close" aria-label="Cerrar notificación">×</button>
+    <div class="top-bar">
+        <div class="top-info">
+            <span>📅 <span id="current-date">--</span></span>
+            <span>🕒 <span id="current-time">--</span></span>
         </div>
-    <?php endif; ?>
+        <div class="weather-info" id="weather-info">
+            <span>🌤️ <span id="weather-status">Cargando clima...</span></span>
+        </div>
+    </div>
 
-    <div class="page-wrapper">
+    <main class="main-content">
         <section class="brand-card">
-            <img src="../assets/images/Sertero/LogoHenkel.png" alt="Sertero">
+            <img src="../assets/images/Sertero/LogoHenkel.png" alt="Sertero" style="max-width: 180px; height: auto;">
             <h1>Bienvenido al ecosistema logístico de Sertero</h1>
-            <p>Centraliza tus operaciones y gestiona la información crítica de manera segura desde cualquier dispositivo.</p>
-            <p style="font-size: 0.9rem; color: rgba(244, 247, 251, 0.7);">Optimizado para tabletas y móviles. Mantente productivo estés donde estés.</p>
+            <p>
+                Centraliza tus operaciones y gestiona la información crítica de manera segura desde cualquier dispositivo.
+                Accede a herramientas de inventario, picking, control de montacargas y mucho más, ahora con una interfaz optimizada.
+            </p>
+            <p style="font-size: 0.9rem; color: rgba(244, 247, 251, 0.7);">
+                Optimizado para tabletas y móviles. Mantente productivo estés donde estés.
+            </p>
         </section>
+
         <section class="login-card">
             <h2>Ingreso al sistema</h2>
             <form role="form" action="" method="post">
-                <input type="text" name="UserLog" placeholder="Usuario" class="form-control" id="form-username" required>
-                <input type="password" name="ClaveLog" placeholder="Contraseña" class="form-control" id="form-password" required>
+                <div>
+                    <input type="text" name="UserLog" placeholder="Usuario" class="form-control" id="form-username" required>
+                </div>
+                <div>
+                    <input type="password" name="ClaveLog" placeholder="Contraseña" class="form-control" id="form-password" required>
+                </div>
+                <div class="message-container"><?php echo $error . $mensajeExito; ?></div>
                 <button type="submit" name="Entrar" class="effect-button">Entrar</button>
             </form>
         </section>
-    </div>
+    </main>
 
-    <footer>
+    <footer class="footer-note">
         © <?php echo date('Y'); ?> Sertero CBP. Todos los derechos reservados.
     </footer>
 
     <script>
-        const floatingAlert = document.querySelector('.floating-alert');
+        const dateElement = document.getElementById('current-date');
+        const timeElement = document.getElementById('current-time');
 
-        if (floatingAlert) {
-            const closeButton = floatingAlert.querySelector('.alert-close');
+        const updateDateTime = () => {
+            const now = new Date();
+            const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Guatemala' };
+            const optionsTime = { hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: 'America/Guatemala' };
 
-            const hideAlert = () => {
-                if (!floatingAlert.classList.contains('hidden')) {
-                    floatingAlert.classList.add('hidden');
-                    floatingAlert.addEventListener('transitionend', () => floatingAlert.remove(), { once: true });
+            dateElement.textContent = now.toLocaleDateString('es-GT', optionsDate);
+            timeElement.textContent = now.toLocaleTimeString('es-GT', optionsTime);
+        };
+
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        const weatherStatus = document.getElementById('weather-status');
+
+        fetch('https://api.open-meteo.com/v1/forecast?latitude=14.6331&longitude=-90.6070&current_weather=true&timezone=America%2FGuatemala')
+            .then(response => response.ok ? response.json() : Promise.reject(response.statusText))
+            .then(data => {
+                if (data?.current_weather) {
+                    const { temperature, windspeed, weathercode } = data.current_weather;
+                    const descriptions = {
+                        0: 'Despejado',
+                        1: 'Mayormente despejado',
+                        2: 'Parcialmente nublado',
+                        3: 'Nublado',
+                        45: 'Niebla',
+                        48: 'Niebla helada',
+                        51: 'Llovizna ligera',
+                        53: 'Llovizna moderada',
+                        55: 'Llovizna intensa',
+                        61: 'Lluvia ligera',
+                        63: 'Lluvia moderada',
+                        65: 'Lluvia intensa',
+                        80: 'Chubascos ligeros',
+                        81: 'Chubascos moderados',
+                        82: 'Chubascos fuertes',
+                        95: 'Tormenta eléctrica'
+                    };
+                    const description = descriptions[weathercode] || 'Condición variable';
+                    weatherStatus.textContent = `${description} · ${temperature.toFixed(0)}°C · Viento ${windspeed.toFixed(0)} km/h`;
+                } else {
+                    weatherStatus.textContent = 'No se pudo obtener el clima.';
                 }
-            };
-
-            closeButton?.addEventListener('click', hideAlert);
-            setTimeout(hideAlert, 7000);
-        }
+            })
+            .catch(() => {
+                weatherStatus.textContent = 'Clima no disponible en este momento.';
+            });
     </script>
 </body>
 

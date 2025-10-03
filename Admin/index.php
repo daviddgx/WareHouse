@@ -11,10 +11,10 @@ $TotalPiking=0;
 
 date_default_timezone_set('America/Guatemala');
 
-$fecha = date("d") . '-' . date("m") . '-' . date("Y");
+$fecha = date('Y-m-d');
 
 $fechaFinal = $fecha;
-$fechaInicial = date("d-m-Y", strtotime("-8 days"));
+$fechaInicial = date('Y-m-d', strtotime('-8 days'));
 
 
 
@@ -26,8 +26,13 @@ switch ($accion) {
         $Fecha1 = (isset($_POST['txtFechaInicial'])) ? $_POST['txtFechaInicial'] : "";
         $Fecha2 = (isset($_POST['txtFechaFinal'])) ? $_POST['txtFechaFinal'] : "";
 
-        $fechaInicial = $Fecha1;
-        $fechaFinal = $Fecha2;
+        if ($Fecha1) {
+            $fechaInicial = date('Y-m-d', strtotime($Fecha1));
+        }
+
+        if ($Fecha2) {
+            $fechaFinal = date('Y-m-d', strtotime($Fecha2));
+        }
 
 
         break;
@@ -89,6 +94,8 @@ ob_end_flush();
     <!-- Custom CSS -->
     <link href="../assets/extra-libs/c3/c3.min.css" rel="stylesheet">
     <link href="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.css" rel="stylesheet" />
+    <link href="../assets/libs/chartist/dist/chartist.min.css" rel="stylesheet">
+    <link href="../assets/libs/chartist-plugin-tooltips/dist/chartist-plugin-tooltip.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
@@ -223,13 +230,20 @@ ob_end_flush();
         .scroll-animate {
             opacity: 0;
             transform: translateY(30px);
-            transition: opacity 0.6s ease, transform 0.6s ease;
+            transition: opacity 0.5s ease, transform 0.5s ease;
             will-change: opacity, transform;
+            backface-visibility: hidden;
         }
 
         .scroll-animate.scroll-animate--visible {
             opacity: 1;
             transform: translateY(0);
+        }
+
+        .scroll-animate.animate__animated {
+            animation-duration: var(--animate-duration, 0.75s);
+            animation-delay: var(--animate-delay, 0s);
+            animation-fill-mode: both;
         }
 
     </style>
@@ -1132,7 +1146,9 @@ ob_end_flush();
         <script src="../assets/extra-libs/c3/c3.min.js"></script>
         <script src="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.min.js"></script>
         <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
-        <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script> 
+        <script src="../assets/libs/chartist/dist/chartist.min.js"></script>
+        <script src="../assets/libs/chartist-plugin-tooltips/dist/chartist-plugin-tooltip.min.js"></script>
+        <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
         <script src="../dist/js/OnLine.js"></script>
         <!-- Chart JS -->
         <script src="../assets/libs/chart.js/dist/Chart.min.js"></script>
@@ -1142,102 +1158,307 @@ ob_end_flush();
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 var defaultAnimation = 'animate__fadeInUp';
-                var targets = [];
+                var defaultDuration = 750;
+                var autoAnimateSelectorList = [
+                    '#main-wrapper .topbar',
+                    '#main-wrapper .left-sidebar',
+                    '#main-wrapper .page-wrapper',
+                    '#main-wrapper .page-wrapper .container-fluid',
+                    '#main-wrapper .page-wrapper .container-fluid > *',
+                    '#main-wrapper .page-wrapper .container-fluid .row',
+                    '#main-wrapper .page-wrapper .container-fluid .row > *',
+                    '#main-wrapper .page-wrapper .container-fluid .card',
+                    '#main-wrapper .page-wrapper .container-fluid .card > .card-header',
+                    '#main-wrapper .page-wrapper .container-fluid .card > .card-body',
+                    '#main-wrapper .page-wrapper .container-fluid .card > .card-footer',
+                    '#main-wrapper .page-wrapper .container-fluid canvas',
+                    '#main-wrapper .page-wrapper .container-fluid table',
+                    '#main-wrapper .page-wrapper .container-fluid .list-group-item',
+                    '#main-wrapper .page-wrapper .container-fluid .progress',
+                    '#main-wrapper .page-wrapper .container-fluid [class*="chart"]',
+                    '#main-wrapper .page-wrapper .container-fluid [data-animate-on-scroll]',
+                    '[data-animate-on-scroll]'
+                ];
 
-                function addTarget(element) {
-                    if (targets.indexOf(element) === -1) {
-                        targets.push(element);
-                    }
-                }
-
-                document.querySelectorAll('[data-animate-on-scroll]').forEach(function (element) {
-                    addTarget(element);
-                });
-
-                document.querySelectorAll('[class*="animate__"]').forEach(function (element) {
-                    addTarget(element);
-                });
-
-                document.querySelectorAll('.page-wrapper .container-fluid > .row, .page-wrapper .container-fluid .card').forEach(function (element) {
-                    addTarget(element);
-                });
-
-                if (!targets.length) {
-                    return;
-                }
-
+                var autoAnimateSelector = autoAnimateSelectorList.join(', ');
                 var supportsIntersectionObserver = 'IntersectionObserver' in window;
-                var observer = null;
 
-                function revealElement(element) {
-                    var animationClasses = (element.dataset.scrollAnimateClasses || defaultAnimation)
+                var observer = supportsIntersectionObserver ? new IntersectionObserver(function (entries, obs) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            reveal(entry.target);
+                            obs.unobserve(entry.target);
+                        }
+                    });
+                }, {
+                    threshold: 0.2,
+                    rootMargin: '0px 0px -10% 0px'
+                }) : null;
+
+                function sanitizeAnimationList(value) {
+                    return (value || '')
                         .split(/\s+/)
-                        .filter(Boolean);
+                        .map(function (className) {
+                            return className.trim();
+                        })
+                        .filter(function (className) {
+                            return className.length > 0;
+                        });
+                }
+
+                function parseTimeValue(value) {
+                    if (typeof value === 'number') {
+                        return value;
+                    }
+
+                    if (value === null || value === undefined) {
+                        return NaN;
+                    }
+
+                    var stringValue = String(value).trim();
+
+                    if (!stringValue) {
+                        return NaN;
+                    }
+
+                    if (/ms$/i.test(stringValue)) {
+                        return parseFloat(stringValue);
+                    }
+
+                    if (/s$/i.test(stringValue)) {
+                        return parseFloat(stringValue) * 1000;
+                    }
+
+                    var numericValue = parseFloat(stringValue);
+
+                    if (isNaN(numericValue)) {
+                        return NaN;
+                    }
+
+                    return numericValue > 20 ? numericValue : numericValue * 1000;
+                }
+
+                function getSiblingIndex(element) {
+                    var index = 0;
+                    var sibling = element;
+
+                    while (sibling && (sibling = sibling.previousElementSibling)) {
+                        index++;
+                    }
+
+                    return index;
+                }
+
+                function computeDelay(element) {
+                    var explicitDelay = element.dataset.animateDelay || element.dataset.scrollAnimateDelay;
+                    var parsedDelay = parseTimeValue(explicitDelay);
+
+                    if (!isNaN(parsedDelay)) {
+                        return parsedDelay;
+                    }
+
+                    if (element.parentElement && element.parentElement.classList && element.parentElement.classList.contains('row')) {
+                        return Math.min(getSiblingIndex(element) * 120, 480);
+                    }
+
+                    return 0;
+                }
+
+                function computeDuration(element) {
+                    var explicitDuration = element.dataset.animateDuration || element.dataset.scrollAnimateDuration;
+                    var parsedDuration = parseTimeValue(explicitDuration);
+
+                    if (!isNaN(parsedDuration) && parsedDuration > 0) {
+                        return parsedDuration;
+                    }
+
+                    return defaultDuration;
+                }
+
+                function applyTiming(element, delayMs, durationMs) {
+                    var delaySeconds = (delayMs / 1000).toFixed(2) + 's';
+                    var durationSeconds = (durationMs / 1000).toFixed(2) + 's';
+
+                    element.style.setProperty('--animate-delay', delaySeconds);
+                    element.style.setProperty('--animate-duration', durationSeconds);
+                    element.style.animationDelay = delaySeconds;
+                    element.style.animationDuration = durationSeconds;
+                }
+
+                function reveal(element) {
+                    var classes = sanitizeAnimationList(element.dataset.scrollAnimateClasses || defaultAnimation);
 
                     element.classList.add('scroll-animate--visible', 'animate__animated');
 
-                    animationClasses.forEach(function (animationClass) {
-                        if (animationClass !== 'animate__animated') {
-                            element.classList.add(animationClass);
+                    classes.forEach(function (className) {
+                        if (className && className !== 'animate__animated') {
+                            element.classList.add(className);
                         }
                     });
+
+                    var delayMs = computeDelay(element);
+                    var durationMs = computeDuration(element);
+                    element.dataset.scrollAnimateDelay = delayMs;
+                    element.dataset.scrollAnimateDuration = durationMs;
+                    applyTiming(element, delayMs, durationMs);
+
+                    if (element.__chartistInstance && typeof element.__chartistInstance.update === 'function') {
+                        element.__chartistInstance.update();
+                    } else if (element.querySelector && element.querySelector('.ct-chart')) {
+                        element.querySelectorAll('.ct-chart').forEach(function (chartContainer) {
+                            if (chartContainer.__chartistInstance && typeof chartContainer.__chartistInstance.update === 'function') {
+                                chartContainer.__chartistInstance.update();
+                            }
+                        });
+                    }
                 }
 
-                function prepareElement(element) {
-                    var datasetClasses = (element.dataset.animateOnScroll || '').trim();
+                function prepare(element) {
+                    if (!(element instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (element.classList.contains('scroll-animate--prepared')) {
+                        return;
+                    }
+
+                    element.classList.add('scroll-animate--prepared');
+
+                    var datasetClasses = sanitizeAnimationList(element.dataset.animateOnScroll);
                     var existingAnimationClasses = Array.from(element.classList).filter(function (className) {
                         return className.indexOf('animate__') === 0;
                     });
 
-                    var classesToUse;
-
-                    if (datasetClasses) {
-                        classesToUse = datasetClasses.split(/\s+/).filter(Boolean);
-                    } else if (existingAnimationClasses.length > 0) {
-                        classesToUse = existingAnimationClasses.filter(function (className) {
+                    var classesToUse = datasetClasses.length
+                        ? datasetClasses
+                        : existingAnimationClasses.filter(function (className) {
                             return className !== 'animate__animated';
                         });
-                    } else {
-                        classesToUse = [defaultAnimation];
-                    }
 
                     if (!classesToUse.length) {
-                        classesToUse = [defaultAnimation];
+                        if (element.matches('.row > *:nth-child(odd)')) {
+                            classesToUse = ['animate__fadeInLeft'];
+                        } else if (element.matches('.row > *:nth-child(even)')) {
+                            classesToUse = ['animate__fadeInRight'];
+                        } else {
+                            classesToUse = [defaultAnimation];
+                        }
                     }
 
-                    if (existingAnimationClasses.length > 0) {
-                        element.classList.remove(...existingAnimationClasses);
+                    if (existingAnimationClasses.length) {
+                        existingAnimationClasses.forEach(function (className) {
+                            element.classList.remove(className);
+                        });
                     }
 
                     element.dataset.scrollAnimateClasses = classesToUse.join(' ');
                     element.classList.add('scroll-animate');
 
-                    if (!supportsIntersectionObserver) {
-                        revealElement(element);
+                    if (observer) {
+                        observer.observe(element);
+                    } else {
+                        reveal(element);
+                    }
+                }
+
+                function processNode(node) {
+                    if (!(node instanceof HTMLElement)) {
                         return;
                     }
 
-                    observer.observe(element);
-                }
+                    if (node.matches(autoAnimateSelector + ', [class*="animate__"]')) {
+                        prepare(node);
+                    }
 
-                if (supportsIntersectionObserver) {
-                    observer = new IntersectionObserver(function (entries) {
-                        entries.forEach(function (entry) {
-                            if (entry.isIntersecting) {
-                                revealElement(entry.target);
-                                observer.unobserve(entry.target);
-                            }
-                        });
-                    }, {
-                        threshold: 0.2,
-                        rootMargin: '0px 0px -10% 0px'
+                    node.querySelectorAll(autoAnimateSelector + ', [class*="animate__"]').forEach(function (child) {
+                        prepare(child);
                     });
                 }
 
-                targets.forEach(function (element) {
-                    prepareElement(element);
+                document.querySelectorAll(autoAnimateSelector + ', [class*="animate__"]').forEach(function (element) {
+                    prepare(element);
                 });
+
+                if ('MutationObserver' in window) {
+                    var mutationObserver = new MutationObserver(function (mutations) {
+                        mutations.forEach(function (mutation) {
+                            Array.prototype.slice.call(mutation.addedNodes).forEach(function (node) {
+                                processNode(node);
+                            });
+                        });
+                    });
+
+                    mutationObserver.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                }
             });
+
+            (function () {
+                if (!window.Chart || window.__scrollActivatedChartPlugin) {
+                    return;
+                }
+
+                window.__scrollActivatedChartPlugin = true;
+
+                var globalDefaults = Chart.defaults && Chart.defaults.global;
+                if (globalDefaults && globalDefaults.animation) {
+                    globalDefaults.animation.duration = 1200;
+                    globalDefaults.animation.easing = 'easeOutQuart';
+                    globalDefaults.animation.animateRotate = true;
+                    globalDefaults.animation.animateScale = true;
+                } else if (Chart.defaults && Chart.defaults.animation) {
+                    Chart.defaults.animation.duration = 1200;
+                    Chart.defaults.animation.easing = 'easeOutQuart';
+                }
+
+                var chartObserver = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries, obs) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            var canvas = entry.target;
+                            var chartInstance = canvas.__scrollAnimatedChart;
+
+                            if (chartInstance && typeof chartInstance.reset === 'function') {
+                                chartInstance.reset();
+                                chartInstance.update();
+                            }
+
+                            canvas.__scrollAnimatedChartPlayed = true;
+                            obs.unobserve(canvas);
+                        }
+                    });
+                }, {
+                    threshold: 0.35,
+                    rootMargin: '0px 0px -15% 0px'
+                }) : null;
+
+                var plugin = {
+                    id: 'scroll-activate-animation',
+                    afterInit: function (chart) {
+                        if (!chart || !chart.canvas) {
+                            return;
+                        }
+
+                        chart.canvas.__scrollAnimatedChart = chart;
+
+                        if (chartObserver) {
+                            chartObserver.observe(chart.canvas);
+                        } else if (typeof chart.reset === 'function') {
+                            chart.reset();
+                            setTimeout(function () {
+                                chart.update();
+                            }, 50);
+                        }
+                    }
+                };
+
+                if (Chart.pluginService && Chart.pluginService.register) {
+                    Chart.pluginService.register(plugin);
+                } else if (Chart.register) {
+                    Chart.register(plugin);
+                }
+            })();
         </script>
 
 
@@ -1673,7 +1894,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -1871,7 +2092,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -2042,7 +2263,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -2212,7 +2433,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -2417,7 +2638,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -2521,7 +2742,7 @@ ORDER BY FechaVencimiento;";
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -2622,7 +2843,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -2874,7 +3095,7 @@ ORDER BY Fecha DESC";
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "12px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -3000,7 +3221,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "12px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -3133,7 +3354,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "12px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -3274,7 +3495,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -3382,7 +3603,7 @@ toneladasElement.textContent = valorToneladas;
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -3734,7 +3955,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {
@@ -3838,7 +4059,7 @@ try {
                 onComplete: function () {
                     var ctx = this.chart.ctx;
                     ctx.textAlign = "center";
-                    ctx.textBaseline = "TOP";
+                    ctx.textBaseline = "top";
                     ctx.font = "10px Arial";
 
                     this.data.datasets.forEach(function (dataset) {

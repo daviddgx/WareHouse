@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/LST_BDGS.php';
@@ -17,6 +18,8 @@ $Mensajeerror = '';
 // Fin de la conexion
 // Validar formulario y grabar informacion
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

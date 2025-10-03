@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
 include '../Innet_ADM/Innet_AMD.php';
@@ -36,6 +37,8 @@ $Listaocupadas = DarValorListaOcupadas($BodegaPRM);
 // Fin de la conexion
 // Validar formulario y grabar informacion
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

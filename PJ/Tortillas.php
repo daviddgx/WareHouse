@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 
 const ACCESS_PASSWORD = 'Inicio1994=';
@@ -17,7 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clave_acceso'])) {
 }
 
 if (empty($_SESSION[ACCESS_SESSION_FLAG])) {
-  ?><!doctype html>
+  
+ob_end_flush();
+?><!doctype html>
   <html lang="es">
   <head>
     <meta charset="utf-8">

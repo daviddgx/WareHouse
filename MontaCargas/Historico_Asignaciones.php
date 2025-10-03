@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
 //include '../LQS_EUQ/ListarAsignacionesCompletos.php';
@@ -136,6 +137,8 @@ switch ($accion) {
         break;
 }
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

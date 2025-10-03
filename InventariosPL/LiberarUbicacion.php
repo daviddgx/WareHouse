@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 
 if ($_SESSION['Usuario'] == '') {
@@ -139,6 +140,8 @@ where Ubicacion = '$txtUOrigne' and posiciones.Estado = 'Ocupada'
 
 
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

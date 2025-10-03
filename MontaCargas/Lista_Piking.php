@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/ListarPiking.php';
@@ -50,6 +51,8 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

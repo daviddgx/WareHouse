@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 
 if ($_SESSION['Usuario'] == '') {
@@ -185,6 +186,8 @@ try {
                                 </div>';
 }
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

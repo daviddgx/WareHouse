@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/ListarAsignacionesIDH.php';
@@ -43,6 +44,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
 
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Auth.php';
 include '../LQS_EUQ/ListarAsignacionesCompletos.php';
@@ -171,6 +172,8 @@ switch ($accion) {
 }
 
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">

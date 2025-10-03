@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');
@@ -61,4 +62,6 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'ejecutar_funcion') {
 }
 exportToExcel();
 
+
+ob_end_flush();
 ?>

@@ -1,4 +1,5 @@
 <?php
+ob_start();
 
 function darValorDespachos($NombreUsuario){
     include '../LQS_EUQ/Auth.php';
@@ -846,4 +847,6 @@ function CaluclarCuarentena($FechaCuarentena){
 
 }
 
+
+ob_end_flush();
 ?>

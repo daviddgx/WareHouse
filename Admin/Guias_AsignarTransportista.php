@@ -1,5 +1,12 @@
 <?php
 session_start();
+$currentDate = date('Y-m-d');
+
+if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
+    header('Location: ../Innet/505.html');
+    exit();
+}
+
 include '../LQS_EUQ/LST_Transportista.php';
 
 date_default_timezone_set('America/Guatemala');

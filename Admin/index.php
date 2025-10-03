@@ -1400,11 +1400,11 @@ ob_end_flush();
             });
 
             (function () {
-                if (!window.Chart || window.__initialChartAnimationConfigured) {
+                if (!window.Chart || window.__chartAnimationDefaultsConfigured) {
                     return;
                 }
 
-                window.__initialChartAnimationConfigured = true;
+                window.__chartAnimationDefaultsConfigured = true;
 
                 var globalDefaults = Chart.defaults && Chart.defaults.global;
                 if (globalDefaults && globalDefaults.animation) {
@@ -1415,26 +1415,6 @@ ob_end_flush();
                 } else if (Chart.defaults && Chart.defaults.animation) {
                     Chart.defaults.animation.duration = 1200;
                     Chart.defaults.animation.easing = 'easeOutQuart';
-                }
-
-                var plugin = {
-                    id: 'initial-render-animation',
-                    afterInit: function (chart) {
-                        if (!chart || typeof chart.reset !== 'function' || typeof chart.update !== 'function') {
-                            return;
-                        }
-
-                        chart.reset();
-                        setTimeout(function () {
-                            chart.update();
-                        }, 50);
-                    }
-                };
-
-                if (Chart.pluginService && Chart.pluginService.register) {
-                    Chart.pluginService.register(plugin);
-                } else if (Chart.register) {
-                    Chart.register(plugin);
                 }
             })();
         </script>

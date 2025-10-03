@@ -1,5 +1,6 @@
 
 <?php
+ob_start();
 session_start();
 $currentDate = date('Y-m-d');
 
@@ -51,6 +52,7 @@ if ($result->num_rows > 0)
 }
 
 echo $Cadena . '</select>';
+ob_end_flush();
 ?>
 
 <script type="text/javascript">

@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 $currentDate = date('Y-m-d');
 
@@ -40,4 +41,5 @@ echo "Procesado correctamente";
 $SQL4 = "Insert into dbs9098416.DetalleGuias (Select null,Transporte,Entrega,Material,Cajas,PesoNeto,PesoBruto,'','',Tipo from dbs9098416.DetalleGuias_Carga where Transporte = '".$Transporte."'  and Tipo = 'Piking');";
 $result2 = $conexion2->query($SQL4);
 
+ob_end_flush();
 ?>

@@ -14,7 +14,6 @@ if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuari
         'success' => false,
         'error' => 'Sesión inválida',
     ]);
-    exit();
 }
 
 require_once __DIR__ . '/providers.php';

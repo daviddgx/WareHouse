@@ -1148,7 +1148,11 @@ ob_end_flush();
         <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
         <script src="../assets/libs/chartist/dist/chartist.min.js"></script>
         <script src="../assets/libs/chartist-plugin-tooltips/dist/chartist-plugin-tooltip.min.js"></script>
-        <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
+        <!-- Removed dashboard1 demo script because the admin dashboard has its own
+             custom charts and the demo attempted to initialize Chartist and
+             jVectorMap widgets that do not exist on this page, producing
+             console errors. -->
+        <!-- <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script> -->
         <script src="../dist/js/OnLine.js"></script>
         <!-- Chart JS -->
         <script src="../assets/libs/chart.js/dist/Chart.min.js"></script>

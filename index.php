@@ -4,7 +4,7 @@ session_start();
 
 
 //ANCHOR -  Redireccion a HTPPS
-if ((!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') && php_sapi_name() !== 'cli-server') {
+if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') {
     echo "NO DISPONE DE CONEXIÓN HTTPS";
     header('Location: https://apps-sertero.com/');
 }
@@ -13,14 +13,16 @@ if ((!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') && php_sapi_name() 
 
 include 'LQS_EUQ/Auth.php';
 
-$error = $error ?? '';
-$mensajeExito = $mensajeExito ?? '';
 
 // FuncionLogin
 
+
 if (!empty($_POST['Entrar'])) {
+    
     $LUser = $_POST['UserLog'];
     $LClave = $_POST['ClaveLog'];
+
+
     // Creamos la conexion
 
     $conn = new mysqli($servername, $username, $password, $dbname);
@@ -111,7 +113,7 @@ if (!empty($_POST['Entrar'])) {
                 // $row = $result->fetch_assoc();
             }
         } catch (Exception $ex) {
-            $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
+            $error = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
                                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                         <span aria-hidden="true">×</span>
                                     </button>
@@ -344,13 +346,17 @@ ob_end_flush();
     <main class="main-content">
         <section class="brand-card">
             <img src="../assets/images/Sertero/LogoHenkel.png" alt="Sertero" style="max-width: 180px; height: auto;">
-            <h1>Bienvenido al ecosistema logístico de Sertero</h1>
+            <h1>Pantalla de acceso Sertero</h1>
             <p>
-                Centraliza tus operaciones y gestiona la información crítica de manera segura desde cualquier dispositivo.
-                Accede a herramientas de inventario, picking, control de montacargas y mucho más, ahora con una interfaz optimizada.
+                Bienvenido
+                Sistema Logistico
+
+                Control de Posiciones, planificacion y control de despachos, Inventario, Picking.
+
+                Conectividad en tiempo real interoperabilidad con montacargas
             </p>
             <p style="font-size: 0.9rem; color: rgba(244, 247, 251, 0.7);">
-                Optimizado para tabletas y móviles. Mantente productivo estés donde estés.
+                Interfaz optimizada y responsiva. 
             </p>
         </section>
 
@@ -358,13 +364,13 @@ ob_end_flush();
             <h2>Ingreso al sistema</h2>
             <form role="form" action="" method="post">
                 <div>
-                    <input type="text" name="UserLog" placeholder="Usuario" class="form-control" id="form-username" required>
+                    <input type="text" name="UserLog" placeholder="Usuario" class="form-control" id="UserLog" required>
                 </div>
                 <div>
-                    <input type="password" name="ClaveLog" placeholder="Contraseña" class="form-control" id="form-password" required>
+                    <input type="password" name="ClaveLog" placeholder="Contraseña" class="form-control" id="ClaveLog" required>
                 </div>
                 <div class="message-container"><?php echo $error . $mensajeExito; ?></div>
-                <button type="submit" name="Entrar" class="effect-button">Entrar</button>
+                <button type="submit" name="Entrar"  value="Entrar"class="effect-button">Entrar al Sistema</button>
             </form>
         </section>
     </main>

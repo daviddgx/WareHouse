@@ -29,7 +29,7 @@ if (isset($_GET['id'])) {
 // 1. Validar que el ID que viene no trae registros establecidos en Ubicacion.
 
     // Tu consulta SQL
-    $query = "SELECT * FROM dbs9098416.DetalleGuias  where IDRegistro = $ID_DetalleGuia;";
+    $query = "SELECT * FROM dbs9098416.DetalleGuias  where IDRegistro = $ID_DetalleGuia and Estatus <> 'Despachado;'";
 
 // Ejecutar la consulta
     $result = $conn->query($query);

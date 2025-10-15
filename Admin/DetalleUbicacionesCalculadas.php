@@ -25,10 +25,14 @@ $NoGuia = isset($_GET["Guia"]) ? $_GET["Guia"] : null;
 
 // Datos generales
 
+ rEALIZAR UNA REVISION DE LA GUIA, Y SI ESTA DESPACHADA, QUE YA NO APLIQUE EL PROCESO
+
+//
+
 try {
 
      if (isset($_GET['Guia'])) {
-         $sql = "select FechaPedido,FechaEngrega,NombreDestino,Direccion,Lugar,Transportista,Piloto,Rampa,Montacarguista from  dbs9098416.Guias where Transporte ='" . $NoGuia . "' ;";
+         $sql = "select FechaPedido,FechaEngrega,NombreDestino,Direccion,Lugar,Transportista,Piloto,Rampa,Montacarguista from  dbs9098416.Guias where Transporte ='" . $NoGuia . "' and Estatus <> 'Despachado' ;";
 
          $sentencia = $pdo->prepare($sql,
              array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true));

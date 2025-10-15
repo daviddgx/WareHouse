@@ -46,6 +46,25 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
+// Preparar registros para el visor de detalle
+$asignacionesList = [];
+if ($lista_AsignacionesPRODUCCION) {
+    do {
+        $registroActual = $lista_AsignacionesPRODUCCION;
+        $registroActual['FechaIngresoFormateada'] = isset($registroActual['FechaIngreso']) && $registroActual['FechaIngreso']
+            ? date('d/m/Y', strtotime($registroActual['FechaIngreso']))
+            : '';
+        $asignacionesList[] = $registroActual;
+    } while ($lista_AsignacionesPRODUCCION = $ejecutar_sentencia_Asignaciones->fetch(PDO::FETCH_ASSOC));
+}
+
+$totalAsignacionesPendientes = count($asignacionesList);
+$primerRegistroAsignacion = $totalAsignacionesPendientes > 0 ? $asignacionesList[0] : null;
+$ingresarUrl = '';
+if ($primerRegistroAsignacion) {
+    $ingresarUrl = 'UbicarProducto.php?Guia=' . urlencode($primerRegistroAsignacion['Numero']) . '&IDH=' . urlencode($primerRegistroAsignacion['IDH']) . '&Ubicacion=' . urlencode($primerRegistroAsignacion['Posicion']);
+}
+
 
 
 
@@ -90,11 +109,6 @@ ob_end_flush();
     <![endif]-->
 
     <style>
-        .bolded {
-            font-weight:bold;
-            font-size: large;
-        }
-
         .card-body {
             flex: 1 1 auto;
             padding: 5px;
@@ -102,6 +116,147 @@ ob_end_flush();
 
         .page-breadcrumb {
             padding: 10px 10px 0;
+        }
+
+        .assignment-card-body {
+            padding: 1.5rem;
+        }
+
+        .assignment-view {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-height: calc(100vh - 240px);
+        }
+
+        .assignment-header {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .assignment-header {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .assignment-navigation {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .assignment-navigation .nav-btn {
+            min-width: 120px;
+        }
+
+        .assignment-summary {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+        }
+
+        .assignment-summary .record-indicator {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .assignment-details {
+            flex: 1 1 auto;
+            background: #f4f6fb;
+            border-radius: 1rem;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .assignment-fields {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .assignment-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .assignment-field .label {
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-size: .75rem;
+            color: #6c757d;
+        }
+
+        .assignment-field .value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #212529;
+            word-break: break-word;
+        }
+
+        .assignment-field--highlight {
+            background: #ffffff;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 10px 30px rgba(31, 45, 61, 0.08);
+        }
+
+        .assignment-field--highlight .value {
+            font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+            color: #e53935;
+        }
+
+        .assignment-empty {
+            text-align: center;
+            font-size: 1.25rem;
+            color: #6c757d;
+            margin: auto;
+        }
+
+        .assignment-footer {
+            margin-top: auto;
+            height: 25vh;
+            min-height: 160px;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-ingresar {
+            width: 100%;
+            height: 100%;
+            font-size: clamp(1.35rem, 2.5vw, 2.2rem);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+        }
+
+        .btn-ingresar.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 767.98px) {
+            .assignment-card-body {
+                padding: 1rem;
+            }
+
+            .assignment-details {
+                padding: 1.5rem;
+            }
+
+            .assignment-footer {
+                min-height: 140px;
+            }
         }
     </style>
 </head>
@@ -370,85 +525,73 @@ ob_end_flush();
 
                             -->
 
-                            <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
-
-                                <h4 class="card-title mb-3">Guias a Despachar</h4>
-<br>
-                                <a class="btn btn btn-outline-danger" style="margin-left: 2rem" href="Lista_AsignacionesIDH.php"><span > Regresar al listado de IDHs 📦 </span></a>
-<br>
-                                <table id="example" class="table table-striped skeleton-target" cellspacing="0" width="100%" data-aos="fade-up" data-aos-delay="150">
-                                    <thead>
-
-
-
-                                    <th>IDH</th>
-                                    <th>Material</th>
-                                    <th>A Posicion</th>
-                                    
-                                    <th>Bultos</th>
-                                    <th>Pallet Completo</th>
-                                    
-                                    <th>Estatus</th>
-                                    <th>Fecha de ingreso</th>
-                                    <th>Ubicar</th>
-
-
-
-                                    </thead>
-                                    <tbody>
-                                    <?php
-                                    for ($i = 0; $i < $lista_AsignacionesPRODUCCION; $i++) {
-                                        echo "<tr>";
-
-
-                                        $IDGUIA = $lista_AsignacionesPRODUCCION['Numero'];
-                                        $IDIDH = $lista_AsignacionesPRODUCCION['IDH'];
-                                        $Posicion = $lista_AsignacionesPRODUCCION['Posicion'];
-
-
-                                        echo "<td>";
-                                        echo $lista_AsignacionesPRODUCCION['IDH'];
-                                        echo "</td>";
-
-                                        echo "<td>";
-                                        echo $lista_AsignacionesPRODUCCION['Producto'];
-                                        echo "</td>";
-
-                                        echo "<td>";
-                                        echo $lista_AsignacionesPRODUCCION['Posicion'];
-                                        echo "</td>";
-
-                                        echo "<td>";
-                                        echo $lista_AsignacionesPRODUCCION['Cantidades'];
-                                        echo "</td>";
-
-                                        echo "<td>";
-                                        echo $lista_AsignacionesPRODUCCION['PalletCompleto'];
-                                        echo "</td>";
-
-                                        echo "<td>";
-                                        echo $lista_AsignacionesPRODUCCION['Estado'];
-                                        echo "</td>";
-
-                                        echo "<td>";
-                                        echo  date('d/m/Y', strtotime($lista_AsignacionesPRODUCCION['FechaIngreso']));
-                                        echo "</td>";
-
-
-                                        echo "<td>";
-                                        echo '<a href="UbicarProducto.php?Guia='.$IDGUIA.'&IDH='.$IDIDH.'&Ubicacion='.$Posicion.'" class="btn btn-success action-button">Ingresar ✔️</a>';
-                                        echo "</td>";
-
-                                        
-
-                                        echo "</tr>";
-                                        $lista_AsignacionesPRODUCCION =$ejecutar_sentencia_Asignaciones->fetch(PDO::FETCH_ASSOC);
-                                    }
-                                    ?>
-                                    </tbody>
-                                </table>
-
-                                <br>
+                            <div class="card-body skeleton-target assignment-card-body" data-aos="fade-up" data-aos-delay="100">
+                                <h4 class="card-title mb-4">Guías a despachar</h4>
+                                <div class="assignment-view">
+                                    <div class="assignment-header">
+                                        <a class="btn btn-outline-danger" href="Lista_AsignacionesIDH.php">
+                                            <span>Regresar al listado de IDHs 📦</span>
+                                        </a>
+                                        <div class="assignment-navigation">
+                                            <button type="button" class="btn btn-secondary nav-btn" id="prevRecord" disabled>◀ Anterior</button>
+                                            <div class="assignment-summary">
+                                                <span class="badge badge-info badge-pill">Pendientes: <span id="pendingTotal"><?php echo $totalAsignacionesPendientes; ?></span></span>
+                                                <span class="record-indicator" id="recordIndicator"><?php echo $totalAsignacionesPendientes ? '1 / ' . $totalAsignacionesPendientes : '0 / 0'; ?></span>
+                                            </div>
+                                            <button type="button" class="btn btn-secondary nav-btn" id="nextRecord" <?php echo $totalAsignacionesPendientes > 1 ? '' : 'disabled'; ?>>Siguiente ▶</button>
+                                        </div>
+                                    </div>
+                                    <div class="assignment-details">
+                                        <div class="assignment-empty <?php echo $primerRegistroAsignacion ? 'd-none' : ''; ?>" id="assignmentEmpty">
+                                            No hay registros pendientes por despachar.
+                                        </div>
+                                        <div class="assignment-fields <?php echo $primerRegistroAsignacion ? '' : 'd-none'; ?>" id="assignmentFields">
+                                            <div class="assignment-field assignment-field--highlight">
+                                                <span class="label">IDH</span>
+                                                <span class="value" id="detailIdh"><?php echo $primerRegistroAsignacion ? htmlspecialchars($primerRegistroAsignacion['IDH'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Guía</span>
+                                                <span class="value" id="detailGuia"><?php echo $primerRegistroAsignacion ? htmlspecialchars($primerRegistroAsignacion['Numero'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Material</span>
+                                                <span class="value" id="detailMaterial"><?php echo $primerRegistroAsignacion ? htmlspecialchars($primerRegistroAsignacion['Producto'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">A posición</span>
+                                                <span class="value" id="detailPosicion"><?php echo $primerRegistroAsignacion ? htmlspecialchars($primerRegistroAsignacion['Posicion'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Bultos</span>
+                                                <span class="value" id="detailBultos"><?php echo $primerRegistroAsignacion ? htmlspecialchars($primerRegistroAsignacion['Cantidades'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Pallet completo</span>
+                                                <span class="value" id="detailPallet"><?php echo $primerRegistroAsignacion ? htmlspecialchars($primerRegistroAsignacion['PalletCompleto'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Estatus</span>
+                                                <span class="value" id="detailEstado"><?php echo $primerRegistroAsignacion ? htmlspecialchars($primerRegistroAsignacion['Estado'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Fecha de ingreso</span>
+                                                <span class="value" id="detailFecha"><?php echo $primerRegistroAsignacion ? htmlspecialchars($primerRegistroAsignacion['FechaIngresoFormateada'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="assignment-footer">
+                                        <a id="ingresarButton"
+                                           class="btn btn-success btn-ingresar<?php echo $primerRegistroAsignacion ? '' : ' disabled'; ?>"
+                                           <?php if ($primerRegistroAsignacion) { ?>
+                                               href="<?php echo htmlspecialchars($ingresarUrl, ENT_QUOTES, 'UTF-8'); ?>"
+                                           <?php } else { ?>
+                                               role="button" aria-disabled="true"
+                                           <?php } ?>>
+                                            Ingresar ✔️
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                             <!-- Fin de componentes dinamicos -->
 
@@ -507,23 +650,118 @@ ob_end_flush();
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
-<script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
-<script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
-
 <script>
-    $(document).ready( function () {
-        var table = $('#example').DataTable({
- scrollX: true,
+    document.addEventListener('DOMContentLoaded', function () {
+        const assignments = <?php echo json_encode($asignacionesList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        const prevBtn = document.getElementById('prevRecord');
+        const nextBtn = document.getElementById('nextRecord');
+        const indicator = document.getElementById('recordIndicator');
+        const pendingTotal = document.getElementById('pendingTotal');
+        const fieldsWrapper = document.getElementById('assignmentFields');
+        const emptyState = document.getElementById('assignmentEmpty');
+        const ingresarButton = document.getElementById('ingresarButton');
+        const detailElements = {
+            idh: document.getElementById('detailIdh'),
+            guia: document.getElementById('detailGuia'),
+            material: document.getElementById('detailMaterial'),
+            posicion: document.getElementById('detailPosicion'),
+            bultos: document.getElementById('detailBultos'),
+            pallet: document.getElementById('detailPallet'),
+            estado: document.getElementById('detailEstado'),
+            fecha: document.getElementById('detailFecha')
+        };
+        let currentIndex = assignments.length > 0 ? 0 : -1;
 
-            language: {
-                url: 'datatables_espanol.json'
+        function updateButtonLink(assignment) {
+            if (!ingresarButton) {
+                return;
             }
-        });
+            if (!assignment) {
+                ingresarButton.removeAttribute('href');
+                ingresarButton.classList.add('disabled');
+                ingresarButton.setAttribute('aria-disabled', 'true');
+                ingresarButton.textContent = 'Ingresar ✔️';
+                ingresarButton.setAttribute('title', 'No hay registros pendientes');
+                return;
+            }
 
+            const params = new URLSearchParams({
+                Guia: assignment.Numero || '',
+                IDH: assignment.IDH || '',
+                Ubicacion: assignment.Posicion || ''
+            });
 
-        $( table.column( 0 ).nodes() ).addClass( 'bolded' );
-        $( table.column( 2 ).nodes() ).addClass( 'bolded' );
-    } );
+            ingresarButton.href = 'UbicarProducto.php?' + params.toString();
+            ingresarButton.classList.remove('disabled');
+            ingresarButton.removeAttribute('aria-disabled');
+            ingresarButton.removeAttribute('title');
+            ingresarButton.textContent = 'Ingresar ✔️';
+        }
+
+        function renderAssignment(index) {
+            const hasAssignments = assignments.length > 0 && index >= 0;
+
+            if (pendingTotal) {
+                pendingTotal.textContent = assignments.length;
+            }
+
+            if (indicator) {
+                indicator.textContent = hasAssignments ? (index + 1) + ' / ' + assignments.length : '0 / 0';
+            }
+
+            if (!fieldsWrapper || !emptyState) {
+                return;
+            }
+
+            if (!hasAssignments) {
+                fieldsWrapper.classList.add('d-none');
+                emptyState.classList.remove('d-none');
+                updateButtonLink(null);
+                if (prevBtn) prevBtn.disabled = true;
+                if (nextBtn) nextBtn.disabled = true;
+                return;
+            }
+
+            const assignment = assignments[index];
+
+            fieldsWrapper.classList.remove('d-none');
+            emptyState.classList.add('d-none');
+
+            if (detailElements.idh) detailElements.idh.textContent = assignment.IDH || '';
+            if (detailElements.guia) detailElements.guia.textContent = assignment.Numero || '';
+            if (detailElements.material) detailElements.material.textContent = assignment.Producto || '';
+            if (detailElements.posicion) detailElements.posicion.textContent = assignment.Posicion || '';
+            if (detailElements.bultos) detailElements.bultos.textContent = assignment.Cantidades || '';
+            if (detailElements.pallet) detailElements.pallet.textContent = assignment.PalletCompleto || '';
+            if (detailElements.estado) detailElements.estado.textContent = assignment.Estado || '';
+            if (detailElements.fecha) detailElements.fecha.textContent = assignment.FechaIngresoFormateada || '';
+
+            updateButtonLink(assignment);
+
+            if (prevBtn) prevBtn.disabled = index === 0;
+            if (nextBtn) nextBtn.disabled = index === assignments.length - 1;
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                if (currentIndex > 0) {
+                    currentIndex -= 1;
+                    renderAssignment(currentIndex);
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (currentIndex < assignments.length - 1) {
+                    currentIndex += 1;
+                    renderAssignment(currentIndex);
+                }
+            });
+        }
+
+        renderAssignment(currentIndex);
+    });
 </script>
 
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>

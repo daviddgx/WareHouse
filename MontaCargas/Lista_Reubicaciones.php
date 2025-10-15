@@ -46,6 +46,27 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
+// Preparar registros para el visor de detalle
+$reubicacionesList = [];
+if ($lista_Movimientos) {
+    do {
+        $registroActual = $lista_Movimientos;
+        $reubicacionesList[] = $registroActual;
+    } while ($lista_Movimientos = $ejecutar_sentencia_Movimientos->fetch(PDO::FETCH_ASSOC));
+}
+
+$totalReubicacionesPendientes = count($reubicacionesList);
+$primerRegistroReubicacion = $totalReubicacionesPendientes > 0 ? $reubicacionesList[0] : null;
+$moverUrl = '';
+if ($primerRegistroReubicacion) {
+    $moverUrl = 'MoverProducto.php?' . http_build_query([
+        'Guia' => isset($primerRegistroReubicacion['id']) ? $primerRegistroReubicacion['id'] : '',
+        'Origen' => isset($primerRegistroReubicacion['Origen']) ? $primerRegistroReubicacion['Origen'] : '',
+        'Destino' => isset($primerRegistroReubicacion['Destino']) ? $primerRegistroReubicacion['Destino'] : '',
+        'IDH' => isset($primerRegistroReubicacion['IDH']) ? $primerRegistroReubicacion['IDH'] : '',
+    ]);
+}
+
 
 ob_end_flush();
 ?>
@@ -88,16 +109,159 @@ ob_end_flush();
     <![endif]-->
 
     <style>
-        .bolded {
-            font-weight: bold;
-            font-size: large;
+        .card-body {
+            flex: 1 1 auto;
+            padding: 5px;
+        }
+
+        .page-breadcrumb {
+            padding: 10px 10px 0;
+        }
+
+        .assignment-card-body {
+            padding: 1.5rem;
+        }
+
+        .assignment-view {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-height: calc(100vh - 240px);
+        }
+
+        .assignment-header {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .assignment-header {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .assignment-navigation {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .assignment-navigation .nav-btn {
+            min-width: 120px;
+        }
+
+        .assignment-summary {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+        }
+
+        .assignment-summary .record-indicator {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .assignment-details {
+            flex: 1 1 auto;
+            background: #f4f6fb;
+            border-radius: 1rem;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .assignment-fields {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .assignment-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .assignment-field .label {
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-size: .75rem;
+            color: #6c757d;
+        }
+
+        .assignment-field .value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #212529;
+            word-break: break-word;
+        }
+
+        .assignment-field--highlight {
+            background: #ffffff;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 10px 30px rgba(31, 45, 61, 0.08);
+        }
+
+        .assignment-field--highlight .value {
+            font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+            color: #e53935;
+        }
+
+        .assignment-empty {
+            text-align: center;
+            font-size: 1.25rem;
+            color: #6c757d;
+            margin: auto;
+        }
+
+        .assignment-footer {
+            margin-top: auto;
+            height: 25vh;
+            min-height: 160px;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-ingresar {
+            width: 100%;
+            height: 100%;
+            font-size: clamp(1.35rem, 2.5vw, 2.2rem);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+        }
+
+        .btn-ingresar.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 767.98px) {
+            .assignment-card-body {
+                padding: 1rem;
+            }
+
+            .assignment-details {
+                padding: 1.5rem;
+            }
+
+            .assignment-footer {
+                min-height: 140px;
+            }
         }
     </style>
 </head>
 
 <body>
-echo "<script src='https://code.jquery.com/jquery-3.6.0.min.js'></script>";
-r
 <!-- ============================================================== -->
 <!-- Preloader - style you can find in spinners.css -->
 <!-- ============================================================== -->
@@ -352,66 +516,64 @@ r
 
 
 
-                            <table id="example" class="table table-striped skeleton-target" cellspacing="0" width="100%" data-aos="fade-up" data-aos-delay="200">
-                                <thead>
-
-
-                                <th>IDH</th>
-                                <th>Descripcion</th>
-                                <th>Origen</th>
-                                <th>Destino</th>
-                                <th>Estado</th>
-                                <th>Mover</th>
-
-                                </thead>
-                                <tbody>
-                                <?php
-                                for ($i = 0; $i < $lista_Movimientos; $i++) {
-
-
-                                    $IDGUIA = $lista_Movimientos['id'];
-                                    $Origen = $lista_Movimientos['Origen'];
-                                    $Destino = $lista_Movimientos['Destino'];
-                                    $IDH = $lista_Movimientos['IDH'];
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['IDH'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Descripcion'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Origen'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Destino'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Estado'];
-                                    echo "</td>";
-
-
-                                    echo "<td>";
-                                    echo '<a href="MoverProducto.php?Guia='.$IDGUIA.'&Origen='.$Origen.'&Destino='.$Destino.'&IDH='.$IDH.'" class="btn btn-primary action-button">Mover</a>';
-                                    echo "</td>";
-
-                                    
-
-
-
-                                    echo "</tr>";
-
-
-
-                                    $lista_Movimientos = $ejecutar_sentencia_Movimientos->fetch(PDO::FETCH_ASSOC);
-                                }
-                                ?>
-                                </tbody>
-                            </table>
+                            <div class="card-body skeleton-target assignment-card-body" data-aos="fade-up" data-aos-delay="200">
+                                <h4 class="card-title mb-4">Reubicaciones pendientes</h4>
+                                <div class="assignment-view">
+                                    <div class="assignment-header">
+                                        <a class="btn btn-outline-danger"
+                                           href="Lista_Reubicaciones.php"
+                                           onclick="if (history.length > 1) { history.back(); return false; }">
+                                            <span>Regresar al listado de IDHs 🔄</span>
+                                        </a>
+                                        <div class="assignment-navigation">
+                                            <button type="button" class="btn btn-secondary nav-btn" id="prevRecord" disabled>◀ Anterior</button>
+                                            <div class="assignment-summary">
+                                                <span class="badge badge-info badge-pill">Pendientes: <span id="pendingTotal"><?php echo $totalReubicacionesPendientes; ?></span></span>
+                                                <span class="record-indicator" id="recordIndicator"><?php echo $totalReubicacionesPendientes ? '1 / ' . $totalReubicacionesPendientes : '0 / 0'; ?></span>
+                                            </div>
+                                            <button type="button" class="btn btn-secondary nav-btn" id="nextRecord" <?php echo $totalReubicacionesPendientes > 1 ? '' : 'disabled'; ?>>Siguiente ▶</button>
+                                        </div>
+                                    </div>
+                                    <div class="assignment-details">
+                                        <div class="assignment-empty <?php echo $primerRegistroReubicacion ? 'd-none' : ''; ?>" id="assignmentEmpty">
+                                            No hay reubicaciones pendientes por mover.
+                                        </div>
+                                        <div class="assignment-fields <?php echo $primerRegistroReubicacion ? '' : 'd-none'; ?>" id="assignmentFields">
+                                            <div class="assignment-field assignment-field--highlight">
+                                                <span class="label">IDH</span>
+                                                <span class="value" id="detailIdh"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['IDH'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Descripción</span>
+                                                <span class="value" id="detailDescripcion"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['Descripcion'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Origen</span>
+                                                <span class="value" id="detailOrigen"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['Origen'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Destino</span>
+                                                <span class="value" id="detailDestino"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['Destino'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Estado</span>
+                                                <span class="value" id="detailEstado"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['Estado'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="assignment-footer">
+                                        <a id="moverButton"
+                                           class="btn btn-success btn-ingresar<?php echo $primerRegistroReubicacion ? '' : ' disabled'; ?>"
+                                           <?php if ($primerRegistroReubicacion) { ?>
+                                               href="<?php echo htmlspecialchars($moverUrl, ENT_QUOTES, 'UTF-8'); ?>"
+                                           <?php } else { ?>
+                                               role="button" aria-disabled="true"
+                                           <?php } ?>>
+                                            Mover ✔️
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                             <br>
                             <!-- Fin Contenido de esta seccion-->
 
@@ -467,22 +629,113 @@ r
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
-<script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
-<script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
-
 <script>
-    $(document).ready(function() {
-        var table = $('#example').DataTable({
- scrollX: true,
+    document.addEventListener('DOMContentLoaded', function () {
+        const reubicaciones = <?php echo json_encode($reubicacionesList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        const prevBtn = document.getElementById('prevRecord');
+        const nextBtn = document.getElementById('nextRecord');
+        const indicator = document.getElementById('recordIndicator');
+        const pendingTotal = document.getElementById('pendingTotal');
+        const fieldsWrapper = document.getElementById('assignmentFields');
+        const emptyState = document.getElementById('assignmentEmpty');
+        const moverButton = document.getElementById('moverButton');
+        const detailElements = {
+            idh: document.getElementById('detailIdh'),
+            descripcion: document.getElementById('detailDescripcion'),
+            origen: document.getElementById('detailOrigen'),
+            destino: document.getElementById('detailDestino'),
+            estado: document.getElementById('detailEstado')
+        };
+        let currentIndex = reubicaciones.length > 0 ? 0 : -1;
 
-            language: {
-                url: 'datatables_espanol.json'
+        function updateButtonLink(reubicacion) {
+            if (!moverButton) {
+                return;
             }
-        });
 
+            if (!reubicacion) {
+                moverButton.removeAttribute('href');
+                moverButton.classList.add('disabled');
+                moverButton.setAttribute('aria-disabled', 'true');
+                moverButton.textContent = 'Mover ✔️';
+                moverButton.setAttribute('title', 'No hay reubicaciones pendientes');
+                return;
+            }
 
-        $(table.column(2).nodes()).addClass('bolded');
-        $(table.column(3).nodes()).addClass('bolded');
+            const params = new URLSearchParams({
+                Guia: reubicacion.id || '',
+                Origen: reubicacion.Origen || '',
+                Destino: reubicacion.Destino || '',
+                IDH: reubicacion.IDH || ''
+            });
+
+            moverButton.href = 'MoverProducto.php?' + params.toString();
+            moverButton.classList.remove('disabled');
+            moverButton.removeAttribute('aria-disabled');
+            moverButton.removeAttribute('title');
+            moverButton.textContent = 'Mover ✔️';
+        }
+
+        function renderReubicacion(index) {
+            const hasRecords = reubicaciones.length > 0 && index >= 0;
+
+            if (pendingTotal) {
+                pendingTotal.textContent = reubicaciones.length;
+            }
+
+            if (indicator) {
+                indicator.textContent = hasRecords ? (index + 1) + ' / ' + reubicaciones.length : '0 / 0';
+            }
+
+            if (!fieldsWrapper || !emptyState) {
+                return;
+            }
+
+            if (!hasRecords) {
+                fieldsWrapper.classList.add('d-none');
+                emptyState.classList.remove('d-none');
+                updateButtonLink(null);
+                if (prevBtn) prevBtn.disabled = true;
+                if (nextBtn) nextBtn.disabled = true;
+                return;
+            }
+
+            const reubicacion = reubicaciones[index];
+
+            fieldsWrapper.classList.remove('d-none');
+            emptyState.classList.add('d-none');
+
+            if (detailElements.idh) detailElements.idh.textContent = reubicacion.IDH || '';
+            if (detailElements.descripcion) detailElements.descripcion.textContent = reubicacion.Descripcion || '';
+            if (detailElements.origen) detailElements.origen.textContent = reubicacion.Origen || '';
+            if (detailElements.destino) detailElements.destino.textContent = reubicacion.Destino || '';
+            if (detailElements.estado) detailElements.estado.textContent = reubicacion.Estado || '';
+
+            updateButtonLink(reubicacion);
+
+            if (prevBtn) prevBtn.disabled = index === 0;
+            if (nextBtn) nextBtn.disabled = index === reubicaciones.length - 1;
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                if (currentIndex > 0) {
+                    currentIndex -= 1;
+                    renderReubicacion(currentIndex);
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (currentIndex < reubicaciones.length - 1) {
+                    currentIndex += 1;
+                    renderReubicacion(currentIndex);
+                }
+            });
+        }
+
+        renderReubicacion(currentIndex);
     });
 </script>
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>

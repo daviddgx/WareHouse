@@ -119,13 +119,13 @@ ob_end_flush();
         }
 
         .assignment-card-body {
-            padding: 1.5rem;
+            padding: 1.25rem;
         }
 
         .assignment-view {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1.25rem;
             min-height: calc(100vh - 240px);
         }
 
@@ -178,7 +178,7 @@ ob_end_flush();
 
         .assignment-fields {
             display: grid;
-            gap: 1.5rem;
+            gap: 1.25rem;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         }
 
@@ -210,7 +210,7 @@ ob_end_flush();
         }
 
         .assignment-field--highlight .value {
-            font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+            font-size: clamp(1.25rem, 2.5vw, 2.25rem);
             color: #e53935;
         }
 
@@ -251,7 +251,7 @@ ob_end_flush();
             }
 
             .assignment-details {
-                padding: 1.5rem;
+                padding: 1.25rem;
             }
 
             .assignment-footer {
@@ -526,7 +526,7 @@ ob_end_flush();
                             -->
 
                             <div class="card-body skeleton-target assignment-card-body" data-aos="fade-up" data-aos-delay="100">
-                                <h4 class="card-title mb-4">Guías a despachar</h4>
+                                
                                 <div class="assignment-view">
                                     <div class="assignment-header">
                                         <a class="btn btn-outline-danger" href="Lista_AsignacionesIDH.php">

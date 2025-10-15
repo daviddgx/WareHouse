@@ -119,13 +119,13 @@ ob_end_flush();
         }
 
         .assignment-card-body {
-            padding: 1.5rem;
+            padding: 1.25rem;
         }
 
         .assignment-view {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1.25rem;
             min-height: calc(100vh - 240px);
         }
 
@@ -178,7 +178,7 @@ ob_end_flush();
 
         .assignment-fields {
             display: grid;
-            gap: 1.5rem;
+            gap: 1.25rem;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         }
 
@@ -210,7 +210,7 @@ ob_end_flush();
         }
 
         .assignment-field--highlight .value {
-            font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+            font-size: clamp(1.25rem, 2.5vw, 2.25rem);
             color: #e53935;
         }
 
@@ -251,7 +251,7 @@ ob_end_flush();
             }
 
             .assignment-details {
-                padding: 1.5rem;
+                padding: 1.25rem;
             }
 
             .assignment-footer {
@@ -430,78 +430,7 @@ ob_end_flush();
                     <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
                         <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
-                            <h4 class="card-title">Lista de Reubicaciones a Realizar</h4>
-                            <h6 class="card-subtitle">Estos son las Reubicaciones que debe realizar en este turno </h6>
-                            <br>
-                            <!-- Start First Cards -->
-                            <!-- *************************************************************** -->
-                            <div class="card-group skeleton-target" data-aos="fade-up" data-aos-delay="150">
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $TotalMovimientos ;?></h2>
-
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Total de Movimientos</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="activity"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <h2 class="text-dark mb-1 w-100 text-truncate font-weight-medium"><sup class="set-doller"></sup><?php echo $IDHs ;?></h2>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">IDHs
-                                                </h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="box"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaColocadas ;?></h2>
-                                                    <span class="badge bg-success font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if($TotalMovimientos == 0) {} else{ echo  bcdiv((($ListaColocadas / $TotalMovimientos) * 100),'1', 2); }?>%</span>
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Reubicadas</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="flag"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaPendientes ;?></h2>
-                                                    <span class="badge bg-danger font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if($TotalMovimientos == 0) {} else{ echo  bcdiv((($ListaPendientes / $TotalMovimientos) * 100),'1', 2) ;} ?>%</span>
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Pendientes</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="compass"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- *************************************************************** -->
-                            <!-- End First Cards -->
-                            <br>
+                            
                             <?php echo $Mensajeerror; ?>
                             <?php echo $MensajeExito; ?>
 
@@ -517,7 +446,7 @@ ob_end_flush();
 
 
                             <div class="card-body skeleton-target assignment-card-body" data-aos="fade-up" data-aos-delay="200">
-                                <h4 class="card-title mb-4">Reubicaciones pendientes</h4>
+                                
                                 <div class="assignment-view">
                                     <div class="assignment-header">
                                         <a class="btn btn-outline-danger"

@@ -20,15 +20,21 @@ if (isset($_GET['IDH'])) {
 
     // Consulta SQL con consulta preparada
     $sql = "SELECT 
-                CONCAT(Bodega, '-', Carril) AS Carril,
-                posiciones.IDH,
-                PR.Descripcion,
-                EstatusUbicacion,
-                COUNT(*) AS Pallets
-            FROM posiciones
-            INNER JOIN productos PR ON posiciones.IDH = PR.IDH
-            WHERE posiciones.IDH = ?
-            GROUP BY Carril, posiciones.IDH, PR.Descripcion, EstatusUbicacion";
+    CONCAT(Bodega, '-', Carril) AS Carril,
+    posiciones.IDH,
+    DATE_FORMAT(posiciones.FechaProduccion, '%d-%m-%Y') AS FechaProduccion,
+    PR.Descripcion,
+    EstatusUbicacion,
+    COUNT(*) AS Pallets
+FROM posiciones
+INNER JOIN productos PR ON posiciones.IDH = PR.IDH
+WHERE posiciones.IDH = ?
+GROUP BY 
+    Carril,
+    posiciones.IDH,
+    posiciones.FechaProduccion,
+    PR.Descripcion,
+    EstatusUbicacion;";
 
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $IDH);
@@ -41,7 +47,7 @@ if (isset($_GET['IDH'])) {
         header('Content-Disposition: attachment; filename="Reporte_FiFo_' . $IDH . '.csv"');
 
         $output = fopen('php://output', 'w');
-        fputcsv($output, ['Carril', 'IDH', 'Descripción', 'Estado', 'Pallets']);
+        fputcsv($output, ['Carril', 'IDH','FechaProduccion', 'Descripción', 'Estado', 'Pallets']);
 
         while ($row = $result->fetch_assoc()) {
             fputcsv($output, $row);

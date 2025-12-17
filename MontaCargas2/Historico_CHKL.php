@@ -1,13 +1,15 @@
 <?php
+ob_start();
 session_start();
-include '../LQS_EUQ/Auth.php';
-include '../LQS_EUQ/ListarAsignacionesCompletos.php';
+include '../LQS_EUQ/Connect.php';
 include "../Innet_MTC/Innet_MTC.php";
-date_default_timezone_set('America/Guatemala');
-$fecha = date("d") . '-' . date("m") . '-' . date("Y");
 $Num_Despachos= '';
 $Num_Reubicaciones= '';
 $Num_Piking= '';
+$Num_Asignaciones = '';
+date_default_timezone_set('America/Guatemala');
+$fecha = date("d") . '-' . date("m") . '-' . date("Y");
+
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');
 } else {
@@ -16,161 +18,21 @@ if ($_SESSION['Usuario'] == '') {
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
-
-$txtNombre = "";
-$txtApellido = "";
-$txtNombreUsuario = "";
-$txtTipoUsuario = "";
-$txtEmail = "";
-$txtFoto = "";
-
-$txtPWD = "";
-
 $Num_Despachos = darValorDespachos($_SESSION['Usuario']);
 $Num_Reubicaciones = darValorReubicaciones($_SESSION['Usuario']);
 $Num_Piking = darValorPiking($_SESSION['Usuario']);
-// Validar formulario y grabar informacion
-
-$Num_Asignaciones = '';
-$Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
+$Num_Asignaciones= darValorAsignaciones($_SESSION['Usuario']);
 
 
-// Cargar datos a mostrar
-
-
-// Creamos la conexion
-
-
-try {
-
-    $sentencia = $pdo->prepare("SELECT * FROM dbs9098416.usuarios_app where Nombre_Usuario = '" . $_SESSION['Usuario'] . "'");
-    $sentencia->execute();
-    $Usuario = $sentencia->fetch(PDO::FETCH_LAZY);
-    $txtNombre = $Usuario['Nombre'];
-    $txtApellido = $Usuario['Apellido'];
-    $txtNombreUsuario = $Usuario['Nombre_Usuario'];
-
-    switch ($Usuario['TipoUsuario']) {
-        case '1' :
-            $txtTipoUsuario = 'Administrador';
-            break;
-        case '2' :
-            $txtTipoUsuario = 'Operador de Montacargas';
-            break;
-        case '3' :
-            $txtTipoUsuario = 'Administrador de inventarios';
-            break;
-        case '4' :
-            $txtTipoUsuario = 'Picking';
-            break;
-        case '5' :
-            $txtTipoUsuario = 'Consulta a DashBoard';
-            break;
-    }
-
-    $txtEmail = $Usuario['Email'];
-    $txtFoto = $Usuario['Foto'];
-    $txtPWD = $Usuario['Clave_Usuario'];
-
-
-
-} catch (Exception $ex) {
-    $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
-                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                        <span aria-hidden="true">×</span>
-                                    </button>
-                                    <strong>Se encontro un error ☹️! -- </strong> ' . $ex . '
-                                </div>';
-}
-//comprovacion de dadtos
-//fin comprovacion de datos
 // Fin de la conexion
 
 
 // Validar formulario y grabar informacion
-$accion = (isset($_POST['accion'])) ? $_POST['accion'] : "";
-
-switch ($accion) {
-    case "btnModificar":
-        $txtNombre = (isset($_POST['txtNombre'])) ? $_POST['txtNombre'] : "";
-        $txtApellido = (isset($_POST['txtApellido'])) ? $_POST['txtApellido'] : "";
-        $txtPasswordActual = (isset($_POST['txtPassActual'])) ? $_POST['txtPassActual'] : "";
-        $txtPasswordNuevo = (isset($_POST['txtNuevoPass'])) ? $_POST['txtNuevoPass'] : "";
-        $txtPasswordVal = (isset($_POST['txtValNuevoPass'])) ? $_POST['txtValNuevoPass'] : "";
-        $txtEmail = (isset($_POST['txtEmail'])) ? $_POST['txtEmail'] : "";
-        $txtPasswordActual = md5($txtPasswordActual);
-        $txtPasswordNuevo = md5($txtPasswordNuevo);
-        $txtPasswordVal = md5($txtPasswordVal);
-        $txtFoto = (isset($_FILES['txtFoto']["name"])) ? $_FILES['txtFoto'] : "";
-
-        if ($txtPasswordActual != $txtPWD) {
-
-            $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
-                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                        <span aria-hidden="true">×</span>
-                                    </button>
-                                    <strong>Se encontro un error ☹️! -- </strong> La clave actual ingresada no es igual a la que el usuario tiene actualmente 🔑
-                                </div>';
-
-        } else if ($txtPasswordNuevo != $txtPasswordVal) {
-            $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
-                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                        <span aria-hidden="true">×</span>
-                                    </button>
-                                    <strong>Se encontro un error ☹️! -- </strong> La Clave nueva no coincide con su validación 🔑 🤔 🗝
-                                </div>';
-        } else {
-
-            //Actualizar datos del registro
-
-            $sentencia = $pdo->prepare("UPDATE dbs9098416.usuarios_app SET Nombre=:Nombre, Apellido =:Apellido, Email=:Email ,Clave_Usuario=:Clave where Nombre_Usuario=:Usuario;");
-
-            $sentencia->bindParam(':Nombre', $txtNombre);
-            $sentencia->bindParam(':Apellido', $txtApellido);
-            $sentencia->bindParam(':Email', $txtEmail);
-            $sentencia->bindParam(':Clave', $txtPasswordVal);
-            $sentencia->bindParam(':Usuario', $txtNombreUsuario);
-
-            $sentencia->execute();
-
-            $_SESSION['USR'] = $txtNombre . ' ' . $txtApellido;
-
-            // Bloque para actualizar la foto
-
-            $fecha = new DateTime();
-            $nombreArchivo = ($txtFoto["name"] != "") ? $fecha->getTimestamp() . "_" . $_FILES["txtFoto"]["name"] : "imagen.jpg";
-            $tmpFoto = $_FILES["txtFoto"]["tmp_name"];
-
-            if ($tmpFoto != "") {
-                move_uploaded_file($tmpFoto, "../assets/images/users/" . $nombreArchivo);
-
-                if (isset($Usuario["Foto"])) {
-                    if (file_exists("../assets/images/users/" . $Usuario["Foto"])) {
-                        if ($Usuario["Foto"] != "imagen.jpg") {
-                            unlink("../assets/images/users/" . $Usuario["Foto"]);
-                        }
-                    }
-                }
-
-                $sentencia = $pdo->prepare("UPDATE dbs9098416.usuarios_app SET Foto=:Foto where Nombre_Usuario=:id;");
-                $sentencia->bindParam(':Foto', $nombreArchivo);
-                $sentencia->bindParam(':id', $txtNombreUsuario);
-                $sentencia->execute();
-                $_SESSION['pic'] = $nombreArchivo;
-                $MensajeExito = '<div class="alert alert-secondary" role="alert">
-                                    <strong>Excelente! 😎  -- </strong> Los datos se actualizaron correctamente
-                                </div>';
-                header('Location: MiPerfil.php');
-            }
-        }
-
-        break;
-
-    default :
-        break;
-}
 
 
+
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -363,7 +225,54 @@ switch ($accion) {
         <!-- Sidebar scroll-->
         <div class="scroll-sidebar" data-sidebarbg="skin6">
             <!-- Sidebar navigation-->
-            <?php include 'Menu.php'; ?>
+            <nav class="sidebar-nav">
+                <ul id="sidebarnav">
+                    <li class="sidebar-item "><a class="sidebar-link sidebar-link" href="index.php"
+                                                 aria-expanded="false"><i data-feather="home"
+                                                                          class="feather-icon"></i><span
+                                    class="hide-menu">Dashboard</span></a></li>
+                    <li class="list-divider"></li>
+
+                    <li class="nav-small-cap"><span class="hide-menu">Tareas</span></li>
+
+                    <li class="sidebar-item"><a class="sidebar-link sidebar-link" href="Lista_Despachos.php"
+                                                aria-expanded="false"><i
+                                    class="fas fa-dolly"></i><span
+                                    class="hide-menu">Despachos
+                                <?php echo $Num_Despachos;?>
+                                </span></a>
+                    </li>
+                    <li class="sidebar-item"><a class="sidebar-link sidebar-link" href="Lista_Asignaciones.php"
+                                                aria-expanded="false"><i
+                                    class="fas fa-warehouse"></i><span
+                                    class="hide-menu">Ingresos
+                                <?php echo $Num_Asignaciones;?>
+                                </span></a>
+                    </li>
+                    
+
+
+                    <li class="list-divider"></li>
+                    <li class="nav-small-cap"><span class="hide-menu">Consultas</span></li>
+
+                    <li class="sidebar-item"><a class="sidebar-link sidebar-link" href="Historico_Despachos.php"
+                                                aria-expanded="false"><i
+                                    class="fas fa-truck-loading"></i><span
+                                    class="hide-menu">Despachos<br> realizados
+                                </span></a>
+                    </li>
+                    <li class="sidebar-item"><a class="sidebar-link sidebar-link" href="Historico_Asignaciones.php"
+                                                aria-expanded="false"><i
+                                    class="fas fa-archive"></i><span
+                                    class="hide-menu">Ingresos<br> Realizados
+                                </span></a>
+                    </li>
+                    
+
+
+
+                </ul>
+            </nav>
             <!-- End Sidebar navigation -->
         </div>
         <!-- End Sidebar scroll-->
@@ -384,122 +293,14 @@ switch ($accion) {
                     <div class="card">
 
                         <div class="card-body">
-                            <h4 class="card-title">Configuración de usuario</h4>
-                            <h6 class="card-subtitle">Valide la información antes de actualizarla</h6>
+                            <h4 class="card-title">Historico de Check List</h4>
+                            <h6 class="card-subtitle">Validar los registros de Check list registrados </h6>
                             <br>
                             <?php echo $Mensajeerror; ?>
                             <?php echo $MensajeExito; ?>
                             <br>
 
-                            <div class="my-content formulario">
-                                <form role="form" action="" method="post" enctype="multipart/form-data">
-                                    <div class="form-body">
 
-
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Nombre</label>
-                                                    <input name="txtNombre" type="text"
-                                                           class="form-control" <?php echo isset(($error['Nombre'])) ? "is-invalid" : ""; ?>
-                                                           value="<?php echo $txtNombre ?>" required>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Apellido</label>
-                                                    <input name="txtApellido" type="text"
-                                                           class="form-control" <?php echo isset(($error['Apellido'])) ? "is-invalid" : ""; ?>
-                                                           value="<?php echo $txtApellido ?>" required>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Nombre de Usuario</label>
-                                                    <input type="text"
-                                                           class="form-control" <?php echo isset(($error['NombreUsuario'])) ? "is-invalid" : ""; ?>
-                                                           value="<?php echo $txtNombreUsuario ?>" readonly="" required>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Tipo de Usuario</label>
-                                                    <input type="text"
-                                                           class="form-control" <?php echo isset(($error['TipoUsuario'])) ? "is-invalid" : ""; ?>
-                                                           value="<?php echo $txtTipoUsuario ?>" readonly="" required>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Password Actual</label>
-                                                    <input name="txtPassActual" type="password" class="form-control "
-                                                           required>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Nuevo Password</label>
-                                                    <input name="txtNuevoPass" type="password" class="form-control"
-                                                           required>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Validar Password Nuevo</label>
-                                                    <input name="txtValNuevoPass" type="password" class="form-control"
-                                                           required>
-                                                </div>
-                                            </div>
-
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Correo Electronico</label>
-                                                    <input name="txtEmail" type="email"
-                                                           class="form-control" <?php echo isset(($error['CorreoElectronico'])) ? "is-invalid" : ""; ?>
-                                                           value="<?php echo $txtEmail ?>" required>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="form-group">
-                                                <label>Fotografia</label>
-                                                <div class="input-group mb-12">
-                                                    <?php if ($txtFoto != "") { ?>
-                                                        <br/>
-                                                        <img style="border-radius: 45px !important;"
-                                                             class="img-thumbnail rounded mx-auto d-block" width="200px"
-                                                             src="../assets/images/users/<?php echo $txtFoto; ?>">
-                                                        <br/>
-                                                        <br/>
-                                                    <?php } ?>
-                                                    <div class="container">
-                                                        <input type="file" class="form-control" accept="image/*"
-                                                               name="txtFoto" placeholder="" id="txt6" require="">
-                                                    </div>
-
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-
-                                    <div class="form-actions">
-                                        <div class="text-center">
-                                            <button type="submit" value="btnModificar" name="accion"
-                                                    class="btn btn-info">Guardar Cambios
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
                         </div>
                     </div>
                 </div>

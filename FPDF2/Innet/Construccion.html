@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sitio en construcción</title>
+  <style>
+    /* CSS personalizado */
+    body {
+      background-image: url('../assets/images/Sertero/EnConstruccion.jpg'); /* Cambia 'background.jpg' por la ruta de tu imagen de fondo */
+      background-size: cover;
+      background-position: center;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    .container {
+      text-align: center;
+      margin-top: 200px;
+    }
+
+    h1 {
+      font-size: 36px;
+    }
+
+    p {
+      font-size: 18px;
+    }
+
+    #countdown {
+      font-size: 24px;
+      animation: countdown 1s linear infinite;
+    }
+
+    @keyframes countdown {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+    </style>
+    </head>
+    <body>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+     <br>
+    <div class="container" >
+    <h1>Sertero y Qbit-Labs estan trabajando en esta funcionalidad</h1>
+    <p>Pronto estaremos en linea!</p>
+    <div id="countdown"></div>
+    </div>
+
+    <script>
+    // JavaScript personalizado
+    // Contador descendiente
+       function countdown() {
+      const countdownDate = new Date('2023-04-16T00:00:00Z'); // Fecha objetivo del contador
+    const now = new Date().getTime(); // Fecha y hora actual
+    const distance = countdownDate - now; // Calcula la diferencia entre la fecha objetivo y la actual
+
+    // Calcula los días, horas, minutos y segundos restantes
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    // Actualiza el elemento con id 'countdown' con el tiempo restante
+    document.getElementById('countdown').innerHTML = `Quedan ${days} dias, ${hours} horas, ${minutes} minutos, y ${seconds} segundos.`;
+
+    // Actualiza el contador cada segundo
+    setTimeout(countdown, 1000);
+    }
+
+    // Inicia el contador cuando se carga la página
+       window.onload = countdown;
+    </script>
+    </body>
+    </html>

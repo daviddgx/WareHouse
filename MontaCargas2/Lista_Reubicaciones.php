@@ -1,11 +1,12 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
-include '../LQS_EUQ/ListarPiking.php';
+include '../LQS_EUQ/ListarReubicaciones.php';
 include "../Innet_MTC/Innet_MTC.php";
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
-$fechaConsulta = date("Y") . '-' . date("m") . '-' . date("d");
+$fechaConsulta = date("Y") . '-' . date("m") . '-' . date("d"); 
 $lista_Asignacion = null;
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');
@@ -21,26 +22,21 @@ $Mensajeerror = '';
 $TotalMovimientos = "";
 $IDHs = "";
 $ListaColocadas = "";
-$ListaPendientes = "";
+$ListaPendientes = "" ;
 
 // Dar valor a las variabes de Resumen
 
-
-
-
-
-$TotalMovimientos = DarValorTotalPiking($_SESSION['Usuario'], $fechaConsulta);
-$IDHs = DarValorIDHsPiking($_SESSION['Usuario'], $fechaConsulta);
-$ListaColocadas = DarValorListaColocadasPiking($_SESSION['Usuario'], $fechaConsulta);
-$ListaPendientes = DarValorListaPendientesPiking($_SESSION['Usuario'], $fechaConsulta);
-;
+$TotalMovimientos = DarValorTotalReubicaciones($_SESSION['Usuario'],$fechaConsulta);
+$IDHs = DarValorIDHsMover($_SESSION['Usuario'],$fechaConsulta);
+$ListaColocadas = DarValorListaColocadasMover($_SESSION['Usuario'],$fechaConsulta);
+$ListaPendientes = DarValorListaPendientesMover($_SESSION['Usuario'],$fechaConsulta); ;
 
 
 
 // Fin de la conexion
-$Num_Despachos = '';
-$Num_Reubicaciones = '';
-$Num_Piking = '';
+$Num_Despachos= '';
+$Num_Reubicaciones= '';
+$Num_Piking= '';
 $Num_Despachos = darValorDespachos($_SESSION['Usuario']);
 $Num_Reubicaciones = darValorReubicaciones($_SESSION['Usuario']);
 $Num_Piking = darValorPiking($_SESSION['Usuario']);
@@ -50,6 +46,29 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
+// Preparar registros para el visor de detalle
+$reubicacionesList = [];
+if ($lista_Movimientos) {
+    do {
+        $registroActual = $lista_Movimientos;
+        $reubicacionesList[] = $registroActual;
+    } while ($lista_Movimientos = $ejecutar_sentencia_Movimientos->fetch(PDO::FETCH_ASSOC));
+}
+
+$totalReubicacionesPendientes = count($reubicacionesList);
+$primerRegistroReubicacion = $totalReubicacionesPendientes > 0 ? $reubicacionesList[0] : null;
+$moverUrl = '';
+if ($primerRegistroReubicacion) {
+    $moverUrl = 'MoverProducto.php?' . http_build_query([
+        'Guia' => isset($primerRegistroReubicacion['id']) ? $primerRegistroReubicacion['id'] : '',
+        'Origen' => isset($primerRegistroReubicacion['Origen']) ? $primerRegistroReubicacion['Origen'] : '',
+        'Destino' => isset($primerRegistroReubicacion['Destino']) ? $primerRegistroReubicacion['Destino'] : '',
+        'IDH' => isset($primerRegistroReubicacion['IDH']) ? $primerRegistroReubicacion['IDH'] : '',
+    ]);
+}
+
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -73,6 +92,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -81,13 +102,161 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
     <![endif]-->
 
     <style>
-        .bolded {
-            font-weight: bold;
-            font-size: large;
+        .card-body {
+            flex: 1 1 auto;
+            padding: 5px;
+        }
+
+        .page-breadcrumb {
+            padding: 10px 10px 0;
+        }
+
+        .assignment-card-body {
+            padding: 1.25rem;
+        }
+
+        .assignment-view {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            min-height: calc(100vh - 240px);
+        }
+
+        .assignment-header {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .assignment-header {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .assignment-navigation {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .assignment-navigation .nav-btn {
+            min-width: 120px;
+        }
+
+        .assignment-summary {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+        }
+
+        .assignment-summary .record-indicator {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .assignment-details {
+            flex: 1 1 auto;
+            background: #f4f6fb;
+            border-radius: 1rem;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .assignment-fields {
+            display: grid;
+            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .assignment-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .assignment-field .label {
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-size: .75rem;
+            color: #6c757d;
+        }
+
+        .assignment-field .value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #212529;
+            word-break: break-word;
+        }
+
+        .assignment-field--highlight {
+            background: #ffffff;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 10px 30px rgba(31, 45, 61, 0.08);
+        }
+
+        .assignment-field--highlight .value {
+            font-size: clamp(1.25rem, 2.5vw, 2.25rem);
+            color: #e53935;
+        }
+
+        .assignment-empty {
+            text-align: center;
+            font-size: 1.25rem;
+            color: #6c757d;
+            margin: auto;
+        }
+
+        .assignment-footer {
+            margin-top: auto;
+            height: 25vh;
+            min-height: 160px;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-ingresar {
+            width: 100%;
+            height: 100%;
+            font-size: clamp(1.35rem, 2.5vw, 2.2rem);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+        }
+
+        .btn-ingresar.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 767.98px) {
+            .assignment-card-body {
+                padding: 1rem;
+            }
+
+            .assignment-details {
+                padding: 1.25rem;
+            }
+
+            .assignment-footer {
+                min-height: 140px;
+            }
         }
     </style>
 </head>
@@ -255,90 +424,13 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn">
+        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
             <div class="row">
                 <div class="col-sm-12">
-                    <div class="card">
+                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
-                        <div class="card-body">
-                            <h4 class="card-title">Movimientos de re Abastecimiento de Piking</h4>
-                            <h6 class="card-subtitle">Estos son los movimientos que debe hacer para Piking </h6>
-                            <br>
-                            <!-- Start First Cards -->
-                            <!-- *************************************************************** -->
-                            <div class="card-group">
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $TotalMovimientos; ?></h2>
-
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Total de Movimientos</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="activity"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <h2 class="text-dark mb-1 w-100 text-truncate font-weight-medium"><sup class="set-doller"></sup><?php echo $IDHs; ?></h2>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">IDHs
-                                                </h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="box"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaColocadas; ?></h2>
-                                                    <span class="badge bg-success font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if ($TotalMovimientos == 0) {
-                                                    } else {
-                                                        echo bcdiv((($ListaColocadas / $TotalMovimientos) * 100), '1', 2);
-                                                    } ?>%</span>
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Reubicadas</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="flag"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaPendientes; ?></h2>
-                                                    <span class="badge bg-danger font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if ($TotalMovimientos == 0) {
-                                                    } else {
-                                                        echo bcdiv((($ListaPendientes / $TotalMovimientos) * 100), '1', 2);
-                                                    } ?>%</span>
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Pendientes</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="compass"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- *************************************************************** -->
-                            <!-- End First Cards -->
-                            <br>
+                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
+                            
                             <?php echo $Mensajeerror; ?>
                             <?php echo $MensajeExito; ?>
 
@@ -353,90 +445,69 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
 
 
-                            <table id="example" class="table table-striped  " cellspacing="0" width="100%">
-                                <thead>
-
-
-                                <th>IDH</th>
-                                <th>Descripcion</th>
-                                <th>Origen</th>
-                                <th>Bultos</th>
-                                <th>Destino</th>
-                                <th>Estado</th>
-                                <th>Mover</th>
-
-                                </thead>
-                                <tbody>
-                                <?php
-                                for ($i = 0; $i < $lista_Movimientos; $i++) {
-
-                                    $IDGUIA = $lista_Movimientos['id'];
-                                    $Origen = $lista_Movimientos['Origen'];
-                                    $Destino = $lista_Movimientos['Destino'];
-                                    $IDH = $lista_Movimientos['IDH'];
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['IDH'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Descripcion'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Origen'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Bultos']; //ANCHOR - Cantida de bultos en piking
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Destino'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Estado'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo '<a href="MoverProductoPiking.php?Guia=' . $IDGUIA . '&Origen=' . $Origen . '&Destino=' . $Destino . '&IDH=' . $IDH . '" class="btn btn-primary mover-boton">Mover</a>';
-                                    echo "</td>";
-
-                                    echo "</tr>";
-
-                                    $lista_Movimientos = $ejecutar_sentencia_Movimientos->fetch(PDO::FETCH_ASSOC);
-                                }
-                                ?>
-                                <script>
-                                    document.addEventListener("DOMContentLoaded", function () {
-                                        var botones = document.querySelectorAll('.mover-boton');
-
-                                        botones.forEach(function (boton) {
-                                            boton.addEventListener('click', function () {
-                                                // Mostrar el mensaje "Moviendo"
-                                                boton.innerText = "Moviendo";
-
-                                                // Deshabilitar el botón
-                                                boton.setAttribute("disabled", "true");
-
-                                                // Ocultar el botón
-                                                boton.style.display = "none";
-
-                                                // Aquí puedes realizar cualquier otra lógica que necesites al hacer clic en el botón
-                                                // ...
-
-                                                // Puedes redirigir al usuario a la página deseada si es necesario
-                                                // window.location.href = boton.href;
-                                            });
-                                        });
-                                    });
-                                </script>
-
-                                </tbody>
-                            </table>
+                            <div class="card-body skeleton-target assignment-card-body" data-aos="fade-up" data-aos-delay="200">
+                                
+                                <div class="assignment-view">
+                                    <div class="assignment-header">
+                                        <a class="btn btn-outline-danger"
+                                           href="Lista_Reubicaciones.php"
+                                           onclick="if (history.length > 1) { history.back(); return false; }">
+                                            <span>Regresar al listado de IDHs 🔄</span>
+                                        </a>
+                                        <div class="assignment-navigation">
+                                            <button type="button" class="btn btn-secondary nav-btn" id="prevRecord" disabled>◀ Anterior</button>
+                                            <div class="assignment-summary">
+                                                <span class="badge badge-info badge-pill">Pendientes: <span id="pendingTotal"><?php echo $totalReubicacionesPendientes; ?></span></span>
+                                                <span class="record-indicator" id="recordIndicator"><?php echo $totalReubicacionesPendientes ? '1 / ' . $totalReubicacionesPendientes : '0 / 0'; ?></span>
+                                            </div>
+                                            <button type="button" class="btn btn-secondary nav-btn" id="nextRecord" <?php echo $totalReubicacionesPendientes > 1 ? '' : 'disabled'; ?>>Siguiente ▶</button>
+                                        </div>
+                                    </div>
+                                    <div class="assignment-details">
+                                        <div class="assignment-empty <?php echo $primerRegistroReubicacion ? 'd-none' : ''; ?>" id="assignmentEmpty">
+                                            No hay reubicaciones pendientes por mover.
+                                        </div>
+                                        <div class="assignment-fields <?php echo $primerRegistroReubicacion ? '' : 'd-none'; ?>" id="assignmentFields">
+                                            <div class="assignment-field assignment-field--highlight">
+                                                <span class="label">IDH</span>
+                                                <span class="value" id="detailIdh"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['IDH'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Descripción</span>
+                                                <span class="value" id="detailDescripcion"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['Descripcion'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Origen</span>
+                                                <span class="value" id="detailOrigen"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['Origen'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Destino</span>
+                                                <span class="value" id="detailDestino"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['Destino'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                            <div class="assignment-field">
+                                                <span class="label">Estado</span>
+                                                <span class="value" id="detailEstado"><?php echo $primerRegistroReubicacion ? htmlspecialchars($primerRegistroReubicacion['Estado'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="assignment-footer">
+                                        <a id="moverButton"
+                                           class="btn btn-success btn-ingresar<?php echo $primerRegistroReubicacion ? '' : ' disabled'; ?>"
+                                           <?php if ($primerRegistroReubicacion) { ?>
+                                               href="<?php echo htmlspecialchars($moverUrl, ENT_QUOTES, 'UTF-8'); ?>"
+                                           <?php } else { ?>
+                                               role="button" aria-disabled="true"
+                                           <?php } ?>>
+                                            Mover ✔️
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                             <br>
                             <!-- Fin Contenido de esta seccion-->
+
+
+
                             <br>
                         </div>
                     </div>
@@ -487,24 +558,117 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
-<script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
-<script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
-
 <script>
-    $(document).ready(function () {
-        var table = $('#example').DataTable({
-            scrollX: true,
+    document.addEventListener('DOMContentLoaded', function () {
+        const reubicaciones = <?php echo json_encode($reubicacionesList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        const prevBtn = document.getElementById('prevRecord');
+        const nextBtn = document.getElementById('nextRecord');
+        const indicator = document.getElementById('recordIndicator');
+        const pendingTotal = document.getElementById('pendingTotal');
+        const fieldsWrapper = document.getElementById('assignmentFields');
+        const emptyState = document.getElementById('assignmentEmpty');
+        const moverButton = document.getElementById('moverButton');
+        const detailElements = {
+            idh: document.getElementById('detailIdh'),
+            descripcion: document.getElementById('detailDescripcion'),
+            origen: document.getElementById('detailOrigen'),
+            destino: document.getElementById('detailDestino'),
+            estado: document.getElementById('detailEstado')
+        };
+        let currentIndex = reubicaciones.length > 0 ? 0 : -1;
 
-            language: {
-                url: 'datatables_espanol.json'
+        function updateButtonLink(reubicacion) {
+            if (!moverButton) {
+                return;
             }
-        });
 
+            if (!reubicacion) {
+                moverButton.removeAttribute('href');
+                moverButton.classList.add('disabled');
+                moverButton.setAttribute('aria-disabled', 'true');
+                moverButton.textContent = 'Mover ✔️';
+                moverButton.setAttribute('title', 'No hay reubicaciones pendientes');
+                return;
+            }
 
-        $(table.column(2).nodes()).addClass('bolded');
-        $(table.column(3).nodes()).addClass('bolded');
+            const params = new URLSearchParams({
+                Guia: reubicacion.id || '',
+                Origen: reubicacion.Origen || '',
+                Destino: reubicacion.Destino || '',
+                IDH: reubicacion.IDH || ''
+            });
+
+            moverButton.href = 'MoverProducto.php?' + params.toString();
+            moverButton.classList.remove('disabled');
+            moverButton.removeAttribute('aria-disabled');
+            moverButton.removeAttribute('title');
+            moverButton.textContent = 'Mover ✔️';
+        }
+
+        function renderReubicacion(index) {
+            const hasRecords = reubicaciones.length > 0 && index >= 0;
+
+            if (pendingTotal) {
+                pendingTotal.textContent = reubicaciones.length;
+            }
+
+            if (indicator) {
+                indicator.textContent = hasRecords ? (index + 1) + ' / ' + reubicaciones.length : '0 / 0';
+            }
+
+            if (!fieldsWrapper || !emptyState) {
+                return;
+            }
+
+            if (!hasRecords) {
+                fieldsWrapper.classList.add('d-none');
+                emptyState.classList.remove('d-none');
+                updateButtonLink(null);
+                if (prevBtn) prevBtn.disabled = true;
+                if (nextBtn) nextBtn.disabled = true;
+                return;
+            }
+
+            const reubicacion = reubicaciones[index];
+
+            fieldsWrapper.classList.remove('d-none');
+            emptyState.classList.add('d-none');
+
+            if (detailElements.idh) detailElements.idh.textContent = reubicacion.IDH || '';
+            if (detailElements.descripcion) detailElements.descripcion.textContent = reubicacion.Descripcion || '';
+            if (detailElements.origen) detailElements.origen.textContent = reubicacion.Origen || '';
+            if (detailElements.destino) detailElements.destino.textContent = reubicacion.Destino || '';
+            if (detailElements.estado) detailElements.estado.textContent = reubicacion.Estado || '';
+
+            updateButtonLink(reubicacion);
+
+            if (prevBtn) prevBtn.disabled = index === 0;
+            if (nextBtn) nextBtn.disabled = index === reubicaciones.length - 1;
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                if (currentIndex > 0) {
+                    currentIndex -= 1;
+                    renderReubicacion(currentIndex);
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (currentIndex < reubicaciones.length - 1) {
+                    currentIndex += 1;
+                    renderReubicacion(currentIndex);
+                }
+            });
+        }
+
+        renderReubicacion(currentIndex);
     });
 </script>
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="../dist/js/Custom/pageEnhancements.js"></script>
 </body>
 
 </html>

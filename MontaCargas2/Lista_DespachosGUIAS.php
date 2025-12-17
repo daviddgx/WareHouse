@@ -1,7 +1,8 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
-include '../LQS_EUQ/ListarPiking.php';
+include '../LQS_EUQ/ListarDespachosGUIAS.php';
 include "../Innet_MTC/Innet_MTC.php";
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
@@ -20,27 +21,21 @@ $Mensajeerror = '';
 //Variables para Resumen
 $TotalMovimientos = "";
 $IDHs = "";
-$ListaColocadas = "";
-$ListaPendientes = "";
+$ListaDespachadas = "";
+$ListaPendientes = "" ;
 
 // Dar valor a las variabes de Resumen
 
-
-
-
-
-$TotalMovimientos = DarValorTotalPiking($_SESSION['Usuario'], $fechaConsulta);
-$IDHs = DarValorIDHsPiking($_SESSION['Usuario'], $fechaConsulta);
-$ListaColocadas = DarValorListaColocadasPiking($_SESSION['Usuario'], $fechaConsulta);
-$ListaPendientes = DarValorListaPendientesPiking($_SESSION['Usuario'], $fechaConsulta);
-;
-
+$TotalMovimientos = DarValorTotalMovimientos($_SESSION['Usuario'],$fechaConsulta);
+$IDHs = DarValorIDHs($_SESSION['Usuario'],$fechaConsulta);
+$ListaDespachadas = DarValorListaDespachadas($_SESSION['Usuario'],$fechaConsulta);
+$ListaPendientes = DarValorListaPendientes($_SESSION['Usuario'],$fechaConsulta); ;
 
 
 // Fin de la conexion
-$Num_Despachos = '';
-$Num_Reubicaciones = '';
-$Num_Piking = '';
+$Num_Despachos= '';
+$Num_Reubicaciones= '';
+$Num_Piking= '';
 $Num_Despachos = darValorDespachos($_SESSION['Usuario']);
 $Num_Reubicaciones = darValorReubicaciones($_SESSION['Usuario']);
 $Num_Piking = darValorPiking($_SESSION['Usuario']);
@@ -50,6 +45,8 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -73,6 +70,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -81,13 +80,40 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-    <![endif]-->
+
 
     <style>
         .bolded {
-            font-weight: bold;
+            font-weight:bold;
             font-size: large;
+        }
+
+        .card-body {
+            flex: 1 1 auto;
+            padding: 10px;
+        }
+        .page-wrapper > .container-fluid {
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-top: 5px;
+            padding-bottom: 0px;
+        }
+
+        .page-breadcrumb {
+            padding: 5px 5px 0;
+        }
+
+        .dataTables_wrapper table.dataTable tbody td {
+            text-align: center;
+        }
+
+        .dataTables_wrapper table.dataTable thead th {
+            text-align: center;
+        }
+
+        .container {
+            margin-left: auto;
+            margin-right: auto;
         }
     </style>
 </head>
@@ -95,14 +121,14 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 <body>
 <!-- ============================================================== -->
 <!-- Preloader - style you can find in spinners.css -->
-<!-- ============================================================== -->
+
 <div class="preloader">
     <div class="lds-ripple">
         <div class="preloader">
             <br></br>
             <div class="logoPre">
                 <img src="../assets/images/Sertero/LogoHenkel.png" width="300px" height="auto">
-                <!-- Sertero<span style="color:#e88733">CBP</span> -->
+                
             </div>
             <div class="loader-frame">
                 <div class="loader1" id="loader1"></div>
@@ -255,30 +281,27 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn">
+        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
             <div class="row">
                 <div class="col-sm-12">
-                    <div class="card">
+                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
-                        <div class="card-body">
-                            <h4 class="card-title">Movimientos de re Abastecimiento de Piking</h4>
-                            <h6 class="card-subtitle">Estos son los movimientos que debe hacer para Piking </h6>
-                            <br>
+                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
                             <!-- Start First Cards -->
                             <!-- *************************************************************** -->
-                            <div class="card-group">
+                            <div class="card-group skeleton-target" data-aos="fade-up" data-aos-delay="150">
                                 <div class="card border-right">
                                     <div class="card-body">
                                         <div class="d-flex d-lg-flex d-md-block align-items-center">
                                             <div>
                                                 <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $TotalMovimientos; ?></h2>
+                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $TotalMovimientos;?></h2>
 
                                                 </div>
                                                 <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Total de Movimientos</h6>
                                             </div>
                                             <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="activity"></i></span>
+                                                <span class="opacity-7 text-muted"><i data-feather="file-text"></i></span>
                                             </div>
                                         </div>
                                     </div>
@@ -292,7 +315,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                                 </h6>
                                             </div>
                                             <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="box"></i></span>
+                                                <span class="opacity-7 text-muted"><i data-feather="inbox"></i></span>
                                             </div>
                                         </div>
                                     </div>
@@ -302,16 +325,13 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                         <div class="d-flex d-lg-flex d-md-block align-items-center">
                                             <div>
                                                 <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaColocadas; ?></h2>
-                                                    <span class="badge bg-success font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if ($TotalMovimientos == 0) {
-                                                    } else {
-                                                        echo bcdiv((($ListaColocadas / $TotalMovimientos) * 100), '1', 2);
-                                                    } ?>%</span>
+                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaDespachadas; ?></h2>
+                                                    <span class="badge bg-success font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php  if($TotalMovimientos == 0) {} else{echo bcdiv((($ListaDespachadas / $TotalMovimientos) *100),'1', 2);} ?>%</span>
                                                 </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Reubicadas</h6>
+                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Despachadas</h6>
                                             </div>
                                             <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="flag"></i></span>
+                                                <span class="opacity-7 text-muted"><i data-feather="award"></i></span>
                                             </div>
                                         </div>
                                     </div>
@@ -321,16 +341,13 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                         <div class="d-flex d-lg-flex d-md-block align-items-center">
                                             <div>
                                                 <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaPendientes; ?></h2>
-                                                    <span class="badge bg-danger font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if ($TotalMovimientos == 0) {
-                                                    } else {
-                                                        echo bcdiv((($ListaPendientes / $TotalMovimientos) * 100), '1', 2);
-                                                    } ?>%</span>
+                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaPendientes?></h2>
+                                                    <span class="badge bg-danger font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if($TotalMovimientos == 0) {} else{echo  bcdiv((($ListaPendientes / $TotalMovimientos) * 100),'1', 2) ;} ?>%</span>
                                                 </div>
                                                 <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Pendientes</h6>
                                             </div>
                                             <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="compass"></i></span>
+                                                <span class="opacity-7 text-muted"><i data-feather="clipboard"></i></span>
                                             </div>
                                         </div>
                                     </div>
@@ -338,7 +355,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                             </div>
                             <!-- *************************************************************** -->
                             <!-- End First Cards -->
-                            <br>
+
                             <?php echo $Mensajeerror; ?>
                             <?php echo $MensajeExito; ?>
 
@@ -350,93 +367,189 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
                             <!-- *************************************************************** -->
                             <!-- End First Cards -->
+                            <!-- Componentes Separados por Guia -->
+                            <div class="card-body">
+
+                                <table id="example" class="table table-striped skeleton-target" cellspacing="0" width="100%" data-aos="fade-up" data-aos-delay="200">
+                                    <thead>
+                                    <th>Guia</th>
+                                    <th>Destino</th>
+                                    <th>Despachar</th>
+
+                                    </thead>
+                                    <tbody>
+                                    <?php
+                                    for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
+
+
+                                        $IDGUIA = $lista_DespachoPRODUCCION['Guia_Carga'];
+                                        $IDEntrega = $lista_DespachoPRODUCCION['Entrega'];
+
+                                        echo '<td class= "h3" >';
+                                        echo $lista_DespachoPRODUCCION['Guia_Carga'];
+                                        echo "</td>";
+
+                                        echo '<td class= "h3" >';
+                                        echo $lista_DespachoPRODUCCION['Destino'];
+                                        echo "</td>";
+
+
+                                        echo '<td class= "h3" >';
+                                            echo '<a href="Lista_Despachos.php?Guia='.$IDGUIA .'&Entrega='.$IDEntrega.'" class="btn btn-info action-button">Despachar</a>';
+                                        echo "</td>";
+
+                                        echo "</tr>";
+
+                                        $lista_DespachoPRODUCCION = $ejecutar_sentencia_Despachos->fetch(PDO::FETCH_ASSOC);
+                                    }
+                                    ?>
+                                    </tbody>
+                                </table>
+
+                                <!--
+
+                                <ul class="nav nav-tabs mb-3">
+                                    <li class="nav-item">
+                                        <a href="#home" data-toggle="tab" aria-expanded="false" class="nav-link ">
+                                            <i class="mdi mdi-home-variant d-lg-none d-block mr-1"></i>
+                                            <span class="d-none d-lg-block">Guia - 1455787</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="#profile" data-toggle="tab" aria-expanded="true" class="nav-link">
+                                            <i class="mdi mdi-account-circle d-lg-none d-block mr-1"></i>
+                                            <span class="d-none d-lg-block">Guia - 1455788</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="#settings" data-toggle="tab" aria-expanded="false" class="nav-link ">
+                                            <i class="mdi mdi-settings-outline d-lg-none d-block mr-1"></i>
+                                            <span class="d-none d-lg-block">Guia - 1455789</span>
+                                        </a>
+                                    </li>
+                                </ul>
+
+                                <div class="tab-content">
+                                    <div class="tab-pane" id="home">
+
+
+                                    </div>
+                                    <div class="tab-pane show" id="profile">
+                                        <table id="example2" class="table table-striped  " cellspacing="0" width="100%">
+                                            <thead>
+
+
+                                            <th>IDH</th>
+                                            <th>Descripcion</th>
+                                            <th>A Rampa</th>
+
+                                            <th>De Posicion</th>
+                                            <th>Despachar</th>
+
+                                            </thead>
+                                            <tbody>
+                                            <?php /*
+                                            for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
+
+
+                                                $IDGUIA = $lista_DespachoPRODUCCION['Movimiento'];
+
+                                                echo "<td>";
+                                                echo $lista_DespachoPRODUCCION['IDH'];
+                                                echo "</td>";
+
+                                                echo "<td>";
+                                                echo $lista_DespachoPRODUCCION['Descripcion'];
+                                                echo "</td>";
+
+                                                echo "<td>";
+                                                echo $lista_DespachoPRODUCCION['Rampa'];
+                                                echo "</td>";
 
 
 
-                            <table id="example" class="table table-striped  " cellspacing="0" width="100%">
-                                <thead>
+                                                echo "<td>";
+                                                echo $lista_DespachoPRODUCCION['Posicion'];
+                                                echo "</td>";
 
 
-                                <th>IDH</th>
-                                <th>Descripcion</th>
-                                <th>Origen</th>
-                                <th>Bultos</th>
-                                <th>Destino</th>
-                                <th>Estado</th>
-                                <th>Mover</th>
+                                                echo "<td>";
+                                                echo '<a href="DespacharProducto.php?Guia=' . $IDGUIA . '" class="	btn btn-primary ">Despachar</a>';
+                                                echo "</td>";
 
-                                </thead>
-                                <tbody>
-                                <?php
-                                for ($i = 0; $i < $lista_Movimientos; $i++) {
+                                                echo "</tr>";
 
-                                    $IDGUIA = $lista_Movimientos['id'];
-                                    $Origen = $lista_Movimientos['Origen'];
-                                    $Destino = $lista_Movimientos['Destino'];
-                                    $IDH = $lista_Movimientos['IDH'];
 
-                                    echo "<td>";
-                                    echo $lista_Movimientos['IDH'];
-                                    echo "</td>";
 
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Descripcion'];
-                                    echo "</td>";
+                                                $lista_DespachoPRODUCCION = $ejecutar_sentencia_Despachos->fetch(PDO::FETCH_ASSOC);
+                                            }
+                                            ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="tab-pane active" id="settings">
+                                        <table id="example3" class="table table-striped  " cellspacing="0" width="100%">
+                                            <thead>
 
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Origen'];
-                                    echo "</td>";
 
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Bultos']; //ANCHOR - Cantida de bultos en piking
-                                    echo "</td>";
+                                            <th>IDH</th>
+                                            <th>Descripcion</th>
+                                            <th>A Rampa</th>
 
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Destino'];
-                                    echo "</td>";
+                                            <th>De Posicion</th>
+                                            <th>Despachar</th>
 
-                                    echo "<td>";
-                                    echo $lista_Movimientos['Estado'];
-                                    echo "</td>";
+                                            </thead>
+                                            <tbody>
+                                            <?php
+                                            for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
 
-                                    echo "<td>";
-                                    echo '<a href="MoverProductoPiking.php?Guia=' . $IDGUIA . '&Origen=' . $Origen . '&Destino=' . $Destino . '&IDH=' . $IDH . '" class="btn btn-primary mover-boton">Mover</a>';
-                                    echo "</td>";
 
-                                    echo "</tr>";
+                                                $IDGUIA = $lista_DespachoPRODUCCION['Movimiento'];
 
-                                    $lista_Movimientos = $ejecutar_sentencia_Movimientos->fetch(PDO::FETCH_ASSOC);
-                                }
-                                ?>
-                                <script>
-                                    document.addEventListener("DOMContentLoaded", function () {
-                                        var botones = document.querySelectorAll('.mover-boton');
+                                                echo "<td>";
+                                                echo $lista_DespachoPRODUCCION['IDH'];
+                                                echo "</td>";
 
-                                        botones.forEach(function (boton) {
-                                            boton.addEventListener('click', function () {
-                                                // Mostrar el mensaje "Moviendo"
-                                                boton.innerText = "Moviendo";
+                                                echo "<td>";
+                                                echo $lista_DespachoPRODUCCION['Descripcion'];
+                                                echo "</td>";
 
-                                                // Deshabilitar el botón
-                                                boton.setAttribute("disabled", "true");
+                                                echo "<td>";
+                                                echo $lista_DespachoPRODUCCION['Rampa'];
+                                                echo "</td>";
 
-                                                // Ocultar el botón
-                                                boton.style.display = "none";
+                                                echo "<td>";
+                                                echo $lista_DespachoPRODUCCION['Posicion'];
+                                                echo "</td>";
 
-                                                // Aquí puedes realizar cualquier otra lógica que necesites al hacer clic en el botón
-                                                // ...
 
-                                                // Puedes redirigir al usuario a la página deseada si es necesario
-                                                // window.location.href = boton.href;
-                                            });
-                                        });
-                                    });
-                                </script>
+                                                echo "<td>";
+                                                echo '<a href="DespacharProducto.php?Guia=' . $IDGUIA . '" class="	btn btn-primary ">Despachar</a>';
+                                                echo "</td>";
 
-                                </tbody>
-                            </table>
+                                                echo "</tr>";
+
+
+
+                                                $lista_DespachoPRODUCCION = $ejecutar_sentencia_Despachos->fetch(PDO::FETCH_ASSOC);
+                                            }
+                                            */?>
+                                            </tbody>
+                                        </table>
+                                </div>
+
+                            </div>
+                             Fin Componentes separados por Guia -->
+
+
+
+
                             <br>
                             <!-- Fin Contenido de esta seccion-->
+
+
+
                             <br>
                         </div>
                     </div>
@@ -491,20 +604,51 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 <script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         var table = $('#example').DataTable({
+            scrollY: 200,
             scrollX: true,
 
             language: {
                 url: 'datatables_espanol.json'
             }
+
         });
 
 
-        $(table.column(2).nodes()).addClass('bolded');
-        $(table.column(3).nodes()).addClass('bolded');
+
     });
 </script>
+
+    <script>
+        $(document).ready(function() {
+            var table = $('#example2').DataTable({
+
+                language: {
+                    url: 'datatables_espanol.json'
+                }
+            });
+
+
+
+        });
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            var table = $('#example3').DataTable({
+
+                language: {
+                    url: 'datatables_espanol.json'
+                }
+            });
+
+
+
+        });
+    </script>
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="../dist/js/Custom/pageEnhancements.js"></script>
 </body>
 
 </html>

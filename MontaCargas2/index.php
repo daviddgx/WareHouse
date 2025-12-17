@@ -44,6 +44,96 @@ ob_end_flush();
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
+    <script>
+        (function () {
+            var isWindows = navigator.userAgent.indexOf('Windows') !== -1;
+            if (!isWindows) {
+                return;
+            }
+
+            var fullscreenWindowName = 'mc_fullscreen_window';
+
+            function requestFullscreen(doc) {
+                if (!doc) {
+                    return;
+                }
+
+                var element = doc.documentElement;
+                if (element.requestFullscreen) {
+                    element.requestFullscreen().catch(function () {
+                    });
+                } else if (element.mozRequestFullScreen) {
+                    element.mozRequestFullScreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                }
+            }
+
+            if (window.name !== fullscreenWindowName) {
+                var features = 'fullscreen=yes,toolbar=no,location=no,menubar=no,status=no,scrollbars=yes,resizable=yes';
+                var popup = window.open(window.location.href, fullscreenWindowName, features);
+
+                if (popup) {
+                    popup.focus();
+                    popup.onload = function () {
+                        requestFullscreen(popup.document);
+                    };
+
+                    try {
+                        window.close();
+                    } catch (e) {
+                    }
+
+                    setTimeout(function () {
+                        if (!window.closed) {
+                            window.location.replace('kiosk-instruction.html');
+                        }
+                    }, 300);
+
+                } else {
+                    if (document.readyState === 'complete') {
+                        requestFullscreen(document);
+                    } else {
+                        document.addEventListener('DOMContentLoaded', function () {
+                            requestFullscreen(document);
+                        });
+                    }
+                }
+            } else {
+                if (document.readyState === 'complete') {
+                    requestFullscreen(document);
+                } else {
+                    document.addEventListener('DOMContentLoaded', function () {
+                        requestFullscreen(document);
+                    });
+                }
+            }
+
+            document.addEventListener('keydown', function (event) {
+                var blockAddressBar = false;
+                if (event.key === 'F6') {
+                    blockAddressBar = true;
+                }
+
+                if ((event.ctrlKey || event.metaKey) && (event.key === 'l' || event.key === 'L')) {
+                    blockAddressBar = true;
+                }
+
+                if (blockAddressBar) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            });
+
+            history.pushState(null, '', window.location.href);
+            window.addEventListener('popstate', function () {
+                history.pushState(null, '', window.location.href);
+            });
+        })();
+    </script>
+
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -133,6 +223,55 @@ ob_end_flush();
             color: #b3b3b3;
         }
 
+        .skeleton-text,
+        .chart-skeleton {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skeleton-text::after,
+        .chart-skeleton::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -150px;
+            width: 150px;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(233,238,245,0) 0%, rgba(255,255,255,0.8) 50%, rgba(233,238,245,0) 100%);
+            animation: shimmer 1.6s infinite;
+        }
+
+        .skeleton-text {
+            display: inline-block;
+            min-width: 60px;
+            min-height: 1em;
+            background-color: #e9eef5;
+            border-radius: 4px;
+            color: transparent !important;
+        }
+
+        .chart-skeleton {
+            background: #f4f6fa;
+            border-radius: 8px;
+        }
+
+        .skeleton-loaded {
+            color: inherit !important;
+        }
+
+        .skeleton-loaded::after {
+            display: none;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(300%);
+            }
+        }
+
     </style>
 
 
@@ -140,23 +279,6 @@ ob_end_flush();
 
 <body>
 <!-- ============================================================== -->
-<!-- Preloader - style you can find in spinners.css -->
-<!-- ==============================================================
-<div class="preloader">
-    <div class="lds-ripple">
-        <div class="preloader">
-            <br></br>
-            <div class="logoPre">
-                <img src="../assets/images/Sertero/LogoHenkel.png" width="300px" height="auto">
-
-            </div>
-            <div class="loader-frame">
-                <div class="loader1" id="loader1"></div>
-                <div class="loader2" id="loader2"></div>
-            </div>
-        </div>
-    </div>
-</div> -->
 <!-- ============================================================== -->
 <!-- Main wrapper - style you can find in pages.scss -->
 <!-- ============================================================== -->
@@ -250,7 +372,13 @@ ob_end_flush();
                 <!-- ============================================================== -->
                 <!-- Right side toggle and nav items -->
                 <!-- ============================================================== -->
-                <ul class="navbar-nav float-right"> <p id="status" class="online">Online</p>
+                <ul class="navbar-nav float-right align-items-center">
+                    <li class="nav-item d-flex align-items-center mr-3">
+                        <button type="button" class="btn btn-link text-muted p-0 mr-2" id="montacargas-fullscreen-toggle" aria-label="Pantalla completa">
+                            Pantalla Completa
+                        </button>
+                        <span id="status" class="online mb-0">Online</span>
+                    </li>
                     <!-- ============================================================== -->
                     <!-- Search -->
                     <!-- ============================================================== -->
@@ -609,6 +737,76 @@ ob_end_flush();
         <script src="../dist/js/OnLine.js"></script>
         <!-- Chart JS -->
         <script src="../assets/libs/chart.js/dist/Chart.min.js"></script>
+
+        <script>
+            const skeletonTextIds = [
+                'capacidad-total',
+                'Ubicaciones-Lbres',
+                'Porcentaje-Exactitud',
+                'Unidades-Ocupadas'
+            ];
+
+            document.addEventListener('DOMContentLoaded', function () {
+                skeletonTextIds.forEach(function (id) {
+                    var element = document.getElementById(id);
+                    if (element && element.innerText.trim() === '') {
+                        element.classList.add('skeleton-text');
+                    }
+                });
+
+                document.querySelectorAll('canvas').forEach(function (canvas) {
+                    canvas.classList.add('chart-skeleton');
+                });
+            });
+
+            window.addEventListener('load', function () {
+                skeletonTextIds.forEach(function (id) {
+                    var element = document.getElementById(id);
+                    if (element) {
+                        element.classList.remove('skeleton-text');
+                        element.classList.add('skeleton-loaded');
+                    }
+                });
+
+                document.querySelectorAll('.chart-skeleton').forEach(function (canvas) {
+                    canvas.classList.add('skeleton-loaded');
+                    canvas.classList.remove('chart-skeleton');
+                });
+            });
+
+            function toggleFullScreen() {
+                if (!document.fullscreenElement) {
+                    var element = document.documentElement;
+                    if (element.requestFullscreen) {
+                        element.requestFullscreen();
+                    } else if (element.webkitRequestFullscreen) {
+                        element.webkitRequestFullscreen();
+                    } else if (element.mozRequestFullScreen) {
+                        element.mozRequestFullScreen();
+                    } else if (element.msRequestFullscreen) {
+                        element.msRequestFullscreen();
+                    }
+                } else if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                var fullscreenButton = document.getElementById('montacargas-fullscreen-toggle');
+                if (fullscreenButton) {
+                    fullscreenButton.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        toggleFullScreen();
+                    });
+                }
+            });
+        </script>
 
         <!-- Datos de las bodegas -->
 

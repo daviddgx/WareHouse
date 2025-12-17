@@ -1,5 +1,4 @@
 <?php
-ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
 include "../Innet_MTC/Innet_MTC.php";
@@ -25,8 +24,6 @@ $Num_Asignaciones= darValorAsignaciones($_SESSION['Usuario']);
 
 
 
-
-ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -50,8 +47,6 @@ ob_end_flush();
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
-    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -236,12 +231,12 @@ ob_end_flush();
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
+        <div class="container-fluid animate__animated animate__fadeIn">
             <div class="row">
                 <div class="col-12">
-                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
+                    <div class="card">
 
-                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
+                        <div class="card-body">
                             <h4 class="card-title">Ingresar Manualmente Check List</h4>
                             <h6 class="card-subtitle">Registre Check list de forma manual </h6>
                             <br>
@@ -300,8 +295,6 @@ ob_end_flush();
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
-<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-<script src="../dist/js/Custom/pageEnhancements.js"></script>
 </body>
 
 </html>

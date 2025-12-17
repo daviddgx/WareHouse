@@ -105,6 +105,14 @@ if (!empty($_POST['Entrar'])) {
                             $_SESSION['pic'] = $row['Foto'];
                             header('Location: InventariosDTG/index.php');
                             break;
+
+                            case '22':
+                            $_SESSION['Usuario'] = $row['Nombre_Usuario'];
+                            $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
+                            $_SESSION['pic'] = $row['Foto'];
+                            header('Location: MontaCargas2/index.php');
+                            break;
                     }
                 }
             } else {

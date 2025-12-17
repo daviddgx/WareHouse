@@ -1,14 +1,11 @@
 <?php
+ob_start();
 session_start();
-include '../LQS_EUQ/Connect.php';
-//include '../LQS_EUQ/ListarAsignacionesCompletos.php';
-$lista_AsignacionesPRODUCCION = null;
+include '../LQS_EUQ/Auth.php';
+include '../LQS_EUQ/ListarAsignacionesCompletos.php';
 include "../Innet_MTC/Innet_MTC.php";
 date_default_timezone_set('America/Guatemala');
-
-
-$fechaConsulta = date("Y") . '-' . date("m") . '-' . date("d");
-
+$fecha = date("d") . '-' . date("m") . '-' . date("Y");
 $Num_Despachos= '';
 $Num_Reubicaciones= '';
 $Num_Piking= '';
@@ -17,81 +14,18 @@ if ($_SESSION['Usuario'] == '') {
 } else {
 }
 
-
-
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
-$UsuarioTrabajo = $_SESSION['Usuario'];
 
-$txtFechaInicial="";
-$txtFechaFinal="";
+$txtNombre = "";
+$txtApellido = "";
+$txtNombreUsuario = "";
+$txtTipoUsuario = "";
+$txtEmail = "";
+$txtFoto = "";
 
-$txtFechaInicial2="";
-$txtFechaFinal2="";
-
-$txtHoraInicial="";
-$txtHoraFinal="";
-
-
-date_default_timezone_set('America/Guatemala');
-$hora = date('G:i', time());
-$fechaConsulta = date("Y") . '-' . date("m") . '-' . date("d");
-$fecha = date("d") . '-' . date("m") . '-' . date("Y");
-$Turno1 = "06:00";
-$Turno2 = "18:00";
-$FechaTrabajoAnterior="";
-$HoraTrabajoInicio="";
-$HoraTrabajoFinal="";
-
-if(strtotime($hora) < strtotime($Turno2) && strtotime($hora) > strtotime($Turno1)  ){
-    $txtTurno = "1";
-    $txtFechaInicial = $fechaConsulta;
-    $txtHoraInicial = $Turno1 ;
-
-    $txtFechaFinal  = $fechaConsulta;
-    $txtHoraFinal  = $Turno2;
-
-}else{
-
-    if(strtotime($hora) <= strtotime("23:59:59") && strtotime($hora) >= strtotime("18:00:00")){
-        $txtTurno = "2";
-        $txtFechaInicial = $fechaConsulta;
-        $txtHoraInicial = $Turno2 ;
-
-        $txtFechaFinal  = $fechaConsulta;
-        $txtHoraFinal  = "23:59";
-
-
-    }else{
-        $txtTurno = "2";
-        $FechaTrabajoAnterior= date('Y-m-d', strtotime($fechaConsulta . ' -1 day')); // Resta un día a la fecha actual
-
-        $txtFechaInicial = $FechaTrabajoAnterior;
-        $txtHoraInicial = $Turno2 ;
-
-        $txtFechaFinal  = $fechaConsulta;
-        $txtHoraFinal  =  $Turno1;
-
-    }
-}
-
-
-
-// Fin de la conexion
-
-//Variables para Resumen
-$TotalMovimientos = "";
-$IDHs = "";
-$ListaDespachadas = "";
-$ListaPendientes = "" ;
-
-// Dar valor a las variabes de Resumen
-
-$TotalMovimientos = HistoricoTotalMovimientos_Ingresos($_SESSION['Usuario'],$fechaConsulta);
-$Cancelado = HistoricoCancelados_Ingresos($_SESSION['Usuario'],$fechaConsulta);
-$ListaDespachadas = HistoricoDespachados_Ingresos($_SESSION['Usuario'],$fechaConsulta);
-$ListaPendientes = HistoricoPendientes_Ingresos($_SESSION['Usuario'],$fechaConsulta); ;
+$txtPWD = "";
 
 $Num_Despachos = darValorDespachos($_SESSION['Usuario']);
 $Num_Reubicaciones = darValorReubicaciones($_SESSION['Usuario']);
@@ -102,40 +36,144 @@ $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
 
+// Cargar datos a mostrar
+
+
+// Creamos la conexion
+
+
+try {
+
+    $sentencia = $pdo->prepare("SELECT * FROM dbs9098416.usuarios_app where Nombre_Usuario = '" . $_SESSION['Usuario'] . "'");
+    $sentencia->execute();
+    $Usuario = $sentencia->fetch(PDO::FETCH_LAZY);
+    $txtNombre = $Usuario['Nombre'];
+    $txtApellido = $Usuario['Apellido'];
+    $txtNombreUsuario = $Usuario['Nombre_Usuario'];
+
+    switch ($Usuario['TipoUsuario']) {
+        case '1' :
+            $txtTipoUsuario = 'Administrador';
+            break;
+        case '2' :
+            $txtTipoUsuario = 'Operador de Montacargas';
+            break;
+        case '3' :
+            $txtTipoUsuario = 'Administrador de inventarios';
+            break;
+        case '4' :
+            $txtTipoUsuario = 'Picking';
+            break;
+        case '5' :
+            $txtTipoUsuario = 'Consulta a DashBoard';
+            break;
+    }
+
+    $txtEmail = $Usuario['Email'];
+    $txtFoto = $Usuario['Foto'];
+    $txtPWD = $Usuario['Clave_Usuario'];
+
+
+
+} catch (Exception $ex) {
+    $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">×</span>
+                                    </button>
+                                    <strong>Se encontro un error ☹️! -- </strong> ' . $ex . '
+                                </div>';
+}
+//comprovacion de dadtos
+//fin comprovacion de datos
+// Fin de la conexion
+
+
 // Validar formulario y grabar informacion
 $accion = (isset($_POST['accion'])) ? $_POST['accion'] : "";
 
 switch ($accion) {
+    case "btnModificar":
+        $txtNombre = (isset($_POST['txtNombre'])) ? $_POST['txtNombre'] : "";
+        $txtApellido = (isset($_POST['txtApellido'])) ? $_POST['txtApellido'] : "";
+        $txtPasswordActual = (isset($_POST['txtPassActual'])) ? $_POST['txtPassActual'] : "";
+        $txtPasswordNuevo = (isset($_POST['txtNuevoPass'])) ? $_POST['txtNuevoPass'] : "";
+        $txtPasswordVal = (isset($_POST['txtValNuevoPass'])) ? $_POST['txtValNuevoPass'] : "";
+        $txtEmail = (isset($_POST['txtEmail'])) ? $_POST['txtEmail'] : "";
+        $txtPasswordActual = md5($txtPasswordActual);
+        $txtPasswordNuevo = md5($txtPasswordNuevo);
+        $txtPasswordVal = md5($txtPasswordVal);
+        $txtFoto = (isset($_FILES['txtFoto']["name"])) ? $_FILES['txtFoto'] : "";
 
-    case "btnConsultar":
+        if ($txtPasswordActual != $txtPWD) {
 
-        $Fecha1 = (isset($_POST['txtFechaInicial'])) ? $_POST['txtFechaInicial'] : "";
-        $Hora1 = (isset($_POST['txtHoraInicial'])) ? $_POST['txtHoraInicial'] : "";
+            $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">×</span>
+                                    </button>
+                                    <strong>Se encontro un error ☹️! -- </strong> La clave actual ingresada no es igual a la que el usuario tiene actualmente 🔑
+                                </div>';
 
-        $Fecha2 = (isset($_POST['txtFechaFinal'])) ? $_POST['txtFechaFinal'] : "";
-        $Hora2 = (isset($_POST['txtHoraFinal'])) ? $_POST['txtHoraFinal'] : "";
+        } else if ($txtPasswordNuevo != $txtPasswordVal) {
+            $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">×</span>
+                                    </button>
+                                    <strong>Se encontro un error ☹️! -- </strong> La Clave nueva no coincide con su validación 🔑 🤔 🗝
+                                </div>';
+        } else {
 
-        $txtFechaInicial = $Fecha1;
-        $txtHoraInicial = $Hora1;
-        $txtFechaFinal = $Fecha2;
-        $txtHoraFinal = $Hora2;
+            //Actualizar datos del registro
 
-        $HoraTrabajoInicio = $Fecha1." ".$Hora1;
-        $HoraTrabajoFinal  = $Fecha2." ".$Hora2;
+            $sentencia = $pdo->prepare("UPDATE dbs9098416.usuarios_app SET Nombre=:Nombre, Apellido =:Apellido, Email=:Email ,Clave_Usuario=:Clave where Nombre_Usuario=:Usuario;");
 
-        include '../LQS_EUQ/RPT_Ingresos_MTHIS.php';
+            $sentencia->bindParam(':Nombre', $txtNombre);
+            $sentencia->bindParam(':Apellido', $txtApellido);
+            $sentencia->bindParam(':Email', $txtEmail);
+            $sentencia->bindParam(':Clave', $txtPasswordVal);
+            $sentencia->bindParam(':Usuario', $txtNombreUsuario);
 
-        $txtFechaInicial2 = $Fecha1."%20".$Hora1;
-        $txtFechaFinal2  = $Fecha2."%20".$Hora2;
+            $sentencia->execute();
+
+            $_SESSION['USR'] = $txtNombre . ' ' . $txtApellido;
+
+            // Bloque para actualizar la foto
+
+            $fecha = new DateTime();
+            $nombreArchivo = ($txtFoto["name"] != "") ? $fecha->getTimestamp() . "_" . $_FILES["txtFoto"]["name"] : "imagen.jpg";
+            $tmpFoto = $_FILES["txtFoto"]["tmp_name"];
+
+            if ($tmpFoto != "") {
+                move_uploaded_file($tmpFoto, "../assets/images/users/" . $nombreArchivo);
+
+                if (isset($Usuario["Foto"])) {
+                    if (file_exists("../assets/images/users/" . $Usuario["Foto"])) {
+                        if ($Usuario["Foto"] != "imagen.jpg") {
+                            unlink("../assets/images/users/" . $Usuario["Foto"]);
+                        }
+                    }
+                }
+
+                $sentencia = $pdo->prepare("UPDATE dbs9098416.usuarios_app SET Foto=:Foto where Nombre_Usuario=:id;");
+                $sentencia->bindParam(':Foto', $nombreArchivo);
+                $sentencia->bindParam(':id', $txtNombreUsuario);
+                $sentencia->execute();
+                $_SESSION['pic'] = $nombreArchivo;
+                $MensajeExito = '<div class="alert alert-secondary" role="alert">
+                                    <strong>Excelente! 😎  -- </strong> Los datos se actualizaron correctamente
+                                </div>';
+                header('Location: MiPerfil.php');
+            }
+        }
 
         break;
 
-    default:
-        $fechaFinal =date("d") . '-' . date("m") . '-' . date("Y");
-        $fechaInicio = date("Y-m-d",strtotime($fechaFinal."- 1 days"));
+    default :
         break;
 }
 
+
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -172,13 +210,6 @@ switch ($accion) {
             href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
     />
     <![endif]-->
-
-    <style>
-        .bolded {
-            font-weight:bold;
-            font-size: large;
-        }
-    </style>
 </head>
 
 <body>
@@ -273,7 +304,7 @@ switch ($accion) {
 
 
                 </ul>
-
+                
                 <!-- ============================================================== -->
                 <!-- Right side toggle and nav items -->
                 <!-- ============================================================== -->
@@ -343,16 +374,7 @@ switch ($accion) {
 
     <div class="page-wrapper">
 
-        <div class="page-breadcrumb">
-            <div class="row">
-
-                <div class="col-5 align-self-center">
-                    <div class="customize-input float-right">
-
-                    </div>
-                </div>
-            </div>
-        </div>
+       
         <!-- ============================================================== -->
         <!-- End Bread crumb and right sidebar toggle -->
         <!-- ============================================================== -->
@@ -365,223 +387,122 @@ switch ($accion) {
                     <div class="card">
 
                         <div class="card-body">
-                            <h4 class="card-title">Historico de Ingresos</h4>
-                            <h6 class="card-subtitle">Listado de los ingresos que ha registrado</h6>
+                            <h4 class="card-title">Configuración de usuario</h4>
+                            <h6 class="card-subtitle">Valide la información antes de actualizarla</h6>
                             <br>
-                            <!-- Start First Cards -->
-                            <div class="row">
-                                <!-- Column -->
-                                <div class="col-md-6 col-lg-3 col-xlg-3">
-                                    <div class="card card-hover">
-                                        <div class="p-2 bg-primary text-center">
-                                            <h1 class="font-light text-white"><?php echo $TotalMovimientos; ?></h1>
-                                            <h6 class="text-white">Total Movimientos</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Column -->
-                                <div class="col-md-6 col-lg-3 col-xlg-3">
-                                    <div class="card card-hover">
-                                        <div class="p-2 bg-cyan text-center">
-                                            <h1 class="font-light text-white"><?php echo $Cancelado; ?></h1>
-                                            <h6 class="text-white">Cancelados</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Column -->
-                                <div class="col-md-6 col-lg-3 col-xlg-3">
-                                    <div class="card card-hover">
-                                        <div class="p-2 bg-success text-center">
-                                            <h1 class="font-light text-white"><?php echo $ListaDespachadas; ?></h1>
-                                            <h6 class="text-white">Ingreseos</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Column -->
-                                <div class="col-md-6 col-lg-3 col-xlg-3">
-                                    <div class="card card-hover">
-                                        <div class="p-2 bg-danger text-center">
-                                            <h1 class="font-light text-white"><?php echo $ListaPendientes; ?></h1>
-                                            <h6 class="text-white">Pendientes</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Column -->
-                            </div>
-                            <!-- *************************************************************** -->
-                            <!-- End First Cards -->
-                            <!-- Contenido de esta seccion-->
-                        </div>
-                    </div>
-                </div>
+                            <?php echo $Mensajeerror; ?>
+                            <?php echo $MensajeExito; ?>
+                            <br>
 
-                <div class="col-sm-12 col-md-12">
-                    <div class="card">
-
-                        <div class="card-body">
-                            <h4 class="card-title">Ingrese las fechas en las que ingreso los productos para consultar</h4>
-                            <h6 class="card-subtitle">El reporte se basa en los rangos de fechas seleccionadas</h6>
                             <div class="my-content formulario">
                                 <form role="form" action="" method="post" enctype="multipart/form-data">
                                     <div class="form-body">
+
+
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>Fecha Inicial</label>
-                                                    <input name="txtFechaInicial"  type="date" class="form-control" value="<?php echo $txtFechaInicial ?>" required>
-
+                                                    <label>Nombre</label>
+                                                    <input name="txtNombre" type="text"
+                                                           class="form-control" <?php echo isset(($error['Nombre'])) ? "is-invalid" : ""; ?>
+                                                           value="<?php echo $txtNombre ?>" required>
                                                 </div>
-
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>Hora Inicial</label>
-                                                    <input name="txtHoraInicial" type="time" class="form-control" value="<?php echo $txtHoraInicial ?>" required>
-
+                                                    <label>Apellido</label>
+                                                    <input name="txtApellido" type="text"
+                                                           class="form-control" <?php echo isset(($error['Apellido'])) ? "is-invalid" : ""; ?>
+                                                           value="<?php echo $txtApellido ?>" required>
                                                 </div>
-
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Nombre de Usuario</label>
+                                                    <input type="text"
+                                                           class="form-control" <?php echo isset(($error['NombreUsuario'])) ? "is-invalid" : ""; ?>
+                                                           value="<?php echo $txtNombreUsuario ?>" readonly="" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Tipo de Usuario</label>
+                                                    <input type="text"
+                                                           class="form-control" <?php echo isset(($error['TipoUsuario'])) ? "is-invalid" : ""; ?>
+                                                           value="<?php echo $txtTipoUsuario ?>" readonly="" required>
+                                                </div>
                                             </div>
                                         </div>
 
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>Fecha Final</label>
-                                                    <input name="txtFechaFinal"  type="date" class="form-control" value="<?php echo $txtFechaFinal ?>" required>
-
+                                                    <label>Password Actual</label>
+                                                    <input name="txtPassActual" type="password" class="form-control "
+                                                           required>
                                                 </div>
-
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label>Hora Final</label>
-                                                    <input name="txtHoraFinal" type="time" class="form-control" value="<?php echo $txtHoraFinal ?>" required>
-
+                                                    <label>Nuevo Password</label>
+                                                    <input name="txtNuevoPass" type="password" class="form-control"
+                                                           required>
                                                 </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Validar Password Nuevo</label>
+                                                    <input name="txtValNuevoPass" type="password" class="form-control"
+                                                           required>
+                                                </div>
+                                            </div>
 
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Correo Electronico</label>
+                                                    <input name="txtEmail" type="email"
+                                                           class="form-control" <?php echo isset(($error['CorreoElectronico'])) ? "is-invalid" : ""; ?>
+                                                           value="<?php echo $txtEmail ?>" required>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div class="row">
-                                            <div class="col-md-12 centrado">
-                                                <div class="form-group">
-                                                    <button type="submit" value="btnConsultar" name="accion" class="btn btn-outline-success">Consultar
-                                                    </button>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label>Fotografia</label>
+                                                <div class="input-group mb-12">
+                                                    <?php if ($txtFoto != "") { ?>
+                                                        <br/>
+                                                        <img style="border-radius: 45px !important;"
+                                                             class="img-thumbnail rounded mx-auto d-block" width="200px"
+                                                             src="../assets/images/users/<?php echo $txtFoto; ?>">
+                                                        <br/>
+                                                        <br/>
+                                                    <?php } ?>
+                                                    <div class="container">
+                                                        <input type="file" class="form-control" accept="image/*"
+                                                               name="txtFoto" placeholder="" id="txt6" require="">
+                                                    </div>
+
                                                 </div>
                                             </div>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="form-actions">
+                                        <div class="text-center">
+                                            <button type="submit" value="btnModificar" name="accion"
+                                                    class="btn btn-info">Guardar Cambios
+                                            </button>
                                         </div>
                                     </div>
                                 </form>
                             </div>
-
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-sm-12 col-md-12">
-                    <div class="card">
-
-                        <div class="card-body">
-                            <!-- Start First Cards -->
-                            <!-- *************************************************************** -->
-
-                            <!-- *************************************************************** -->
-                            <!-- End First Cards -->
-                            <table id="example" class="table table-striped  " cellspacing="0" width="100%">
-                                <thead>
-
-
-
-                                <th>IDH</th>
-                                <th>Material</th>
-                                <th>A Posicion</th>
-                                <th>Bultos</th>
-                                <th>Pallet Completo</th>
-                                <th>Estatus</th>
-                                <th>Icono</th>
-                                <th>Fecha de colocacion</th>
-
-
-
-
-                                </thead>
-                                <tbody>
-                                <?php
-                                for ($i = 0; $i < $lista_AsignacionesPRODUCCION; $i++) {
-                                    echo "<tr>";
-
-
-                                    echo "<td>";
-                                    echo $lista_AsignacionesPRODUCCION['IDH'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_AsignacionesPRODUCCION['Producto'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_AsignacionesPRODUCCION['Posicion'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_AsignacionesPRODUCCION['Cantidades'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_AsignacionesPRODUCCION['PalletCompleto'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_AsignacionesPRODUCCION['Estado'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    {
-                                        //Estatus del Producto
-                                        switch ($lista_AsignacionesPRODUCCION['Estado']){
-                                            case 'Producido' :
-                                                echo '<img src="../assets/images/Iconos/circuloNaranja.png" class="" --="" width="auto" height="40">';
-                                                break;
-
-                                            case 'Cancelado' :
-                                                echo '<img src="../assets/images/Iconos/circuloAmarillo.png" class="" --="" width="auto" height="40">';
-                                                break;
-
-                                            case 'Ingresado' :
-                                                echo '<img src="../assets/images/Iconos/circuloVerde.png" class="" --="" width="auto" height="40">';
-                                                break;
-
-                                            default :
-                                                echo '<img src="../assets/images/Iconos/circuloRojo.png" class="" --="" width="auto" height="40">';
-                                                break;
-
-                                        }
-
-                                    }
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo date('Y-m-d H:i:s', strtotime($lista_AsignacionesPRODUCCION['FechaColocado']));
-                                    echo "</td>";
-
-
-
-
-                                    echo "</tr>";
-                                    $lista_AsignacionesPRODUCCION =$ejecutar_sentencia_Asignaciones->fetch(PDO::FETCH_ASSOC);
-                                }
-                                ?>
-                                </tbody>
-                            </table>
-                            <br>
-                            <!-- Fin Contenido de esta seccion-->
-
-
-
-                            <br>
-                            <br>
-
-
                         </div>
                     </div>
                 </div>
@@ -632,24 +553,6 @@ switch ($accion) {
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
-<script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
-<script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
-
-<script>
-    $(document).ready( function () {
-        var table = $('#example').DataTable({
- scrollX: true,
-
-            language: {
-                url: 'datatables_espanol.json'
-            }
-        });
-
-
-
-    } );
-</script>
-
 </body>
 
 </html>

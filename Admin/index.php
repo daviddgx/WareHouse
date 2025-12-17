@@ -1535,9 +1535,9 @@ try {
 
     
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT date(FechaRegistro) AS Fecha, round(sum(ASG.Cantidades * PR.PESOBRUTOCAJA /1000),2) AS ToneladasProduccion FROM `asignaciones` ASG
+    $sql = "SELECT date(FechaColocado) AS Fecha, round(sum(ASG.Cantidades * PR.PESOBRUTOCAJA /1000),2) AS ToneladasProduccion FROM `asignaciones` ASG
     inner join productos PR on PR.IDH = ASG.IDH
-    where ASG.Estado = 'Ingresado' and date(ASG.FechaRegistro) between '$FechaHace9Dias' and '$FechaActual' GROUP by date(FechaRegistro) ORDER BY  date(FechaRegistro) desc ;  ";
+    where ASG.Estado = 'Ingresado' and date(ASG.FechaColocado) between '$FechaHace9Dias' and '$FechaActual' GROUP by date(FechaColocado) ORDER BY  date(FechaColocado) desc;"; // se cambia de FechaRegistro a FechaColocado a solicitud de Ronald el dia 10-11-2025
     $result = $conn->query($sql);
     
 
@@ -1772,23 +1772,23 @@ try {
     SUM(total_despachos) AS total_despachos
   FROM (
     SELECT
-      DATE(FechaRegistro) AS fecha,
+      DATE(FechaColocado) AS fecha,
            COUNT(*) AS total_asignaciones,
       0 AS total_despachos
     FROM asignaciones
-    WHERE PalletCompleto = 'Si' and date(FechaRegistro) between '$FechaHace9Dias' and '$FechaActual' AND Estado = 'Ingresado' and cantidades > 0  
+    WHERE PalletCompleto = 'Si' and date(FechaColocado) between '$FechaHace9Dias' and '$FechaActual' AND Estado = 'Ingresado' and cantidades > 0  
     GROUP BY fecha
     UNION ALL
     SELECT
-      DATE(Fecha_Hora_Despacho) AS fecha,
+      DATE(FechaRealizado) AS fecha,
            0 AS total_asignaciones,
       COUNT(*) AS total_despachos
     FROM despachos
-    WHERE Operador <> 'PIKING' and date(Fecha_Hora_Despacho) between '$FechaHace9Dias' and '$FechaActual' AND Estado = 'Despachado'
+    WHERE Operador <> 'PIKING' and date(FechaRealizado) between '$FechaHace9Dias' and '$FechaActual' AND Estado = 'Despachado'
     GROUP BY fecha
   ) AS subquery
   GROUP BY fecha
-  ORDER BY fecha DESC;";
+  ORDER BY fecha DESC;"; // Se cambia Fecha_Hora_Despacho a FechaRealizado a solicitud de Ronald el 10/11/2025
 
 
     $result = $conn->query($sql);

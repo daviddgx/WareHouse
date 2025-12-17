@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 
 date_default_timezone_set('America/Guatemala');
@@ -50,6 +51,31 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
+
+// Preparar registros para el visor de detalle
+$despachosList = [];
+if ($lista_DespachoPRODUCCION) {
+    do {
+        $registroActual = $lista_DespachoPRODUCCION;
+        $despachosList[] = $registroActual;
+    } while ($lista_DespachoPRODUCCION = $ejecutar_sentencia_Despachos->fetch(PDO::FETCH_ASSOC));
+}
+
+$totalDespachosPendientes = count($despachosList);
+$primerRegistroDespacho = $totalDespachosPendientes > 0 ? $despachosList[0] : null;
+$despacharUrl = '';
+if ($primerRegistroDespacho) {
+    $despacharUrl = 'DespacharProducto.php?' . http_build_query([
+        'Guia' => isset($primerRegistroDespacho['Movimiento']) ? $primerRegistroDespacho['Movimiento'] : '',
+        'IDH' => isset($primerRegistroDespacho['IDH']) ? $primerRegistroDespacho['IDH'] : '',
+        'Ubicacion' => isset($primerRegistroDespacho['Posicion']) ? $primerRegistroDespacho['Posicion'] : '',
+        'Transporte' => isset($primerRegistroDespacho['Guia_Carga']) ? $primerRegistroDespacho['Guia_Carga'] : '',
+        'Entrega' => isset($primerRegistroDespacho['Entrega']) ? $primerRegistroDespacho['Entrega'] : '',
+    ]);
+}
+
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -73,6 +99,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
+    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -88,34 +116,155 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <![endif]-->
 
     <style>
-
-
         .card-body {
             flex: 1 1 auto;
-            padding: 10px;
-        }
-        .page-wrapper > .container-fluid {
-            padding-left: 10px;
-            padding-right: 10px;
-            padding-top: 5px;
-            padding-bottom: 0px;
+            padding: 5px;
         }
 
         .page-breadcrumb {
-            padding: 5px 5px 0;
+            padding: 10px 10px 0;
         }
 
-        .dataTables_wrapper table.dataTable tbody td {
+        .assignment-card-body {
+            padding: 1.5rem;
+        }
+
+        .assignment-view {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-height: calc(100vh - 240px);
+        }
+
+        .assignment-header {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .assignment-header {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .assignment-navigation {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .assignment-navigation .nav-btn {
+            min-width: 120px;
+        }
+
+        .assignment-summary {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            flex-wrap: wrap;
+        }
+
+        .assignment-summary .record-indicator {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .assignment-details {
+            flex: 1 1 auto;
+            background: #f4f6fb;
+            border-radius: 1rem;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .assignment-fields {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .assignment-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .assignment-field .label {
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-size: .75rem;
+            color: #6c757d;
+        }
+
+        .assignment-field .value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #212529;
+            word-break: break-word;
+        }
+
+        .assignment-field--highlight {
+            background: #ffffff;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 10px 30px rgba(31, 45, 61, 0.08);
+        }
+
+        .assignment-field--highlight .value {
+            font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+            color: #e53935;
+        }
+
+        .assignment-empty {
             text-align: center;
+            font-size: 1.25rem;
+            color: #6c757d;
+            margin: auto;
         }
 
-        .dataTables_wrapper table.dataTable thead th {
-            text-align: center;
+        .assignment-footer {
+            margin-top: auto;
+            height: 25vh;
+            min-height: 160px;
+            display: flex;
+            align-items: center;
         }
 
-        .container {
-            margin-left: auto;
-            margin-right: auto;
+        .btn-ingresar {
+            width: 100%;
+            height: 100%;
+            font-size: clamp(1.35rem, 2.5vw, 2.2rem);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+        }
+
+        .btn-ingresar.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 767.98px) {
+            .assignment-card-body {
+                padding: 1rem;
+            }
+
+            .assignment-details {
+                padding: 1.5rem;
+            }
+
+            .assignment-footer {
+                min-height: 140px;
+            }
         }
     </style>
 </head>
@@ -282,84 +431,13 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn">
+        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
             <div class="row">
                 <div class="col-sm-12">
-                    <div class="card">
+                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
 
-                        <div class="card-body">
-                            <h4 class="card-title">Lista de Despachos a Realizar</h4>
-                            <h6 class="card-subtitle">Estos son los despachos que debe realizar en este turno </h6>
-
-                            <!-- Start First Cards -->
-                            <!-- *************************************************************** -->
-                            <div class="card-group">
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $TotalMovimientos;?></h2>
-
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Total de Movimientos</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="file-text"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <h2 class="text-dark mb-1 w-100 text-truncate font-weight-medium"><sup class="set-doller"></sup><?php echo $IDHs; ?></h2>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">IDHs
-                                                </h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="inbox"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaDespachadas; ?></h2>
-                                                    <span class="badge bg-success font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php  if($TotalMovimientos == 0) {} else{echo bcdiv((($ListaDespachadas / $TotalMovimientos) *100),'1', 2);} ?>%</span>
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Despachadas</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="award"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaPendientes?></h2>
-                                                    <span class="badge bg-danger font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if($TotalMovimientos == 0) {} else{echo  bcdiv((($ListaPendientes / $TotalMovimientos) * 100),'1', 2) ;} ?>%</span>
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Pendientes</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="clipboard"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- *************************************************************** -->
-                            <!-- End First Cards -->
-
+                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
+                            
                             <?php echo $Mensajeerror; ?>
                             <?php echo $MensajeExito; ?>
 
@@ -372,89 +450,69 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                             <!-- *************************************************************** -->
                             <!-- End First Cards -->
                             <!-- Componentes Separados por Guia -->
-                            <nav class="navbar navbar-expand-lg text-center">
-
-
-                                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                                    <span class="navbar-toggler-icon"></span>
-                                </button>
-                                <div class="collapse navbar-collapse" id="navbarNav">
-                                    <ul class="navbar-nav ">
-
-                                        <li class="nav-item active">
-                                            <a class="btn btn-outline-danger" style="margin-left: 2rem" href="Lista_DespachosGUIAS.php"><span > Regresar </span></a>
-                                        </li>
-
-                                    </ul>
-                                </div>
-                            </nav>
-
-                            <div class="card-body">
-
-                                <h4 class="card-title mb-3">Despachando Guia: <?php echo $GuiaDeCarga ?> y Engrega: <?php echo $Entrega?> </h4>
-                                <table id="example" class="table table-striped  " cellspacing="0" width="100%">
-                                    <thead>
-                                    <th>IDH</th>
-                                    <th>Descripcion</th>
-                                    <th>Transporte</th>
-                                    <th>Entrega</th>
-                                    <th>A Rampa</th>
-                                    <th>De Posicion</th>
-                                    <th>Despachar</th>
-
-                                    </thead>
-                                    <tbody>
-                                    <?php
-                                    for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
-
-
-                                        $IDGUIA = $lista_DespachoPRODUCCION['Movimiento'];
-                                        $IDIDH = $lista_DespachoPRODUCCION['IDH'];
-                                        $Posicion = $lista_DespachoPRODUCCION['Posicion'];
-                                        $Transporte = $lista_DespachoPRODUCCION['Guia_Carga'];
-                                        $Entrega = $lista_DespachoPRODUCCION['Entrega'];
-
-                                        echo '<td >';
-                                        echo $lista_DespachoPRODUCCION['IDH'];
-                                        echo "</td>";
-
-
-
-                                        echo "<td>";
-                                        echo $lista_DespachoPRODUCCION['Descripcion'];
-                                        echo "</td>";
-
-                                        echo "<td>";
-                                        echo $lista_DespachoPRODUCCION['Guia_Carga'];
-                                        echo "</td>";
-
-
-                                        echo "<td>";
-                                        echo $lista_DespachoPRODUCCION['Entrega'];
-                                        echo "</td>";
-
-
-                                        echo "<td>";
-                                        echo $lista_DespachoPRODUCCION['Rampa'];
-                                        echo "</td>";
-
-                                        echo '<td >';
-                                        echo $lista_DespachoPRODUCCION['Posicion'];
-                                        echo "</td>";
-
-                                        echo "<td>";
-                                        echo '<a href="DespacharProducto.php?Guia='.$IDGUIA .'&IDH='.$IDIDH.'&Ubicacion='.$Posicion.'&Transporte='.$Transporte.'&Entrega='.$Entrega.'" class="	btn btn-primary ">Despachar</a>';
-                                        echo "</td>";
-
-                                        echo "</tr>";
-
-
-
-                                        $lista_DespachoPRODUCCION = $ejecutar_sentencia_Despachos->fetch(PDO::FETCH_ASSOC);
-                                    }
-                                    ?>
-                                    </tbody>
-                                </table>
+                            <div class="card-body skeleton-target assignment-card-body" data-aos="fade-up" data-aos-delay="200">
+                                  <div class="assignment-view">
+                                      <div class="assignment-header">
+                                          <a class="btn btn-outline-danger"
+                                             href="Lista_DespachosGUIAS.php"
+                                             onclick="if (history.length > 1) { history.back(); return false; }">
+                                              <span>Regresar al listado de IDHs 🚚</span>
+                                          </a>
+                                          <div class="assignment-navigation">
+                                              <button type="button" class="btn btn-secondary nav-btn" id="prevRecord" disabled>◀ Anterior</button>
+                                              <div class="assignment-summary">
+                                                  <span class="badge badge-info badge-pill">Pendientes: <span id="pendingTotal"><?php echo $totalDespachosPendientes; ?></span></span>
+                                                  <span class="badge badge-light">Guía actual: <?php echo htmlspecialchars($GuiaDeCarga, ENT_QUOTES, 'UTF-8'); ?></span>
+                                                  <span class="badge badge-light">Entrega: <?php echo htmlspecialchars($Entrega, ENT_QUOTES, 'UTF-8'); ?></span>
+                                                  <span class="record-indicator" id="recordIndicator"><?php echo $totalDespachosPendientes ? '1 / ' . $totalDespachosPendientes : '0 / 0'; ?></span>
+                                              </div>
+                                              <button type="button" class="btn btn-secondary nav-btn" id="nextRecord" <?php echo $totalDespachosPendientes > 1 ? '' : 'disabled'; ?>>Siguiente ▶</button>
+                                          </div>
+                                      </div>
+                                      <div class="assignment-details">
+                                          <div class="assignment-empty <?php echo $primerRegistroDespacho ? 'd-none' : ''; ?>" id="assignmentEmpty">
+                                              No hay guías pendientes por despachar.
+                                          </div>
+                                          <div class="assignment-fields <?php echo $primerRegistroDespacho ? '' : 'd-none'; ?>" id="assignmentFields">
+                                              <div class="assignment-field assignment-field--highlight">
+                                                  <span class="label">IDH</span>
+                                                  <span class="value" id="detailIdh"><?php echo $primerRegistroDespacho ? htmlspecialchars($primerRegistroDespacho['IDH'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                              </div>
+                                              <div class="assignment-field">
+                                                  <span class="label">Descripción</span>
+                                                  <span class="value" id="detailDescripcion"><?php echo $primerRegistroDespacho ? htmlspecialchars($primerRegistroDespacho['Descripcion'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                              </div>
+                                              <div class="assignment-field">
+                                                  <span class="label">Transporte</span>
+                                                  <span class="value" id="detailTransporte"><?php echo $primerRegistroDespacho ? htmlspecialchars($primerRegistroDespacho['Guia_Carga'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                              </div>
+                                              <div class="assignment-field">
+                                                  <span class="label">Entrega</span>
+                                                  <span class="value" id="detailEntrega"><?php echo $primerRegistroDespacho ? htmlspecialchars($primerRegistroDespacho['Entrega'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                              </div>
+                                              <div class="assignment-field">
+                                                  <span class="label">A rampa</span>
+                                                  <span class="value" id="detailRampa"><?php echo $primerRegistroDespacho ? htmlspecialchars($primerRegistroDespacho['Rampa'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                              </div>
+                                              <div class="assignment-field">
+                                                  <span class="label">De posición</span>
+                                                  <span class="value" id="detailPosicion"><?php echo $primerRegistroDespacho ? htmlspecialchars($primerRegistroDespacho['Posicion'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                              </div>
+                                          </div>
+                                      </div>
+                                      <div class="assignment-footer">
+                                          <a id="despacharButton"
+                                             class="btn btn-success btn-ingresar<?php echo $primerRegistroDespacho ? '' : ' disabled'; ?>"
+                                             <?php if ($primerRegistroDespacho) { ?>
+                                                 href="<?php echo htmlspecialchars($despacharUrl, ENT_QUOTES, 'UTF-8'); ?>"
+                                             <?php } else { ?>
+                                                 role="button" aria-disabled="true"
+                                             <?php } ?>>
+                                              Despachar ✔️
+                                          </a>
+                                      </div>
+                                  </div>
+                              </div>
 
 
                         </div>
@@ -506,20 +564,121 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
-<script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
-<script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
-
 <script>
-    $(document).ready(function() {
-        var table = $('#example').DataTable({
- scrollX: true,
+    document.addEventListener('DOMContentLoaded', function () {
+        const despachos = <?php echo json_encode($despachosList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        const prevBtn = document.getElementById('prevRecord');
+        const nextBtn = document.getElementById('nextRecord');
+        const indicator = document.getElementById('recordIndicator');
+        const pendingTotal = document.getElementById('pendingTotal');
+        const fieldsWrapper = document.getElementById('assignmentFields');
+        const emptyState = document.getElementById('assignmentEmpty');
+        const despacharButton = document.getElementById('despacharButton');
+        const detailElements = {
+            idh: document.getElementById('detailIdh'),
+            descripcion: document.getElementById('detailDescripcion'),
+            transporte: document.getElementById('detailTransporte'),
+            entrega: document.getElementById('detailEntrega'),
+            rampa: document.getElementById('detailRampa'),
+            posicion: document.getElementById('detailPosicion')
+        };
+        let currentIndex = despachos.length > 0 ? 0 : -1;
 
-            language: {
-                url: 'datatables_espanol.json'
+        function updateButtonLink(despacho) {
+            if (!despacharButton) {
+                return;
             }
-        });
+
+            if (!despacho) {
+                despacharButton.removeAttribute('href');
+                despacharButton.classList.add('disabled');
+                despacharButton.setAttribute('aria-disabled', 'true');
+                despacharButton.textContent = 'Despachar ✔️';
+                despacharButton.setAttribute('title', 'No hay guías pendientes');
+                return;
+            }
+
+            const params = new URLSearchParams({
+                Guia: despacho.Movimiento || '',
+                IDH: despacho.IDH || '',
+                Ubicacion: despacho.Posicion || '',
+                Transporte: despacho.Guia_Carga || '',
+                Entrega: despacho.Entrega || ''
+            });
+
+            despacharButton.href = 'DespacharProducto.php?' + params.toString();
+            despacharButton.classList.remove('disabled');
+            despacharButton.removeAttribute('aria-disabled');
+            despacharButton.removeAttribute('title');
+            despacharButton.textContent = 'Despachar ✔️';
+        }
+
+        function renderDespacho(index) {
+            const hasRecords = despachos.length > 0 && index >= 0;
+
+            if (pendingTotal) {
+                pendingTotal.textContent = despachos.length;
+            }
+
+            if (indicator) {
+                indicator.textContent = hasRecords ? (index + 1) + ' / ' + despachos.length : '0 / 0';
+            }
+
+            if (!fieldsWrapper || !emptyState) {
+                return;
+            }
+
+            if (!hasRecords) {
+                fieldsWrapper.classList.add('d-none');
+                emptyState.classList.remove('d-none');
+                updateButtonLink(null);
+                if (prevBtn) prevBtn.disabled = true;
+                if (nextBtn) nextBtn.disabled = true;
+                return;
+            }
+
+            const despacho = despachos[index];
+
+            fieldsWrapper.classList.remove('d-none');
+            emptyState.classList.add('d-none');
+
+            if (detailElements.idh) detailElements.idh.textContent = despacho.IDH || '';
+            if (detailElements.descripcion) detailElements.descripcion.textContent = despacho.Descripcion || '';
+            if (detailElements.transporte) detailElements.transporte.textContent = despacho.Guia_Carga || '';
+            if (detailElements.entrega) detailElements.entrega.textContent = despacho.Entrega || '';
+            if (detailElements.rampa) detailElements.rampa.textContent = despacho.Rampa || '';
+            if (detailElements.posicion) detailElements.posicion.textContent = despacho.Posicion || '';
+
+            updateButtonLink(despacho);
+
+            if (prevBtn) prevBtn.disabled = index === 0;
+            if (nextBtn) nextBtn.disabled = index === despachos.length - 1;
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                if (currentIndex > 0) {
+                    currentIndex -= 1;
+                    renderDespacho(currentIndex);
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (currentIndex < despachos.length - 1) {
+                    currentIndex += 1;
+                    renderDespacho(currentIndex);
+                }
+            });
+        }
+
+        renderDespacho(currentIndex);
     });
 </script>
+
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="../dist/js/Custom/pageEnhancements.js"></script>
 
 
 </body>

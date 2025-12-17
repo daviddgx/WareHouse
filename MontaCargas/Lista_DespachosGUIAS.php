@@ -1,5 +1,4 @@
 <?php
-ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/ListarDespachosGUIAS.php';
@@ -45,8 +44,6 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
-
-ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -70,8 +67,6 @@ ob_end_flush();
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css"/>
-    <link rel="stylesheet" href="../dist/css/Custom/interactiveEnhancements.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -281,15 +276,15 @@ ob_end_flush();
         <!-- ============================================================== -->
         <!-- Container fluid  -->
         <!-- ============================================================== -->
-        <div class="container-fluid animate__animated animate__fadeIn" data-aos="fade-up">
+        <div class="container-fluid animate__animated animate__fadeIn">
             <div class="row">
                 <div class="col-sm-12">
-                    <div class="card skeleton-target" data-aos="fade-up" data-aos-delay="50">
+                    <div class="card">
 
-                        <div class="card-body skeleton-target" data-aos="fade-up" data-aos-delay="100">
+                        <div class="card-body">
                             <!-- Start First Cards -->
                             <!-- *************************************************************** -->
-                            <div class="card-group skeleton-target" data-aos="fade-up" data-aos-delay="150">
+                            <div class="card-group">
                                 <div class="card border-right">
                                     <div class="card-body">
                                         <div class="d-flex d-lg-flex d-md-block align-items-center">
@@ -370,7 +365,7 @@ ob_end_flush();
                             <!-- Componentes Separados por Guia -->
                             <div class="card-body">
 
-                                <table id="example" class="table table-striped skeleton-target" cellspacing="0" width="100%" data-aos="fade-up" data-aos-delay="200">
+                                <table id="example" class="table table-striped  " cellspacing="0" width="100%">
                                     <thead>
                                     <th>Guia</th>
                                     <th>Destino</th>
@@ -395,7 +390,7 @@ ob_end_flush();
 
 
                                         echo '<td class= "h3" >';
-                                            echo '<a href="Lista_Despachos.php?Guia='.$IDGUIA .'&Entrega='.$IDEntrega.'" class="btn btn-info action-button">Despachar</a>';
+                                            echo '<a href="Lista_Despachos.php?Guia='.$IDGUIA .'&Entrega='.$IDEntrega.'" class=" btn btn-info ">Despachar</a>';
                                         echo "</td>";
 
                                         echo "</tr>";
@@ -647,8 +642,6 @@ ob_end_flush();
 
         });
     </script>
-<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-<script src="../dist/js/Custom/pageEnhancements.js"></script>
 </body>
 
 </html>

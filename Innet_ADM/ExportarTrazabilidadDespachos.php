@@ -65,13 +65,13 @@ GROUP BY DP.Transporte, DP.IDH;";
         // Output the column headings
         $row = $result->fetch_assoc();
         $headings = array_keys($row);
-        fputcsv($output, $headings, ';');
+        fputcsv($output, $headings, ',');
 
         // Loop over the rows, outputting them
         $result->data_seek(0);
         while ($row = $result->fetch_assoc()) {
             //ANCHOR - Separador del archivo, ahorita esta en punto y coma
-            fputcsv($output, $row, ';');
+            fputcsv($output, $row, ',');
         }
 
         fclose($output);

@@ -1,11 +1,14 @@
 <?php
+ob_start();
 session_start();
 include '../LQS_EUQ/Connect.php';
-include '../LQS_EUQ/ListarPiking.php';
+include '../LQS_EUQ/ListarReubicacionesCompletas.php';
 include "../Innet_MTC/Innet_MTC.php";
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 $fechaConsulta = date("Y") . '-' . date("m") . '-' . date("d");
+
+$Num_Asignaciones = '';
 $lista_Asignacion = null;
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');
@@ -17,39 +20,33 @@ $MensajeExito = '';
 $Mensajeerror = '';
 
 
+
+// Fin de la conexion
 //Variables para Resumen
 $TotalMovimientos = "";
 $IDHs = "";
-$ListaColocadas = "";
-$ListaPendientes = "";
+$ListaDespachadas = "";
+$ListaPendientes = "" ;
 
 // Dar valor a las variabes de Resumen
 
+$TotalMovimientos = HistoricoTotalMovimientos_Reubicaciones($_SESSION['Usuario'],$fechaConsulta);
+$Cancelado = HistoricoCancelados_Reubicaciones($_SESSION['Usuario'],$fechaConsulta);
+$ListaDespachadas = HistoricoDespachados_Reubicaciones($_SESSION['Usuario'],$fechaConsulta);
+$ListaPendientes = HistoricoPendientes_Reubicaciones($_SESSION['Usuario'],$fechaConsulta); ;
 
-
-
-
-$TotalMovimientos = DarValorTotalPiking($_SESSION['Usuario'], $fechaConsulta);
-$IDHs = DarValorIDHsPiking($_SESSION['Usuario'], $fechaConsulta);
-$ListaColocadas = DarValorListaColocadasPiking($_SESSION['Usuario'], $fechaConsulta);
-$ListaPendientes = DarValorListaPendientesPiking($_SESSION['Usuario'], $fechaConsulta);
-;
-
-
-
-// Fin de la conexion
-$Num_Despachos = '';
-$Num_Reubicaciones = '';
-$Num_Piking = '';
+// Validar formulario y grabar informacion
+$Num_Despachos= '';
+$Num_Reubicaciones= '';
+$Num_Piking= '';
 $Num_Despachos = darValorDespachos($_SESSION['Usuario']);
 $Num_Reubicaciones = darValorReubicaciones($_SESSION['Usuario']);
 $Num_Piking = darValorPiking($_SESSION['Usuario']);
-// Validar formulario y grabar informacion
-// Validar formulario y grabar informacion
 
-$Num_Asignaciones = '';
-$Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
+$Num_Asignaciones= darValorAsignaciones($_SESSION['Usuario']);
 
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -63,11 +60,11 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <meta name="author" content="">
     <!-- Favicon icon -->
     <link rel="icon" type="image/png" sizes="16x16" href="../assets/images/Sertero/LogoCBP.png">
-    <title>Henkel CBP / Operador MTC</title>
+    <title>Sertero CBP / Operador MTC</title>
     <!-- Custom CSS -->
     <link href="../assets/extra-libs/c3/c3.min.css" rel="stylesheet">
     <link href="../assets/libs/chartist/dist/chartist.min.css" rel="stylesheet">
-    <link href="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.css" rel="stylesheet" />
+    <link href="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.css" rel="stylesheet"/>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
@@ -81,12 +78,15 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
     <![endif]-->
 
     <style>
         .bolded {
-            font-weight: bold;
+            font-weight:bold;
             font-size: large;
         }
     </style>
@@ -114,7 +114,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 <!-- ============================================================== -->
 <!-- Main wrapper - style you can find in pages.scss -->
 <!-- ============================================================== -->
-<div id="main-wrapper" data-theme="light" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed" data-boxed-layout="full">
+<div id="main-wrapper" data-theme="light" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
+     data-sidebar-position="fixed" data-header-position="fixed" data-boxed-layout="full">
     <!-- ============================================================== -->
     <!-- Topbar header - style you can find in pages.scss -->
     <!-- ============================================================== -->
@@ -122,7 +123,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <nav class="navbar top-navbar navbar-expand-md">
             <div class="navbar-header" data-logobg="skin6">
                 <!-- This is for the sidebar toggle which is visible on mobile only -->
-                <a class="nav-toggler waves-effect waves-light d-block d-md-none" href="javascript:void(0)"><i class="ti-menu ti-close"></i></a>
+                <a class="nav-toggler waves-effect waves-light d-block d-md-none" href="javascript:void(0)"><i
+                            class="ti-menu ti-close"></i></a>
 
                 <div class="navbar-brand">
                     <!-- Logo icon -->
@@ -131,16 +133,18 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                             <!-- Dark Logo icon -->
                             <img src="../assets/images/Sertero/LogoCBP.png" width="auto" height="40" class="" -->
                             <!-- Light Logo icon -->
-                            <img src="../assets/images/logo-icon.png" alt="homepage" width="auto" height="10" class="light-logo" />
+                            <img src="../assets/images/logo-icon.png" alt="homepage" width="auto" height="10"
+                                 class="light-logo"/>
                         </b>
                         <!--End Logo icon -->
                         <!-- Logo text -->
                         <span class="logo-text">
-                <!-- dark Logo text -->
-                <img src="../assets/images/logo-text.png" alt="homepage" class="dark-logo" width="auto" height="40" />
+                                <!-- dark Logo text -->
+                                <img src="../assets/images/logo-text.png" alt="homepage" class="dark-logo" width="auto"
+                                     height="40"/>
                             <!-- Light Logo text -->
-                <img src="../assets/images/logo-light-text.png" class="light-logo" alt="homepage" />
-              </span>
+                                <img src="../assets/images/logo-light-text.png" class="light-logo" alt="homepage"/>
+                            </span>
                     </a>
                 </div>
                 <!-- ============================================================== -->
@@ -149,7 +153,10 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                 <!-- ============================================================== -->
                 <!-- Toggle which is visible on mobile only -->
                 <!-- ============================================================== -->
-                <a class="topbartoggler d-block d-md-none waves-effect waves-light" href="javascript:void(0)" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><i class="ti-more"></i></a>
+                <a class="topbartoggler d-block d-md-none waves-effect waves-light" href="javascript:void(0)"
+                   data-toggle="collapse" data-target="#navbarSupportedContent"
+                   aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><i
+                            class="ti-more"></i></a>
             </div>
             <!-- ============================================================== -->
             <!-- End Logo -->
@@ -164,7 +171,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                     <!-- create new -->
                     <!-- ============================================================== -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <i data-feather="settings" class="svg-icon"></i>
                         </a>
                         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
@@ -180,8 +188,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                 <!-- ============================================================== -->
                 <!-- Right side toggle and nav items -->
                 <!-- ============================================================== -->
-                <ul class="navbar-nav float-right">
-                    <p id="status" class="online">Online</p>
+                <ul class="navbar-nav float-right"> <p id="status" class="online">Online</p>
                     <!-- ============================================================== -->
                     <!-- Search -->
                     <!-- ============================================================== -->
@@ -200,16 +207,24 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                     <!-- User profile and search -->
                     <!-- ============================================================== -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="javascript:void(0)" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <img src="../assets/images/users/<?php echo $_SESSION['pic']; ?> " alt="user" class="rounded-circle" width="40">
-                            <span class="ml-2 d-none d-lg-inline-block"><span>Bienvenido,</span> <span class="text-dark"> <?php echo $_SESSION['USR']; ?> </span> <i data-feather="chevron-down" class="svg-icon"></i></span>
+                        <a class="nav-link dropdown-toggle" href="javascript:void(0)" data-toggle="dropdown"
+                           aria-haspopup="true" aria-expanded="false">
+                            <img src="../assets/images/users/<?php echo $_SESSION['pic']; ?> " alt="user"
+                                 class="rounded-circle"
+                                 width="40">
+                            <span class="ml-2 d-none d-lg-inline-block"><span>Bienvenido,</span> <span
+                                        class="text-dark"> <?php echo $_SESSION['USR']; ?> </span> <i
+                                        data-feather="chevron-down"
+                                        class="svg-icon"></i></span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right user-dd animated flipInY">
 
-                            <a class="dropdown-item" href="javascript:PerfilAdminFifo()"><i data-feather="settings" class="svg-icon mr-2 ml-1"></i>
+                            <a class="dropdown-item" href="javascript:PerfilAdminFifo()"><i data-feather="settings"
+                                                                                            class="svg-icon mr-2 ml-1"></i>
                                 Mi Perfil</a>
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="javascript:Salir();"><i data-feather="power" class="svg-icon mr-2 ml-1"></i>
+                            <a class="dropdown-item" href="javascript:Salir();"><i data-feather="power"
+                                                                                   class="svg-icon mr-2 ml-1"></i>
                                 Salir</a>
 
                         </div>
@@ -231,7 +246,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <!-- Sidebar scroll-->
         <div class="scroll-sidebar" data-sidebarbg="skin6">
             <!-- Sidebar navigation-->
-               <?php include 'Menu.php'; ?>
+            <?php include 'Menu.php'; ?>
             <!-- End Sidebar navigation -->
         </div>
         <!-- End Sidebar scroll-->
@@ -261,96 +276,106 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                     <div class="card">
 
                         <div class="card-body">
-                            <h4 class="card-title">Movimientos de re Abastecimiento de Piking</h4>
-                            <h6 class="card-subtitle">Estos son los movimientos que debe hacer para Piking </h6>
+                            <h4 class="card-title">Lista de Despachos a Realizar</h4>
+                            <h6 class="card-subtitle">Estos son los despachos que debe realizar en este turno </h6>
                             <br>
                             <!-- Start First Cards -->
-                            <!-- *************************************************************** -->
-                            <div class="card-group">
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $TotalMovimientos; ?></h2>
-
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Total de Movimientos</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="activity"></i></span>
-                                            </div>
+                            <div class="row">
+                                <!-- Column -->
+                                <div class="col-md-6 col-lg-3 col-xlg-3">
+                                    <div class="card card-hover">
+                                        <div class="p-2 bg-primary text-center">
+                                            <h1 class="font-light text-white"><?php echo $TotalMovimientos; ?></h1>
+                                            <h6 class="text-white">Total Movimientos</h6>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <h2 class="text-dark mb-1 w-100 text-truncate font-weight-medium"><sup class="set-doller"></sup><?php echo $IDHs; ?></h2>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">IDHs
-                                                </h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="box"></i></span>
-                                            </div>
+                                <!-- Column -->
+                                <div class="col-md-6 col-lg-3 col-xlg-3">
+                                    <div class="card card-hover">
+                                        <div class="p-2 bg-cyan text-center">
+                                            <h1 class="font-light text-white"><?php echo $Cancelado; ?></h1>
+                                            <h6 class="text-white">Cancelados</h6>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="card border-right">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaColocadas; ?></h2>
-                                                    <span class="badge bg-success font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if ($TotalMovimientos == 0) {
-                                                    } else {
-                                                        echo bcdiv((($ListaColocadas / $TotalMovimientos) * 100), '1', 2);
-                                                    } ?>%</span>
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Reubicadas</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="flag"></i></span>
-                                            </div>
+                                <!-- Column -->
+                                <div class="col-md-6 col-lg-3 col-xlg-3">
+                                    <div class="card card-hover">
+                                        <div class="p-2 bg-success text-center">
+                                            <h1 class="font-light text-white"><?php echo $ListaDespachadas; ?></h1>
+                                            <h6 class="text-white">Reubicados</h6>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="card">
-                                    <div class="card-body">
-                                        <div class="d-flex d-lg-flex d-md-block align-items-center">
-                                            <div>
-                                                <div class="d-inline-flex align-items-center">
-                                                    <h2 class="text-dark mb-1 font-weight-medium"><?php echo $ListaPendientes; ?></h2>
-                                                    <span class="badge bg-danger font-12 text-white font-weight-medium badge-pill ml-2 d-md-none d-lg-block"><?php if ($TotalMovimientos == 0) {
-                                                    } else {
-                                                        echo bcdiv((($ListaPendientes / $TotalMovimientos) * 100), '1', 2);
-                                                    } ?>%</span>
-                                                </div>
-                                                <h6 class="text-muted font-weight-normal mb-0 w-100 text-truncate">Pendientes</h6>
-                                            </div>
-                                            <div class="ml-auto mt-md-3 mt-lg-0">
-                                                <span class="opacity-7 text-muted"><i data-feather="compass"></i></span>
-                                            </div>
+                                <!-- Column -->
+                                <div class="col-md-6 col-lg-3 col-xlg-3">
+                                    <div class="card card-hover">
+                                        <div class="p-2 bg-danger text-center">
+                                            <h1 class="font-light text-white"><?php echo $ListaPendientes; ?></h1>
+                                            <h6 class="text-white">Pendientes</h6>
                                         </div>
                                     </div>
                                 </div>
+                                <!-- Column -->
                             </div>
                             <!-- *************************************************************** -->
                             <!-- End First Cards -->
-                            <br>
-                            <?php echo $Mensajeerror; ?>
-                            <?php echo $MensajeExito; ?>
-
                             <!-- Contenido de esta seccion-->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-12 col-md-12">
+                    <div class="card">
+
+                        <div class="card-body">
+                            <h4 class="card-title">Ingrese fechas para consultar</h4>
+                            <h6 class="card-subtitle">El reporte se basa en los datos de fechas seleccionadas</h6>
+                            <form class="mt-4">
+                                <div class="row">
+                                    <div class="col-md-12 col-lg-6 col-xlg-6">
+                                        <div class="card card-hover">
+                                            <h6 class="card-subtitle">Seleccione la fecha Inicio</h6>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" value="<?php echo date("Y-m-d",strtotime($fecha."- 1 days")); ?>">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12 col-lg-6 col-xlg-6">
+                                        <div class="card card-hover">
+                                            <h6 class="card-subtitle">Seleccione la fecha Final</h6>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" value="<?php echo $fecha;?>">
+                                            </div>
+
+                                        </div>
 
 
+
+
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <button type="submit" class="btn btn-info"> Consultar </button>
+
+                                </div>
+                            </form>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-12 col-md-12">
+                    <div class="card">
+
+                        <div class="card-body">
                             <!-- Start First Cards -->
                             <!-- *************************************************************** -->
 
                             <!-- *************************************************************** -->
                             <!-- End First Cards -->
-
 
 
                             <table id="example" class="table table-striped  " cellspacing="0" width="100%">
@@ -360,83 +385,81 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                 <th>IDH</th>
                                 <th>Descripcion</th>
                                 <th>Origen</th>
-                                <th>Bultos</th>
                                 <th>Destino</th>
-                                <th>Estado</th>
-                                <th>Mover</th>
+                                <th>Estatus</th>
+                                <th>Fecha</th>
+                                <th>Icono</th>
 
                                 </thead>
                                 <tbody>
                                 <?php
-                                for ($i = 0; $i < $lista_Movimientos; $i++) {
-
-                                    $IDGUIA = $lista_Movimientos['id'];
-                                    $Origen = $lista_Movimientos['Origen'];
-                                    $Destino = $lista_Movimientos['Destino'];
-                                    $IDH = $lista_Movimientos['IDH'];
+                                for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
+                                    echo "<tr>";
 
                                     echo "<td>";
-                                    echo $lista_Movimientos['IDH'];
+                                    echo $lista_DespachoPRODUCCION['IDH'];
                                     echo "</td>";
 
                                     echo "<td>";
-                                    echo $lista_Movimientos['Descripcion'];
+                                    echo $lista_DespachoPRODUCCION['Descripcion'];
                                     echo "</td>";
 
                                     echo "<td>";
-                                    echo $lista_Movimientos['Origen'];
+                                    echo $lista_DespachoPRODUCCION['Origen'];
                                     echo "</td>";
 
                                     echo "<td>";
-                                    echo $lista_Movimientos['Bultos']; //ANCHOR - Cantida de bultos en piking
+                                    echo $lista_DespachoPRODUCCION['Destino'];
                                     echo "</td>";
 
                                     echo "<td>";
-                                    echo $lista_Movimientos['Destino'];
+                                    echo $lista_DespachoPRODUCCION['Estado'];
                                     echo "</td>";
 
                                     echo "<td>";
-                                    echo $lista_Movimientos['Estado'];
+                                    echo $lista_DespachoPRODUCCION['Fecha_Ingreso'];
                                     echo "</td>";
 
                                     echo "<td>";
-                                    echo '<a href="MoverProductoPiking.php?Guia=' . $IDGUIA . '&Origen=' . $Origen . '&Destino=' . $Destino . '&IDH=' . $IDH . '" class="btn btn-primary mover-boton">Mover</a>';
+                                    {
+                                        //Estatus del Producto
+                                        switch ($lista_DespachoPRODUCCION['Estado']){
+                                            case 'Producido' :
+                                                echo '<img src="../assets/images/Iconos/circuloNaranja.png" class="" --="" width="auto" height="40">';
+                                                break;
+
+                                            case 'Cancelado' :
+                                                echo '<img src="../assets/images/Iconos/circuloAmarillo.png" class="" --="" width="auto" height="40">';
+                                                break;
+
+                                            case 'Reubicada' :
+                                                echo '<img src="../assets/images/Iconos/circuloVerde.png" class="" --="" width="auto" height="40">';
+                                                break;
+
+                                            default :
+                                                echo '<img src="../assets/images/Iconos/circuloRojo.png" class="" --="" width="auto" height="40">';
+                                                break;
+
+                                        }
+
+                                    }
                                     echo "</td>";
+
+
 
                                     echo "</tr>";
 
-                                    $lista_Movimientos = $ejecutar_sentencia_Movimientos->fetch(PDO::FETCH_ASSOC);
+
+                                    $lista_DespachoPRODUCCION =$ejecutar_sentencia_Movimientos->fetch(PDO::FETCH_ASSOC);
                                 }
                                 ?>
-                                <script>
-                                    document.addEventListener("DOMContentLoaded", function () {
-                                        var botones = document.querySelectorAll('.mover-boton');
-
-                                        botones.forEach(function (boton) {
-                                            boton.addEventListener('click', function () {
-                                                // Mostrar el mensaje "Moviendo"
-                                                boton.innerText = "Moviendo";
-
-                                                // Deshabilitar el botón
-                                                boton.setAttribute("disabled", "true");
-
-                                                // Ocultar el botón
-                                                boton.style.display = "none";
-
-                                                // Aquí puedes realizar cualquier otra lógica que necesites al hacer clic en el botón
-                                                // ...
-
-                                                // Puedes redirigir al usuario a la página deseada si es necesario
-                                                // window.location.href = boton.href;
-                                            });
-                                        });
-                                    });
-                                </script>
-
                                 </tbody>
                             </table>
                             <br>
                             <!-- Fin Contenido de esta seccion-->
+
+
+
                             <br>
                         </div>
                     </div>
@@ -450,7 +473,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         <!-- footer -->
         <!-- ============================================================== -->
         <footer class="footer text-center text-muted">
-            2023 ® All Rights Reserved by Sertero. Designed and Developed by <a href="https://qbit-Lab.com">Qbit-Lab</a>.
+            2023 ® All Rights Reserved by Sertero. Designed and Developed by <a
+                    href="https://qbit-Lab.com">Qbit-Lab</a>.
         </footer>
         <!-- ============================================================== -->
         <!-- End footer -->
@@ -491,9 +515,9 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 <script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready( function () {
         var table = $('#example').DataTable({
-            scrollX: true,
+ scrollX: true,
 
             language: {
                 url: 'datatables_espanol.json'
@@ -501,10 +525,11 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         });
 
 
-        $(table.column(2).nodes()).addClass('bolded');
-        $(table.column(3).nodes()).addClass('bolded');
-    });
+
+    } );
 </script>
 </body>
+
+
 
 </html>

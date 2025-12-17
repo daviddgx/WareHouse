@@ -95,6 +95,25 @@ ob_end_flush();
         </li>
 
         <li class="sidebar-item"><a class="sidebar-link has-arrow" href="javascript:void(0)"
+                                    aria-expanded="false"><i class="fas fa-trash-alt"></i><span
+                        class="hide-menu">Movimientos de destrucción </span></a>
+            <ul aria-expanded="false" class="collapse  first-level base-level-line">
+                <li class="sidebar-item"><a href="Destruccion_Procesar.php" class="sidebar-link"><span
+                                class="hide-menu"> Procesar destrucción
+                                        </span></a>
+                </li>
+                <li class="sidebar-item"><a href="Destruccion_Consultar.php" class="sidebar-link"><span
+                                class="hide-menu"> Consultar destrucciones
+                                        </span></a>
+                </li>
+                <li class="sidebar-item"><a href="Destruccion_UbicacionesMalEstado.php" class="sidebar-link"><span
+                                class="hide-menu"> Consultar ubicaciones con <br>producto en mal estado
+                                        </span></a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="sidebar-item"><a class="sidebar-link has-arrow" href="javascript:void(0)"
                                     aria-expanded="false"><i data-feather="award"
                                                              class="feather-icon"></i><span
                     class="hide-menu">Calidad </span></a>

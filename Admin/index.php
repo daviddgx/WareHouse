@@ -1380,7 +1380,10 @@ try {
 
 
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT Fecha,Cant_CapacidadTotal,Cant_Ocupadas, (Cant_Ocupadas/Cant_CapacidadTotal)*100 as Porcentaje FROM `gaf_capacidadbodegasdiaria` where NombreBodega = 'Todas' and date(Fecha) BETWEEN '$FechaHace9Dias' and '$FechaActual' order by date(Fecha) desc ";
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
+
+    $sql = "SELECT Fecha,Cant_CapacidadTotal,Cant_Ocupadas, (Cant_Ocupadas/Cant_CapacidadTotal)*100 as Porcentaje FROM `gaf_capacidadbodegasdiaria` where NombreBodega = 'Todas' and Fecha >= '$FechaInicioRango' and Fecha < '$FechaFinRango' order by Fecha desc ";
     $result = $conn->query($sql);
 
     // Inicializar arrays para las etiquetas y los conjuntos de datos
@@ -1535,9 +1538,12 @@ try {
 
     
     $conn = new mysqli($servername, $username, $password, $dbname);
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
+
     $sql = "SELECT date(FechaColocado) AS Fecha, round(sum(ASG.Cantidades * PR.PESOBRUTOCAJA /1000),2) AS ToneladasProduccion FROM `asignaciones` ASG
     inner join productos PR on PR.IDH = ASG.IDH
-    where ASG.Estado = 'Ingresado' and date(ASG.FechaColocado) between '$FechaHace9Dias' and '$FechaActual' GROUP by date(FechaColocado) ORDER BY  date(FechaColocado) desc;"; // se cambia de FechaRegistro a FechaColocado a solicitud de Ronald el dia 10-11-2025
+    where ASG.Estado = 'Ingresado' and ASG.FechaColocado >= '$FechaInicioRango' and ASG.FechaColocado < '$FechaFinRango' GROUP by date(FechaColocado) ORDER BY  date(FechaColocado) desc;"; // se cambia de FechaRegistro a FechaColocado a solicitud de Ronald el dia 10-11-2025
     $result = $conn->query($sql);
     
 
@@ -1575,8 +1581,10 @@ try {
 
     $FechaHoy = date('Y-m-d', strtotime($fechaFinal));
     $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaHoy . ' +1 day'));
 
-   
+
     $conn = new mysqli($servername, $username, $password, $dbname);
     $sql = "SELECT DATE(FechaDespacho) AS Fecha, ROUND(SUM(PesoDeDespacho) /1000,2) AS TotalPesoDespacho
     FROM (  SELECT DISTINCT
@@ -1598,7 +1606,7 @@ INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
 INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
 INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
 INNER JOIN productos PR ON PR.IDH = D.IDH
-WHERE DATE(D.FechaRealizado) BETWEEN '$FechaHace9Dias' and '$FechaHoy'  
+WHERE D.FechaRealizado >= '$FechaInicioRango' and D.FechaRealizado < '$FechaFinRango'
 
 union
 
@@ -1616,7 +1624,7 @@ INNER join productos PR     on DP.IDH = PR.IDH
 INNER join config_piking CF on DP.IDH = CF.IDH
 INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
 INNER join Guias GS			on DP.Transporte = GS.Transporte
-where date(DS.Fecha_Hora_Despacho) BETWEEN '$FechaHace9Dias' and '$FechaHoy'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
+where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' and DS.Fecha_Hora_Despacho < '$FechaFinRango'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
 
@@ -1768,6 +1776,9 @@ try {
 
    
     $conn = new mysqli($servername, $username, $password, $dbname);
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
+
     $sql = "SELECT fecha,  SUM(total_asignaciones) AS total_asignaciones,
     SUM(total_despachos) AS total_despachos
   FROM (
@@ -1776,7 +1787,7 @@ try {
            COUNT(*) AS total_asignaciones,
       0 AS total_despachos
     FROM asignaciones
-    WHERE PalletCompleto = 'Si' and date(FechaColocado) between '$FechaHace9Dias' and '$FechaActual' AND Estado = 'Ingresado' and cantidades > 0  
+    WHERE PalletCompleto = 'Si' and FechaColocado >= '$FechaInicioRango' and FechaColocado < '$FechaFinRango' AND Estado = 'Ingresado' and cantidades > 0
     GROUP BY fecha
     UNION ALL
     SELECT
@@ -1784,7 +1795,7 @@ try {
            0 AS total_asignaciones,
       COUNT(*) AS total_despachos
     FROM despachos
-    WHERE Operador <> 'PIKING' and date(FechaRealizado) between '$FechaHace9Dias' and '$FechaActual' AND Estado = 'Despachado'
+    WHERE Operador <> 'PIKING' and FechaRealizado >= '$FechaInicioRango' and FechaRealizado < '$FechaFinRango' AND Estado = 'Despachado'
     GROUP BY fecha
   ) AS subquery
   GROUP BY fecha
@@ -1925,8 +1936,10 @@ try {
 
     $FechaActual = date('Y-m-d', strtotime($fechaFinal));
     $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
 
-   
+
     $conn = new mysqli($servername, $username, $password, $dbname);
     $sql = "SELECT DATE(FechaDespacho) AS Fecha, SUM(Cajas)  AS SUMCajas, SUM(CajasPK)  AS SUMCajasPK
     FROM(SELECT DISTINCT
@@ -1948,7 +1961,7 @@ INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
 INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
 INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
 INNER JOIN productos PR ON PR.IDH = D.IDH
-WHERE DATE(D.FechaRealizado) BETWEEN '$FechaHace9Dias' and '$FechaActual'  
+WHERE D.FechaRealizado >= '$FechaInicioRango' and D.FechaRealizado < '$FechaFinRango'
 
 union
 
@@ -1966,7 +1979,7 @@ INNER join productos PR     on DP.IDH = PR.IDH
 INNER join config_piking CF on DP.IDH = CF.IDH
 INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
 INNER join Guias GS			on DP.Transporte = GS.Transporte
-where date(DS.Fecha_Hora_Despacho) BETWEEN '$FechaHace9Dias' and '$FechaActual'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
+where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' and DS.Fecha_Hora_Despacho < '$FechaFinRango'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
 
@@ -2644,10 +2657,12 @@ try {
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
     
-    $fecha_hoy = date('Y-m-d', strtotime($fechaFinal));
-    $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaHoy = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaHoy . ' +1 day'));
 
-    
+
     $sql = "SELECT DATE(FechaDespacho) AS Fecha, SUM(Cajas)  AS TotalBultos
 FROM ( SELECT DISTINCT
 D.Estado, D.Posicion, P.Nivel, D.Descripcion, P.Bodega, D.IDH, 
@@ -2668,7 +2683,7 @@ INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
 INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
 INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
 INNER JOIN productos PR ON PR.IDH = D.IDH
-WHERE DATE(D.FechaRealizado) BETWEEN '$FechaHace9Dias' AND '$FechaHoy') AS subquery
+WHERE D.FechaRealizado >= '$FechaInicioRango' AND D.FechaRealizado < '$FechaFinRango') AS subquery
 GROUP BY Fecha
 ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -2787,10 +2802,12 @@ try {
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
     
-    $fecha_hoy = date('Y-m-d', strtotime($fechaFinal));
-    $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaHoy = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaHoy . ' +1 day'));
 
-    
+
     $sql = "SELECT DATE(FechaRealizado) AS Fecha, SUM(CajasPK)  AS TotalBultos
     FROM (
       SELECT DP.Estatus, CF.Ubicacion,'N/A' as Nivel,PR.Descripcion,'Picking',DP.IDH,DP.FechaProduccion,DP.FechaVencimiento, DS.Operador, 'N/A' as Turno, 'Tapado/Libre', GS.NombreDestino,GS.Transportista, DP.Transporte, TIME(DS.FechaRealizado),'N/A' as Notas, IFNULL(TIMESTAMPDIFF(MONTH, date(DS.FechaRealizado), date(DP.FechaVencimiento)), 'No se puede calcular') AS MesesVidaUtil, 'Tapando/NoTapando' , 'N/A' as ProductoEsta,'1' as CAJASXPALET, PR.LINEA, PR.PESOBRUTOCAJA, 
@@ -2807,7 +2824,7 @@ INNER join productos PR     on DP.IDH = PR.IDH
 INNER join config_piking CF on DP.IDH = CF.IDH
 INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
 INNER join Guias GS			on DP.Transporte = GS.Transporte
-where date(DS.Fecha_Hora_Despacho) BETWEEN '$FechaHace9Dias' AND '$FechaHoy' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH)
+where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' AND DS.Fecha_Hora_Despacho < '$FechaFinRango' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH)
           AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
@@ -2924,8 +2941,10 @@ try {
     $conn = new mysqli($servername, $username, $password, $dbname);
     
     
-    $fecha_hoy = date('Y-m-d', strtotime($fechaFinal));
-    $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaHoy = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaHoy . ' +1 day'));
 
     
     $sql = "SELECT DATE(FechaRealizado) AS Fecha, ROUND(SUM(PesoDeDespacho) /1000,2) AS TotalBultos
@@ -2943,7 +2962,7 @@ INNER join productos PR     on DP.IDH = PR.IDH
 INNER join config_piking CF on DP.IDH = CF.IDH
 INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
 INNER join Guias GS			on DP.Transporte = GS.Transporte
-where date(DS.Fecha_Hora_Despacho) BETWEEN '$FechaHace9Dias' AND '$FechaHoy' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH) AS subquery
+where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' AND DS.Fecha_Hora_Despacho < '$FechaFinRango' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -3074,10 +3093,12 @@ try {
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
-    
-    
-    $fecha_hoy = date('Y-m-d', strtotime($fechaFinal));
-    $fecha_hace_9_dias = date("Y-m-d", strtotime($fechaInicial));
+
+
+    $FechaHoy = date('Y-m-d', strtotime($fechaFinal));
+    $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaHoy . ' +1 day'));
 
     
     $sql = "SELECT DATE(FechaDespacho) AS Fecha, ROUND(SUM(PesoDeDespacho) / 1000,2)  AS TotalBultos
@@ -3098,9 +3119,9 @@ try {
   FROM despachos D
   INNER JOIN posiciones P ON P.Ubicacion = D.Posicion
   INNER JOIN posiciones_historico PH ON PH.ID_Movimiento = D.Movimiento AND PH.TipoMovimiento = 'Despacho'
-  INNER JOIN Guias G ON G.Transporte = D.Guia_Carga 
+  INNER JOIN Guias G ON G.Transporte = D.Guia_Carga
   INNER JOIN productos PR ON PR.IDH = D.IDH
-  WHERE DATE(D.FechaRealizado) BETWEEN '$FechaHace9Dias' AND '$FechaHoy') AS subquery
+  WHERE D.FechaRealizado >= '$FechaInicioRango' AND D.FechaRealizado < '$FechaFinRango') AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -3457,18 +3478,21 @@ try {
     // Metodo tradicional
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
+
     $sql = "SELECT 'Agregadas' AS Color, IFNULL(A.Guias, 0) AS Guias
 FROM (
     SELECT COUNT(*) AS Guias
     FROM `Bitar_ConteoCiego`
-    WHERE DATE(Fecha) BETWEEN '$FechaHace9Dias' and '$FechaActual' AND Accion = 'Agregar'
+    WHERE Fecha >= '$FechaInicioRango' and Fecha < '$FechaFinRango' AND Accion = 'Agregar'
 ) A
 UNION ALL
 SELECT 'Eliminadas' AS Color, IFNULL(E.Guias, 0) AS Guias
 FROM (
     SELECT COUNT(*) AS Guias
     FROM `Bitar_ConteoCiego`
-    WHERE DATE(Fecha) BETWEEN '$FechaHace9Dias' and '$FechaActual' AND Accion = 'Eliminar'
+    WHERE Fecha >= '$FechaInicioRango' and Fecha < '$FechaFinRango' AND Accion = 'Eliminar'
 ) E";
     
     $result = $conn->query($sql);
@@ -3560,10 +3584,12 @@ try {
    
     $FechaActual = date('Y-m-d', strtotime($fechaFinal));
     $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
 
-   
-  
-    $sql = "SELECT  Operador, count(*) as Pallets FROM `asignaciones` where date(FechaColocado) BETWEEN '$FechaHace9Dias' and '$FechaActual' and Operador is not null GROUP by Operador order by count(*) Desc";
+
+
+    $sql = "SELECT  Operador, count(*) as Pallets FROM `asignaciones` where FechaColocado >= '$FechaInicioRango' and FechaColocado < '$FechaFinRango' and Operador is not null GROUP by Operador order by count(*) Desc";
     $result = $conn->query($sql);
 
     // Inicializar arrays para las etiquetas y los conjuntos de datos
@@ -3665,9 +3691,11 @@ try {
     
     $FechaActual = date('Y-m-d', strtotime($fechaFinal));
     $FechaHace9Dias = date("Y-m-d", strtotime($fechaInicial));
+    $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
+    $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
 
-    
-    $sql = "SELECT  Operador, count(*) as Pallets FROM `despachos` where date(Fecha_hora_despacho) BETWEEN '$FechaHace9Dias' and '$FechaActual'  and Operador is not null and Operador <> 'PIKING' GROUP by Operador order by count(*) asc";
+
+    $sql = "SELECT  Operador, count(*) as Pallets FROM `despachos` where Fecha_hora_despacho >= '$FechaInicioRango' and Fecha_hora_despacho < '$FechaFinRango'  and Operador is not null and Operador <> 'PIKING' GROUP by Operador order by count(*) asc";
     $result = $conn->query($sql);
 
     // Inicializar arrays para las etiquetas y los conjuntos de datos

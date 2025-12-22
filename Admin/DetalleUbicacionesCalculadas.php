@@ -572,7 +572,7 @@ ob_end_flush();
                                             if ($result->num_rows > 0) {
                                                 while ($row = $result->fetch_assoc()) {
 
-                                                    echo '<option value="' . $row['Materiales'] . '">' . utf8_encode( $row['Materiales'] . " -- " .$row['Unidades']. " Pallet(s) -- " .$row['descripcion']) . '</option>';
+                                                    echo '<option value="' . $row['Materiales'] . '">' .  $row['Materiales'] . " -- " .$row['Unidades']. " Pallet(s) -- " .$row['descripcion'] . '</option>';
                                                 }
                                             }
                                             ?>

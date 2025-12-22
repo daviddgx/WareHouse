@@ -322,7 +322,7 @@ ob_end_flush();
                                                             if ($result->num_rows > 0) {
                                                                 while ($row = $result->fetch_assoc()) {
 
-                                                                    echo '<option value="' . $row['IDH'] . '">' . utf8_encode($row['IDH']) . ' --- ' . utf8_encode($row['Descripcion']) . ' --- ' . utf8_encode($row['Pallets']) . ' Pallets</option>';
+                                                                    echo '<option value="' . $row['IDH'] . '">' . $row['IDH'] . ' --- ' . $row['Descripcion'] . ' --- ' . $row['Pallets'] . ' Pallets</option>';
                                                                 }
                                                             }
                                                             ?>

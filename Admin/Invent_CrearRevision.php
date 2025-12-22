@@ -340,7 +340,7 @@ ob_end_flush();
                                                     $result = $conn->query($cargos);
                                                     if ($result->num_rows > 0) {
                                                         while ($row = $result->fetch_assoc()) {
-                                                            echo '<option value="' . $row['Bodega'] . '">Bodega ' . utf8_encode($row['Bodega']) . ' </option>';
+                                                            echo '<option value="' . $row['Bodega'] . '">Bodega ' . $row['Bodega'] . ' </option>';
                                                         }
                                                     }
                                                     ?>
@@ -361,7 +361,7 @@ ob_end_flush();
                                                     $result = $conn->query($cargos);
                                                     if ($result->num_rows > 0) {
                                                         while ($row = $result->fetch_assoc()) {
-                                                            echo '<option value="' . $row['Linea'] . '"> ' . utf8_encode($row['Linea']) . ' </option>';
+                                                            echo '<option value="' . $row['Linea'] . '"> ' . $row['Linea'] . ' </option>';
                                                         }
                                                     }
                                                     ?>

@@ -28,7 +28,7 @@ $result = $conn->query($cargos);
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
 
-        echo '<option value="' . $row['Posicion'] . '">' . utf8_encode($row['Posicion']) . '</option>';
+        echo '<option value="' . $row['Posicion'] . '">' . $row['Posicion'] . '</option>';
     }
 }
 

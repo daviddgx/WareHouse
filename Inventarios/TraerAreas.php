@@ -28,7 +28,7 @@ if ($result->num_rows > 0)
 
 {
     while ($row = $result->fetch_assoc()) {
-        echo '<option value="'.$row['Carril'].'">'.utf8_encode($row['Carril']).'</option>';
+        echo '<option value="'.$row['Carril'].'">'.$row['Carril'].'</option>';
     }
 }
 

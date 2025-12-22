@@ -91,53 +91,53 @@ class PDF extends FPDF
         $this->SetTextColor(0, 0, 0); //color
         //creamos una celda o fila
         $this->Cell(25); // Movernos a la derecha
-        $this->Cell(125, 10, utf8_decode('FORMATO DE CARGA DE EXPORTACION'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+        $this->Cell(125, 10, mb_convert_encoding('FORMATO DE CARGA DE EXPORTACION', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
         $this->SetFont('Arial', 'B', 12); //tipo fuente, negrita(B-I-U-BIU), tamañoTexto
-        $this->Cell(40, 10, utf8_decode('CODIGO RE-10-10'), 1, 1, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+        $this->Cell(40, 10, mb_convert_encoding('CODIGO RE-10-10', 'ISO-8859-1', 'UTF-8'), 1, 1, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
 
         $this->SetFont('Arial', 'B', 10); //tipo fuente, negrita(B-I-U-BIU), tamañoTexto
 
         $this->SetTextColor(0, 0, 0); //color
         //creamos una celda o fila
         $this->Cell(25); // Movernos a la derecha
-        $this->Cell(30, 10, utf8_decode('Procedimiento'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
-        $this->Cell(95, 10, utf8_decode('(PR-10-04) DESPACHO DE PRODUCTO TERMINADO'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
-        $this->Cell(40, 10, utf8_decode('Version 3'), 1, 1, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+        $this->Cell(30, 10, mb_convert_encoding('Procedimiento', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+        $this->Cell(95, 10, mb_convert_encoding('(PR-10-04) DESPACHO DE PRODUCTO TERMINADO', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
+        $this->Cell(40, 10, mb_convert_encoding('Version 3', 'ISO-8859-1', 'UTF-8'), 1, 1, 'C', 0); // AnchoCelda,AltoCelda,titulo,borde(1-0),saltoLinea(1-0),posicion(L-C-R),ColorFondo(1-0)
         $this->SetTextColor(103); //color
 
         /* Destino del envio  */
         $this->Cell(1);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(15, 10, utf8_decode("Destino: ". $Destino), 0, 0, '', 0);
+        $this->Cell(15, 10, mb_convert_encoding("Destino: ". $Destino, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
 
         /* Placa */
         $this->Cell(60);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Placa: ". $NoPlaca), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Placa: ". $NoPlaca, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
 
 
         /* Responsable de verificacion */
         $this->Cell(40);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Verificador: ". $Verificador), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Verificador: ". $Verificador, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
         $this->Ln(5);
 
         /* Transporte */
         $this->Cell(1);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(15, 10, utf8_decode("Transporte: ". $Transporte), 0, 0, '', 0);
+        $this->Cell(15, 10, mb_convert_encoding("Transporte: ". $Transporte, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
 
 
         /* Placa Furgon */
         $this->Cell(60);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(15, 10, utf8_decode("Furgon: ". $PlacaFurgon), 0, 0, '', 0);
+        $this->Cell(15, 10, mb_convert_encoding("Furgon: ". $PlacaFurgon, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
 
 
         /* Responsable Doble Chequeo */
         $this->Cell(30);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Responsable Chequeo: ". $ResponsableChequeo), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Responsable Chequeo: ". $ResponsableChequeo, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
         $this->Ln(5);
 
 
@@ -145,42 +145,42 @@ class PDF extends FPDF
         /* Marchamo */
         $this->Cell(1);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Marchamo: ". $Marchamo), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Marchamo: ". $Marchamo, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
 
         /* Responsable Preparacion */
         $this->Cell(70);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Responsable de Preparar: ". $ResponsablePreparador), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Responsable de Preparar: ". $ResponsablePreparador, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
         $this->Ln(5);
 
         /* Destino */
         $this->Cell(1);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(10, 10, utf8_decode("Piloto: ". $NombrePiloto), 0, 0, '', 0);
+        $this->Cell(10, 10, mb_convert_encoding("Piloto: ". $NombrePiloto, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
 
 
         /* Montacarguista */
         $this->Cell(65);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Montacarguista: ". $Montacarguista), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Montacarguista: ". $Montacarguista, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
         $this->Ln(5);
 
         /* Guia de Carga*/
         $this->Cell(1);  // mover a la derecha
         $this->SetTextColor(1); //color
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Guia de Carga : ". $Guia), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Guia de Carga : ". $Guia, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
 
         $this->SetTextColor(103); //color
         /* Fecha */
         $this->Cell(70);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Fecha: ". $Fecha), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Fecha: ". $Fecha, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
 
         /* Ayudante */
         $this->Cell(40);  // mover a la derecha
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(5, 10, utf8_decode("Ayudante: ". $Ayudante), 0, 0, '', 0);
+        $this->Cell(5, 10, mb_convert_encoding("Ayudante: ". $Ayudante, 'ISO-8859-1', 'UTF-8'), 0, 0, '', 0);
         $this->Ln(5);
         $this->Ln(5);
 
@@ -192,13 +192,13 @@ class PDF extends FPDF
         $this->SetTextColor(255, 255, 255); //colorTexto
         $this->SetDrawColor(163, 163, 163); //colorBorde
         $this->SetFont('Arial', 'B', 7);
-        $this->Cell(20, 10, utf8_decode('IDH'), 1, 0, 'C', 1);
-        $this->Cell(53, 10, utf8_decode('DESCRIPCION'), 1, 0, 'C', 1);
-        $this->Cell(21, 10, utf8_decode('CANTIDAD'), 1, 0, 'C', 1);
-        $this->Cell(27, 10, utf8_decode('NUMERO FILA'), 1, 0, 'C', 1);
-        $this->Cell(27, 10, utf8_decode('CANT. POR FILA'), 1, 0, 'C', 1);
-        $this->Cell(23, 10, utf8_decode('TOTAL FILA'), 1, 0, 'C', 1);
-        $this->Cell(21, 10, utf8_decode('TOTAL GENERAL'), 1, 0, 'C', 1);
+        $this->Cell(20, 10, mb_convert_encoding('IDH', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 1);
+        $this->Cell(53, 10, mb_convert_encoding('DESCRIPCION', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 1);
+        $this->Cell(21, 10, mb_convert_encoding('CANTIDAD', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 1);
+        $this->Cell(27, 10, mb_convert_encoding('NUMERO FILA', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 1);
+        $this->Cell(27, 10, mb_convert_encoding('CANT. POR FILA', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 1);
+        $this->Cell(23, 10, mb_convert_encoding('TOTAL FILA', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 1);
+        $this->Cell(21, 10, mb_convert_encoding('TOTAL GENERAL', 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 1);
         $this->Ln(5);
         $this->Ln(5);
     }
@@ -211,14 +211,14 @@ class PDF extends FPDF
 
         $this->SetY(-17); // Posición: a 1,5 cm del final
         $this->SetFont('Arial', 'I', 8); //tipo fuente, negrita(B-I-U-BIU), tamañoTexto
-        $this->Cell(0, 10, utf8_decode('La información registrada es propiedad de Henkel La Luz S.A. queda  ') , 0, 0, 'C'); //pie de pagina(numero de pagina)
+        $this->Cell(0, 10, mb_convert_encoding('La información registrada es propiedad de Henkel La Luz S.A. queda  ', 'ISO-8859-1', 'UTF-8') , 0, 0, 'C'); //pie de pagina(numero de pagina)
         $this->Ln(3);
-        $this->Cell(0, 10, utf8_decode('Prohibida su reproducción total o parcial  ') , 0, 0, 'C'); //pie de pagina(numero de pagina)
+        $this->Cell(0, 10, mb_convert_encoding('Prohibida su reproducción total o parcial  ', 'ISO-8859-1', 'UTF-8') , 0, 0, 'C'); //pie de pagina(numero de pagina)
 
         $this->SetY(-17); // Posición: a 1,5 cm del final
         $this->SetFont('Arial', 'I', 8); //tipo fuente, cursiva, tamañoTexto
         $hoy = date('d/m/Y');
-        $this->Cell(355, 10, utf8_decode($hoy), 0, 0, 'C'); // pie de pagina(fecha de pagina)
+        $this->Cell(355, 10, mb_convert_encoding($hoy, 'ISO-8859-1', 'UTF-8'), 0, 0, 'C'); // pie de pagina(fecha de pagina)
     }
 }
 
@@ -251,9 +251,9 @@ $lista_DespachoPRODUCCION =$ejecutar_sentencia_Despachos->fetch(PDO::FETCH_ASSOC
 
 for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
     /* TABLA */
-    $pdf->Cell(20, 7, utf8_decode($lista_DespachoPRODUCCION['Material']), 1, 0, 'C', 0);
-    $pdf->Cell(53, 7, utf8_decode($lista_DespachoPRODUCCION['Descripcion']), 1, 0, 'C', 0);
-    $pdf->Cell(21, 7,  utf8_decode($lista_DespachoPRODUCCION['Total']), 1, 0, 'C', 0);
+    $pdf->Cell(20, 7, mb_convert_encoding($lista_DespachoPRODUCCION['Material'], 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 0);
+    $pdf->Cell(53, 7, mb_convert_encoding($lista_DespachoPRODUCCION['Descripcion'], 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 0);
+    $pdf->Cell(21, 7,  mb_convert_encoding($lista_DespachoPRODUCCION['Total'], 'ISO-8859-1', 'UTF-8'), 1, 0, 'C', 0);
     $pdf->Cell(27, 7, " ", 1, 0, 'C', 0);
     $pdf->Cell(27, 7, " ", 1, 0, 'C', 0);
     $pdf->Cell(23, 7, " ", 1, 0, 'C', 0);

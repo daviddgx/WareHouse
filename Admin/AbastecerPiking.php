@@ -85,7 +85,7 @@ if (isset($_GET['Ubicacion'])) {
 
             while ($row = $result->fetch_assoc()) {
 
-                // echo '<option value="' . $row['Nombre_Usuario'] . '">' . utf8_encode($row['NombreMont']) . '</option>';
+                // echo '<option value="' . $row['Nombre_Usuario'] . '">' . $row['NombreMont'] . '</option>';
                 $txtIDH = $row['IDH'];
                 $txtDescripcion = $row['Descripcion'];
             }
@@ -215,7 +215,7 @@ switch ($accion) {
 
             while ($row = $result->fetch_assoc()) {
 
-                // echo '<option value="' . $row['Nombre_Usuario'] . '">' . utf8_encode($row['NombreMont']) . '</option>';
+                // echo '<option value="' . $row['Nombre_Usuario'] . '">' . $row['NombreMont'] . '</option>';
                 $txtIDH = $row['IDH'];
                 $txtDescripcion = $row['Descripcion'];
             }
@@ -517,7 +517,7 @@ ob_end_flush();
                                             if ($result->num_rows > 0) {
                                                 while ($row = $result->fetch_assoc()) {
 
-                                                    echo '<option value="' . $row['IDH'] . '">' . utf8_encode($row['IDH']) . ' --- ' . utf8_encode($row['Descripcion']) . ' --- ' . utf8_encode($row['Pallets']) . ' Pallets</option>';
+                                                    echo '<option value="' . $row['IDH'] . '">' . $row['IDH'] . ' --- ' . $row['Descripcion'] . ' --- ' . $row['Pallets'] . ' Pallets</option>';
                                                 }
                                             }
                                             ?>
@@ -563,7 +563,7 @@ ob_end_flush();
                                             if ($result->num_rows > 0) {
                                                 while ($row = $result->fetch_assoc()) {
 
-                                                    echo '<option value="' . $row['Nombre_Usuario'] . '">' . utf8_encode($row['NombreMont']) . '</option>';
+                                                    echo '<option value="' . $row['Nombre_Usuario'] . '">' . $row['NombreMont'] . '</option>';
                                                 }
                                             }
                                             ?>

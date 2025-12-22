@@ -467,7 +467,7 @@ ob_end_flush();
                                                 if ($result->num_rows > 0) {
                                                     while ($row = $result->fetch_assoc()) {
 
-                                                        echo '<option value="' . utf8_encode($row['Lotes']) . '">' . utf8_encode($row['Lotes']) . '-- ' . utf8_encode($row['Bultos']) . '  Bultos</option>';                                                    }
+                                                        echo '<option value="' . $row['Lotes'] . '">' . $row['Lotes'] . '-- ' . $row['Bultos'] . '  Bultos</option>';                                                    }
                                                 }
                                                 echo '</select>';
 

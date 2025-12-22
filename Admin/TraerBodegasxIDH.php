@@ -30,14 +30,13 @@ if ($result->num_rows > 0)
 
 {
     while ($row = $result->fetch_assoc()) {
-               echo '<option value="'.$row['Bodegas'].'">'.utf8_encode( $row['Bodegas'] . " -- " .$row['Pallets']. " Pallet(s)" ) . '</option>';
+               echo '<option value="'.$row['Bodegas'].'">'. $row['Bodegas'] . " -- " .$row['Pallets']. " Pallet(s)" . '</option>';
     }
 }
 
 echo $Cadena . '</select>';
 ob_end_flush();
 ?>
-
 
 
 

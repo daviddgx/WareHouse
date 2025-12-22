@@ -310,7 +310,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="' . $row['NombreDestino'] . '">' . utf8_encode($row['NombreDestino'])  . '</option>';
+                                                                echo '<option value="' . $row['NombreDestino'] . '">' . $row['NombreDestino']  . '</option>';
                                                             }
                                                         }
                                                         ?>

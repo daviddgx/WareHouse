@@ -330,7 +330,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="' . $row['IDH'] . '">' . utf8_encode($row['IDH']) .' -- '.utf8_encode($row['Descripcion']) . '</option>';
+                                                                echo '<option value="' . $row['IDH'] . '">' . $row['IDH'] .' -- '.$row['Descripcion'] . '</option>';
                                                             }
                                                         }
                                                         ?>
@@ -355,7 +355,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="' . $row['Ubicacion'] . '">' . utf8_encode($row['Ubicacion']) .' </option>';
+                                                                echo '<option value="' . $row['Ubicacion'] . '">' . $row['Ubicacion'] .' </option>';
                                                             }
                                                         }
                                                         ?>

@@ -8,41 +8,129 @@ if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuari
 }
 
 include '../LQS_EUQ/Connect.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 date_default_timezone_set('America/Guatemala');
 
 $tablaCarrilesTemporales = 'posisciones_temporalesCNF';
 $mensajeExito = '';
 $mensajeError = '';
+$ubicacionesDisponibles = [];
 
 try {
     $conexion = lqs_get_connection();
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $ubicacion = trim($_POST['ubicacion'] ?? '');
-        $estado = trim($_POST['estado'] ?? '');
-        $fechaConfig = date('Y-m-d H:i:s');
+        $accion = $_POST['accion'] ?? 'manual';
 
-        if ($ubicacion === '' || $estado === '') {
-            $mensajeError = '<div class="alert alert-danger">Complete todos los campos.</div>';
-        } else {
-            $sentencia = $conexion->prepare("SELECT Ubicacion FROM {$tablaCarrilesTemporales} WHERE Ubicacion = ?");
-            $sentencia->bind_param('s', $ubicacion);
-            $sentencia->execute();
-            $resultado = $sentencia->get_result();
-            $existe = $resultado->num_rows > 0;
-            $sentencia->close();
-
-            if ($existe) {
-                $mensajeError = '<div class="alert alert-danger">La ubicación temporal ya está registrada.</div>';
+        if ($accion === 'masiva') {
+            if (!isset($_FILES['archivo_excel']) || $_FILES['archivo_excel']['error'] !== UPLOAD_ERR_OK) {
+                $mensajeError = '<div class="alert alert-danger">Seleccione un archivo Excel válido.</div>';
             } else {
-                $sentencia = $conexion->prepare("INSERT INTO {$tablaCarrilesTemporales} (Ubicacion, Estado, FechaConfig) VALUES (?, ?, ?)");
-                $sentencia->bind_param('sss', $ubicacion, $estado, $fechaConfig);
+                $archivoTemporal = $_FILES['archivo_excel']['tmp_name'];
+                $spreadsheet = IOFactory::load($archivoTemporal);
+                $hoja = $spreadsheet->getActiveSheet();
+                $filas = $hoja->toArray(null, true, true, true);
+
+                $encabezados = array_shift($filas);
+                $columnaUbicacion = null;
+                $columnaEstado = null;
+
+                foreach ($encabezados as $columna => $valor) {
+                    $encabezado = mb_strtolower(trim((string) $valor));
+                    if ($encabezado === 'ubicacion' || $encabezado === 'ubicación') {
+                        $columnaUbicacion = $columna;
+                    }
+                    if ($encabezado === 'estado') {
+                        $columnaEstado = $columna;
+                    }
+                }
+
+                if ($columnaUbicacion === null || $columnaEstado === null) {
+                    $mensajeError = '<div class="alert alert-danger">El archivo debe contener las columnas Ubicacion y Estado.</div>';
+                } else {
+                    $fechaConfig = date('Y-m-d H:i:s');
+                    $insertadas = 0;
+                    $omitidas = 0;
+                    $sentenciaConsulta = $conexion->prepare("SELECT Ubicacion FROM {$tablaCarrilesTemporales} WHERE Ubicacion = ?");
+                    $sentenciaInsercion = $conexion->prepare("INSERT INTO {$tablaCarrilesTemporales} (Ubicacion, Estado, FechaConfig) VALUES (?, ?, ?)");
+
+                    foreach ($filas as $fila) {
+                        $ubicacion = trim((string) ($fila[$columnaUbicacion] ?? ''));
+                        $estado = trim((string) ($fila[$columnaEstado] ?? ''));
+
+                        if ($ubicacion === '' || $estado === '') {
+                            $omitidas++;
+                            continue;
+                        }
+
+                        if (!in_array($estado, ['Activo', 'Desactivo'], true)) {
+                            $omitidas++;
+                            continue;
+                        }
+
+                        $sentenciaConsulta->bind_param('s', $ubicacion);
+                        $sentenciaConsulta->execute();
+                        $resultado = $sentenciaConsulta->get_result();
+
+                        if ($resultado && $resultado->num_rows > 0) {
+                            $omitidas++;
+                            continue;
+                        }
+
+                        $sentenciaInsercion->bind_param('sss', $ubicacion, $estado, $fechaConfig);
+                        $sentenciaInsercion->execute();
+                        $insertadas++;
+                    }
+
+                    $sentenciaConsulta->close();
+                    $sentenciaInsercion->close();
+
+                    $mensajeExito = sprintf(
+                        '<div class="alert alert-success">Carga masiva completada. Insertadas: %d. Omitidas: %d.</div>',
+                        $insertadas,
+                        $omitidas
+                    );
+                }
+            }
+        } else {
+            $ubicacion = trim($_POST['ubicacion'] ?? '');
+            $estado = trim($_POST['estado'] ?? '');
+            $fechaConfig = date('Y-m-d H:i:s');
+
+            if ($ubicacion === '' || $estado === '') {
+                $mensajeError = '<div class="alert alert-danger">Complete todos los campos.</div>';
+            } else {
+                $sentencia = $conexion->prepare("SELECT Ubicacion FROM {$tablaCarrilesTemporales} WHERE Ubicacion = ?");
+                $sentencia->bind_param('s', $ubicacion);
                 $sentencia->execute();
+                $resultado = $sentencia->get_result();
+                $existe = $resultado->num_rows > 0;
                 $sentencia->close();
-                $mensajeExito = '<div class="alert alert-success">Ubicación temporal registrada correctamente.</div>';
+
+                if ($existe) {
+                    $mensajeError = '<div class="alert alert-danger">La ubicación temporal ya está registrada.</div>';
+                } else {
+                    $sentencia = $conexion->prepare("INSERT INTO {$tablaCarrilesTemporales} (Ubicacion, Estado, FechaConfig) VALUES (?, ?, ?)");
+                    $sentencia->bind_param('sss', $ubicacion, $estado, $fechaConfig);
+                    $sentencia->execute();
+                    $sentencia->close();
+                    $mensajeExito = '<div class="alert alert-success">Ubicación temporal registrada correctamente.</div>';
+                }
             }
         }
+    }
+
+    $consultaUbicaciones = "SELECT Ubicacion FROM posiciones WHERE Ubicacion NOT IN (SELECT Ubicacion FROM {$tablaCarrilesTemporales})";
+    $resultadoUbicaciones = $conexion->query($consultaUbicaciones);
+
+    if ($resultadoUbicaciones) {
+        while ($fila = $resultadoUbicaciones->fetch_assoc()) {
+            $ubicacionesDisponibles[] = $fila['Ubicacion'];
+        }
+        $resultadoUbicaciones->free();
     }
 } catch (Exception $exception) {
     $mensajeError = '<div class="alert alert-danger">No fue posible registrar la ubicación temporal.</div>';
@@ -196,7 +284,14 @@ ob_end_flush();
                                 <div class="form-row">
                                     <div class="form-group col-md-6">
                                         <label for="ubicacion">Ubicación</label>
-                                        <input type="text" class="form-control" id="ubicacion" name="ubicacion" required>
+                                        <select class="form-control" id="ubicacion" name="ubicacion" required>
+                                            <option value="">Seleccione</option>
+                                            <?php foreach ($ubicacionesDisponibles as $ubicacionDisponible): ?>
+                                                <option value="<?php echo htmlspecialchars($ubicacionDisponible); ?>">
+                                                    <?php echo htmlspecialchars($ubicacionDisponible); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label for="estado">Estado</label>
@@ -207,8 +302,21 @@ ob_end_flush();
                                         </select>
                                     </div>
                                 </div>
+                                <input type="hidden" name="accion" value="manual">
                                 <button type="submit" class="btn btn-Sertero">Guardar</button>
                                 <a class="btn btn-outline-danger" style="margin-left: 1rem" href="CarrilesTemporales_Consultar.php"><span> Regresar </span></a>
+                            </form>
+                            <hr>
+                            <h6 class="card-subtitle">Carga masiva desde Excel (columnas: Ubicacion y Estado).</h6>
+                            <form method="post" action="" enctype="multipart/form-data" style="margin-top: 1rem;">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="archivo_excel">Archivo Excel</label>
+                                        <input type="file" class="form-control" id="archivo_excel" name="archivo_excel" accept=".xlsx,.xls" required>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="accion" value="masiva">
+                                <button type="submit" class="btn btn-Sertero">Cargar archivo</button>
                             </form>
                         </div>
                     </div>

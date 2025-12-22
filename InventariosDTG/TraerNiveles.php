@@ -25,7 +25,7 @@ if ($Area == '10'){
     $result = $conn->query($cargos);
     if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            echo '<option value="' . $row['Nivel'] . '">' . utf8_encode($row['Nivel']) . '</option>';
+            echo '<option value="' . $row['Nivel'] . '">' . $row['Nivel'] . '</option>';
         }
     }
 

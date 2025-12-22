@@ -76,7 +76,7 @@ where Ubicacion = '$txtUOrigne' and posiciones.Estado = 'Ocupada'
 
             while ($row = $result->fetch_assoc()) {
 
-                // echo '<option value="' . $row['Nombre_Usuario'] . '">' . utf8_encode($row['NombreMont']) . '</option>';
+                // echo '<option value="' . $row['Nombre_Usuario'] . '">' . $row['NombreMont'] . '</option>';
                 $txtIDH = $row['IDH'];
                 $txtDescripcion = $row['Descripcion'];
             }

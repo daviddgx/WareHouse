@@ -429,7 +429,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="'.$row['Marca'].'">'.utf8_encode($row['Marca']).'</option>';
+                                                                echo '<option value="'.$row['Marca'].'">'.$row['Marca'].'</option>';
 
                                                             }
                                                         }
@@ -462,7 +462,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="'.$row['linea'].'">'.utf8_encode($row['linea']).'</option>';
+                                                                echo '<option value="'.$row['linea'].'">'.$row['linea'].'</option>';
 
                                                             }
                                                         }
@@ -490,7 +490,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="'.$row['UMEDIDA'].'">'.utf8_encode($row['UMEDIDA']).'</option>';
+                                                                echo '<option value="'.$row['UMEDIDA'].'">'.$row['UMEDIDA'].'</option>';
 
                                                             }
                                                         }

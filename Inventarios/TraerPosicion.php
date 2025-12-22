@@ -28,7 +28,7 @@ ORDER BY SUBSTRING(Posicion, 1, 1), CAST(SUBSTRING(Posicion, 2) AS SIGNED);
     if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
 
-            echo '<option value="' . $row['Posicion'] . '">' . utf8_encode($row['Posicion']) . '</option>';
+            echo '<option value="' . $row['Posicion'] . '">' . $row['Posicion'] . '</option>';
         }
     }
 

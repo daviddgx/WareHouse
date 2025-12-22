@@ -104,7 +104,7 @@ where Ubicacion = '$txtUOrigne' and posiciones.Estado = 'Ocupada';";
 
             while ($row = $result->fetch_assoc()) {
 
-               // echo '<option value="' . $row['Nombre_Usuario'] . '">' . utf8_encode($row['NombreMont']) . '</option>';
+               // echo '<option value="' . $row['Nombre_Usuario'] . '">' . $row['NombreMont'] . '</option>';
                 $txtIDH = $row['IDH'];
                 $txtDescripcion = $row['Descripcion'];
             }
@@ -421,7 +421,7 @@ ob_end_flush();
                                                             if ($result->num_rows > 0) {
                                                                 while ($row = $result->fetch_assoc()) {
 
-                                                                    echo '<option value="'.$row['Nombre_Bodega'].'">'.utf8_encode($row['Descripcion']).'</option>';
+                                                                    echo '<option value="'.$row['Nombre_Bodega'].'">'.$row['Descripcion'].'</option>';
                                                                 }
                                                             }
                                                             ?>
@@ -476,7 +476,7 @@ ob_end_flush();
                                                             if ($result->num_rows > 0) {
                                                                 while ($row = $result->fetch_assoc()) {
 
-                                                                    echo '<option value="' . $row['Nombre_Usuario'] . '">' . utf8_encode($row['NombreMont']) . '</option>';
+                                                                    echo '<option value="' . $row['Nombre_Usuario'] . '">' . $row['NombreMont'] . '</option>';
                                                                 }
                                                             }
                                                             ?>
@@ -512,7 +512,7 @@ ob_end_flush();
                                                                 if ($result->num_rows > 0) {
                                                                     while ($row = $result->fetch_assoc()) {
 
-                                                                        echo '<option value="'.$row['Nombre_Bodega'].'">'.utf8_encode($row['Descripcion']).'</option>';
+                                                                        echo '<option value="'.$row['Nombre_Bodega'].'">'.$row['Descripcion'].'</option>';
                                                                     }
                                                                 }
                                                                 ?>

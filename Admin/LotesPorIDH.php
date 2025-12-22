@@ -29,7 +29,7 @@ if ($result->num_rows > 0)
 
 {
     while ($row = $result->fetch_assoc()) {
-        echo '<option value="'.$row['LoteProduccion'].'">'.utf8_encode($row['LoteProduccion']).' -- '.utf8_encode($row['Ocupados']).' </option>';
+        echo '<option value="'.$row['LoteProduccion'].'">'.$row['LoteProduccion'].' -- '.$row['Ocupados'].' </option>';
     }
 }
 

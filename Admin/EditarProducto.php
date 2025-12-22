@@ -432,7 +432,7 @@ ob_end_flush();
                                                     <select required class="funy form-control ng-pristine ng-valid ng-valid-required ng-touched" name="txtMarca" id="idtxtMarca" ng-model="properties.value" ng-options="ctrl.getValue(option) as (ctrl.getLabel(option) | uiTranslate) for option in properties.availableValues" ng-required="properties.required" ng-disabled="properties.disabled">
 
 
-                                                        <?php echo '<option value="' . $txtMarca . '">' . utf8_encode($txtMarca) . '</option>'; ?>
+                                                        <?php echo '<option value="' . $txtMarca . '">' . $txtMarca . '</option>'; ?>
 
                                                         <?php
                                                         $conn = new mysqli($servername, $username, $password, $dbname);
@@ -442,7 +442,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="' . $row['Marca'] . '">' . utf8_encode($row['Marca']) . '</option>';
+                                                                echo '<option value="' . $row['Marca'] . '">' . $row['Marca'] . '</option>';
                                                             }
                                                         }
                                                         ?>
@@ -462,7 +462,7 @@ ob_end_flush();
                                                     <label>Linea</label>
                                                     <select required class="funy form-control ng-pristine ng-valid ng-valid-required ng-touched" name="txtLinea" id="idtxtLinea" ng-model="properties.value" ng-options="ctrl.getValue(option) as (ctrl.getLabel(option) | uiTranslate) for option in properties.availableValues" ng-required="properties.required" ng-disabled="properties.disabled">
 
-                                                      <?php echo '<option value="' . $txtLinea . '">' . utf8_encode($txtLinea) . '</option>'; ?>
+                                                      <?php echo '<option value="' . $txtLinea . '">' . $txtLinea . '</option>'; ?>
 
 
 
@@ -474,7 +474,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="' . $row['linea'] . '">' . utf8_encode($row['linea']) . '</option>';
+                                                                echo '<option value="' . $row['linea'] . '">' . $row['linea'] . '</option>';
                                                             }
                                                         }
                                                         ?>
@@ -490,7 +490,7 @@ ob_end_flush();
                                                     <label> Unidad de Medida</label>
                                                     <select required class="funy form-control ng-pristine ng-valid ng-valid-required ng-touched" name="txtUMedida" id="idtxtUMedida" ng-model="properties.value" ng-options="ctrl.getValue(option) as (ctrl.getLabel(option) | uiTranslate) for option in properties.availableValues" ng-required="properties.required" ng-disabled="properties.disabled">
 
-                                                        <?php echo '<option value="' . $txtUnidadDeMedida . '">' . utf8_encode($txtUnidadDeMedida) . '</option>';?>
+                                                        <?php echo '<option value="' . $txtUnidadDeMedida . '">' . $txtUnidadDeMedida . '</option>';?>
 
 
 
@@ -502,7 +502,7 @@ ob_end_flush();
                                                         if ($result->num_rows > 0) {
                                                             while ($row = $result->fetch_assoc()) {
 
-                                                                echo '<option value="' . $row['UMEDIDA'] . '">' . utf8_encode($row['UMEDIDA']) . '</option>';
+                                                                echo '<option value="' . $row['UMEDIDA'] . '">' . $row['UMEDIDA'] . '</option>';
                                                             }
                                                         }
                                                         ?>

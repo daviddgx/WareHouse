@@ -321,6 +321,22 @@ ob_end_flush();
                                 </span></a>
         </li>
 
+        <li class="sidebar-item"><a class="sidebar-link has-arrow" href="javascript:void(0)"
+                                    aria-expanded="false"><i
+                    class="fas fa-road"></i><span
+                    class="hide-menu">Carriles Temporales </span></a>
+            <ul aria-expanded="false" class="collapse  first-level base-level-line">
+                <li class="sidebar-item"><a href="CarrilesTemporales_Consultar.php" class="sidebar-link"><span
+                            class="hide-menu"> Consultar
+                                        </span></a>
+                </li>
+                <li class="sidebar-item"><a href="CarrilesTemporales_Agregar.php" class="sidebar-link"><span
+                            class="hide-menu"> Agregar
+                                        </span></a>
+                </li>
+            </ul>
+        </li>
+
         </li>
         <li class="sidebar-item"><a class="sidebar-link sidebar-link" href="Mantenimiento_Piking.php"
                                     aria-expanded="false"><i
@@ -360,5 +376,4 @@ ob_end_flush();
     </ul>
 </nav>
 <!-- End Sidebar navigation -->
-
 

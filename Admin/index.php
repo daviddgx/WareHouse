@@ -2186,7 +2186,12 @@ try {
                     anchor: 'end',
                     align: 'start',
                     formatter: function(value, context) {
-                        return context.chart.data.labels[context.dataIndex];
+                        var data = context.chart.data.datasets[0].data;
+                        var total = data.reduce(function(acc, current) {
+                            return acc + current;
+                        }, 0);
+                        var percentage = total > 0 ? (value / total) * 100 : 0;
+                        return percentage.toFixed(2) + '%';
                     }
                 }
             }

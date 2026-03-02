@@ -470,7 +470,7 @@ ob_end_flush();
                                         </div>
                                             <div style="text-align: center">
                                                 <br>
-                                                <button type="submit" value="btnIngresarMovimiento" name="accion"
+                                                <button type="submit" value="btnIngresarMovimiento" name="accion" id="btnCalcularMovimientos"
                                                         class="btn btn-outline-info">Calcular Movimientos
                                                 </button>
 
@@ -611,7 +611,7 @@ ob_end_flush();
                             <div class="text-center">
                                 <br>
 
-                                <button type="submit" value="btnModificar" name="Procesar"
+                                <button type="submit" value="btnModificar" name="Procesar" id="btnAnularRegistros"
                                         class="btn btn-outline-danger">Anular los registros
                                 </button>
 
@@ -666,6 +666,7 @@ ob_end_flush();
 <script src="../dist/js/sidebarmenu.js"></script>
 <!--Custom JavaScript -->
 <script src="../dist/js/custom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <!--This page JavaScript -->
 <script src="../assets/extra-libs/c3/d3.min.js"></script>
 <script src="../assets/extra-libs/c3/c3.min.js"></script>
@@ -791,6 +792,43 @@ ob_end_flush();
 
 
 
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const confirmarEnvio = (selector, titulo, texto, textoConfirmar) => {
+            const boton = document.querySelector(selector);
+            if (!boton) {
+                return;
+            }
+
+            boton.addEventListener('click', function (event) {
+                event.preventDefault();
+                const formulario = boton.closest('form');
+                if (!formulario) {
+                    return;
+                }
+
+                Swal.fire({
+                    title: titulo,
+                    text: texto,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: textoConfirmar,
+                    cancelButtonText: 'Cancelar',
+                    reverseButtons: true
+                }).then((resultado) => {
+                    if (resultado.isConfirmed) {
+                        formulario.submit();
+                    }
+                });
+            });
+        };
+
+        confirmarEnvio('#btnCalcularMovimientos', '¿Calcular movimientos?', 'Se validarán los datos y se calcularán las reubicaciones.', 'Sí, calcular');
+        confirmarEnvio('#btnEnviarUbicaciones', '¿Enviar movimientos?', 'Esta acción enviará las reubicaciones al montacarguista seleccionado.', 'Sí, enviar');
+        confirmarEnvio('#btnAnularRegistros', '¿Anular registros?', 'Se eliminarán los movimientos pendientes de aplicar.', 'Sí, anular');
+    });
+</script>
 
 </body>
 

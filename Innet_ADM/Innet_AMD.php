@@ -354,8 +354,30 @@ function PorcentajeOcupacion(){
 
     include '../LQS_EUQ/Auth.php';
     $sentencia = $pdo->prepare("SELECT
-    (SELECT COUNT(*) FROM `posiciones` WHERE Estado = 'Ocupada' and bodega <> 9) /
-    (SELECT COUNT(*) FROM `posiciones` where bodega  <> 9) * 100 AS Porcentaje
+(
+  (SELECT COUNT(*)
+   FROM posiciones p
+   WHERE p.Estado = 'Ocupada'
+     AND NOT EXISTS (
+       SELECT 1
+       FROM posisciones_temporalesCNF t
+       WHERE t.ubicacion = p.Ubicacion
+     )
+  )
+  /
+  NULLIF(
+    (SELECT COUNT(*)
+     FROM posiciones p
+     WHERE NOT EXISTS (
+       SELECT 1
+       FROM posisciones_temporalesCNF t
+       WHERE t.ubicacion = p.Ubicacion
+     )
+    ),
+    0
+  )
+) * 100 AS Porcentaje;
+
 ");
     $sentencia->execute();
     $Count =  $sentencia->fetch(PDO::FETCH_LAZY);

@@ -541,7 +541,7 @@ ob_end_flush();
                                                     <label>Cajas por Pallet</label>
                                                     <input name="txtCajasPorPalet" type="number" id= "paletizado"
                                                            class="form-control" onKeypress="if (event.keyCode < 45 || event.keyCode > 57) event.returnValue = false;"
-                                                           value="<?php echo $txtCajasPorPalet;?>" disabled required>
+                                                           value="<?php echo $txtCajasPorPalet;?>"  required>
                                                 </div>
                                             </div>
                                         </div>

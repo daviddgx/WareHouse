@@ -1181,7 +1181,7 @@ try {
     
     $conn = new mysqli($servername, $username, $password, $dbname);
     $sql = "SELECT CONCAT('Bodega ', bodega) AS bodega_concatenada
-FROM (SELECT DISTINCT bodega FROM posiciones) AS b WHERE b.bodega <> 9
+FROM (SELECT DISTINCT bodega FROM posiciones) AS b WHERE b.bodega not in (9,12)
 ORDER BY b.bodega + 0 desc";
     $result = $conn->query($sql);
     
@@ -1224,8 +1224,28 @@ try {
 
    
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT Bodega,count(*) as Ocupadas FROM `posiciones` where Estado = 'Ocupada' GROUP by Bodega order by Bodega+0 desc
-  ";
+    $sql = "SELECT 
+    b.Bodega,
+    COALESCE(p.Ocupadas, 0) AS Ocupadas
+FROM (
+    SELECT DISTINCT Bodega
+    FROM posiciones
+    WHERE Bodega NOT IN (9,12)
+) b
+LEFT JOIN (
+    SELECT 
+        Bodega,
+        COUNT(*) AS Ocupadas
+    FROM posiciones
+    WHERE Estado = 'Ocupada'
+      AND Bodega NOT IN (9,12)
+      AND Ubicacion NOT IN (
+          SELECT ubicacion 
+          FROM posisciones_temporalesCNF
+      )
+    GROUP BY Bodega
+) p ON p.Bodega = b.Bodega
+ORDER BY b.Bodega + 0 DESC";
 
 
     $result = $conn->query($sql);
@@ -1245,7 +1265,7 @@ try {
 
 
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT Bodega,count(*) as Libres FROM `posiciones` where Estado = 'Libre' GROUP by Bodega order by Bodega+0 desc";
+    $sql = "SELECT Bodega,count(*) as Libres FROM `posiciones` where Estado = 'Libre' and Ubicacion not in (SELECT ubicacion FROM `posisciones_temporalesCNF`) GROUP by Bodega order by Bodega+0 desc";
     $result = $conn->query($sql);
     if ($result->num_rows > 0) {
           while ($row = $result->fetch_assoc()) {
@@ -1255,7 +1275,7 @@ try {
 
 
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $sql = "SELECT Bodega,count(*) as Totales FROM `posiciones` GROUP by Bodega order by Bodega+0 desc";
+    $sql = "SELECT Bodega,count(*) as Totales FROM `posiciones` where Ubicacion not in (SELECT ubicacion FROM posisciones_temporalesCNF) GROUP by Bodega order by Bodega+0 desc";
     $result = $conn->query($sql);
     if ($result->num_rows > 0) {
           while ($row = $result->fetch_assoc()) {
@@ -2344,14 +2364,14 @@ ORDER BY FechaVencimiento;";
     new Chart(document.getElementById("Top10AVencer").getContext('2d'), {
         type: 'bar',
         data: {
-            labels: <?php echo json_encode(array_reverse($IDHsG6)); ?>,
+            labels: <?php echo json_encode($IDHsG6); ?>,
             datasets: [
                 {
                     label: "Cantidad de Pallets a vencer",
                     backgroundColor: colores,
                     borderColor: "#ffffff",
                     borderWidth: 4,
-                    data: <?php echo json_encode(array_reverse($CantidadesG6)); ?>
+                    data: <?php echo json_encode($CantidadesG6); ?>
                 }
             ]
         },

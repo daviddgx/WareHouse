@@ -7,60 +7,62 @@ if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuari
     header('Location: ../Innet/505.html');
 }
 
-include '../LQS_EUQ/Connect.php';
+include '../LQS_EUQ/Auth.php';
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-} else {
-}
-
 // Variables de entorno
 $MensajeExito = '';
-$Mensajeerror = '';
-$lista_Guias;
-$TotalPallets = 0;
+
+$txtIDH =           '';
+// Cargar datos a mostrar
+
+
+// Creamos la conexion
+
+if(isset($_GET['IDH'])) {
+    $txtIDH = $_GET['IDH'];
+    // Ahora puedes usar la variable $idh que contiene el valor del parámetro IDH
+    
+} else {
+    header('Location: ../Innet/505.html');
+}
+
 
 
 
 // Validar formulario y grabar informacion
 $accion = (isset($_POST['accion'])) ? $_POST['accion'] : "";
+
 switch ($accion) {
 
-    case 'btnGenerarReporte':
-
-        include '../LQS_EUQ/Connect.php';
-
-        
-        $Bodega = (isset($_POST['txtBodega'])) ? $_POST['txtBodega'] : "";
-        $Linea = (isset($_POST['txtLinea'])) ? $_POST['txtLinea'] : "";
-
+    case "btnBloquearLote":
+        $txtIDH =  (isset($_POST['txtIDH'])) ? $_POST['txtIDH'] : "";
+        $txtLote =   (isset($_POST['txtLote'])) ? $_POST['txtLote'] : "";
+        $txtBultos =   (isset($_POST['txtBultos'])) ? $_POST['txtBultos'] : "";
+        $txtAccion =   (isset($_POST['txtAccion'])) ? $_POST['txtAccion'] : "Bloquear";
+  
+        if ($txtAccion == 'Bloquear') {
+            $status = 'Bloqueado';
+            $message = 'bloqueado';
+            $where = "Estatus is null";
+        } else {
+            $status = NULL;
+            $message = 'desbloqueado';
+            $where = "Estatus is null";
+        }
 
         try {
-            $conn = new PDO('mysql:host=' . $servername . ';dbname=' . $dbname, $username, $password);
-
-            $sqlDatos = "SELECT * FROM `InventarioPorLinea_Estatus` where Bodega = '$Bodega' and Linea = '$Linea'";
-           
-            $ejecutar_sentencia_Guias = $conn->query($sqlDatos);
-
-            // Verifica si la consulta retorna resultados
-
-            // Obtiene los datos en forma de un arreglo
-            $lista_Guias = $ejecutar_sentencia_Guias->fetch(PDO::FETCH_ASSOC);
-
-        } catch (Exception $ex) {
-            // Captura la excepción y procesala de alguna manera
-            // (por ejemplo, registrando el error en un archivo de log)
-            echo $ex->getMessage();
-            error_log("Error: " . $ex->getMessage());
+            $sentencia = $pdo->prepare("update `detalle_piking` set EstatusProducto = ?, Observaciones = ? where $where and IDH = ? and LoteProduccion = ? ;");
+            $sentencia->execute([$status, $txtBultos, $txtIDH, $txtLote]);
+            $MensajeExito = '<div class="alert alert-success" role="alert"><strong>Actualización correcta!</strong> Se ha ' . $message . ' el IDH ' . $txtIDH . ' del lote ' . $txtLote . ' con el mensaje: ' . $txtBultos . '.</div>';
+        } catch (Exception $e) {
+            $MensajeExito = '<div class="alert alert-danger" role="alert"><strong>Error en la actualización!</strong> No se pudo ' . $message . ' el IDH ' . $txtIDH . ' del lote ' . $txtLote . '. ' . $e->getMessage() . '</div>';
         }
-        break;
-    default:
-        break;
+        
+    break;
+
 }
-
-
 ob_end_flush();
 ?>
 <!DOCTYPE html>
@@ -73,70 +75,33 @@ ob_end_flush();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   
     <!-- Favicon icon -->
     <link rel="icon" type="image/png" sizes="16x16" href="../assets/images/Sertero/LogoCBP.png">
     <title>Henkel CBP / AdminFIFO</title>
     <!-- Custom CSS -->
     <link href="../assets/extra-libs/c3/c3.min.css" rel="stylesheet">
     <link href="../assets/libs/chartist/dist/chartist.min.css" rel="stylesheet">
-    <link href="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.css" rel="stylesheet" />
+    <link href="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.css" rel="stylesheet"/>
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/alasql/4.2.3/alasql.min.js"></script>
-   
-    
-    
-
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
     <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-    
-
-
-    <style>
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #exampleTab, #exampleTab * {
-                visibility: visible;
-            }
-            #exampleTab {
-                position: absolute;
-                left: 0;
-                top: 0;
-            }
-        }
-
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 10vh;
-        }
-
-        .result-box {
-            background-color: #f0f0f0;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+    <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
+    <![endif]-->
 </head>
 
 <body>
@@ -293,7 +258,7 @@ ob_end_flush();
         <!-- Sidebar scroll-->
         <div class="scroll-sidebar" data-sidebarbg="skin6">
             <!-- Sidebar navigation-->
-            <?php include 'Menu.php'; ?>
+                <?php include 'Menu.php'; ?>
             <!-- End Sidebar navigation -->
         </div>
         <!-- End Sidebar scroll-->
@@ -314,239 +279,102 @@ ob_end_flush();
                     <div class="card">
 
                         <div class="card-body">
-                            <h4 class="card-title">Crear Revisión</h4>
-                            <h6 class="card-subtitle">Cree y administre revisiones de inventario ciclico </h6>
-                            <br>
-                            <?php echo $Mensajeerror; ?>
+                            <h4 class="card-title">Bloquear productos que esten en piking</h4>
+                            <h6 class="card-subtitle">Puede bloquear del inventario de Piking algun lote para que no sea despachado </h6>
+
                             <?php echo $MensajeExito; ?>
                             <br>
-                            <h4 class="card-title">Seleccione los datos de bodega y Liea a consultar </h4>
+                            <br>
+<!-- Formulario de datos -->
                             <div class="my-content formulario">
                                 <form role="form" action="" method="post" enctype="multipart/form-data">
                                     <div class="form-body">
-                            <div class="row">
-                            
-                                    <div class="col-md-6">
-                                            
-                                            <div class="form-group">
-                                                <label>Bodega</label>
-                                                <select  required class="funy form-control ng-pristine ng-valid ng-valid-required ng-touched  monospace-font" name="txtBodega" id="txtBodega" ng-model="properties.value" ng-options="ctrl.getValue(option) as (ctrl.getLabel(option) | uiTranslate) for option in properties.availableValues" ng-required="properties.required" ng-disabled="properties.disabled">
-                                                    <option style="display:none; height:50px;" value="" class="ng-binding">
-                                                        --- Bodega ---
-                                                    </option>
-                                                    <?php
-                                                    $conn = new mysqli($servername, $username, $password, $dbname);
-                                                    $cargos = "SELECT DISTINCT(Bodega) FROM `posiciones` order by Bodega+'';";
-                                                    $result = $conn->query($cargos);
-                                                    if ($result->num_rows > 0) {
-                                                        while ($row = $result->fetch_assoc()) {
-                                                            echo '<option value="' . $row['Bodega'] . '">Bodega ' . $row['Bodega'] . ' </option>';
-                                                        }
-                                                    }
-                                                    ?>
-                                                </select>
+                                    <form>
+                                    <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label>IDH</label>
+                                                    <input name="txtIDH" type="text"
+                                                           class="form-control"
+                                                           placeholder="1234567..."
+                                                           value="<?php echo $txtIDH; ?>" readonly required>
+                                                </div>
                                             </div>
-                                            </div>
-                                            
-                                            <div class="col-md-6">        
-                                            <div class="form-group">
-                                                <label>Linea</label>
-                                                <select  required class="funy form-control ng-pristine ng-valid ng-valid-required ng-touched  monospace-font" name="txtLinea" id="txtLinea" ng-model="properties.value" ng-options="ctrl.getValue(option) as (ctrl.getLabel(option) | uiTranslate) for option in properties.availableValues" ng-required="properties.required" ng-disabled="properties.disabled">
-                                                    <option style="display:none; height:50px;" value="" class="ng-binding">
-                                                        --- Linea ---
-                                                    </option>
-                                                    <?php
-                                                    $conn = new mysqli($servername, $username, $password, $dbname);
-                                                    $cargos = "SELECT DISTINCT(LINEA) as Linea FROM `productos`;";
-                                                    $result = $conn->query($cargos);
-                                                    if ($result->num_rows > 0) {
-                                                        while ($row = $result->fetch_assoc()) {
-                                                            echo '<option value="' . $row['Linea'] . '"> ' . $row['Linea'] . ' </option>';
-                                                        }
-                                                    }
-                                                    ?>
-                                                </select>
-                                            </div>
-                                            </div>
-                                                
-                            </div>
-                            
 
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label>Lote de produccion</label>
+                                                    <select required class="funy form-control ng-pristine ng-valid ng-valid-required ng-touched" name="txtLote" id="txtLote" ng-model="properties.value" ng-options="ctrl.getValue(option) as (ctrl.getLabel(option) | uiTranslate) for option in properties.availableValues" ng-required="properties.required" ng-disabled="properties.disabled" >
+                                                        <option style="display:none; height:50px;" value="" class="ng-binding">
+                                                            --- Lote ---
+                                                        </option>
+
+                                                        <?php
+                                                        $conn = new mysqli($servername, $username, $password, $dbname);
+                                                        $cargos = "SELECT LoteProduccion, count(*) as Bultos FROM `detalle_piking` where IDH = $txtIDH and Estatus is Null group by LoteProduccion; ";
+
+                                                        $result = $conn->query($cargos);
+                                                        if ($result->num_rows > 0) {
+                                                            while ($row = $result->fetch_assoc()) {
+
+                                                                echo '<option value="' . $row['LoteProduccion'] . '">' . $row['LoteProduccion'] .' -- '.$row['Bultos'] . ' Bultos</option>';
+                                                            }
+                                                        }
+                                                        ?>
+
+
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label>Razon del bloqueo</label>
+                                                    <input name="txtBultos" type="text" 
+                                                           class="form-control"
+                                                           placeholder="Justificacion de bloqueo"
+                                                           value=""  required>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label>Acción</label>
+                                                    <select name="txtAccion" class="form-control" required>
+                                                        <option value="Bloquear">Bloquear</option>
+                                                        <option value="Desbloquear">Desbloquear</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        
+
+
+
+                                        <!-- FIN Row para Elemento de formulario -->
+
+                                        <!--INICIO Row para Elemento de formulario -->
+
+                                        <!-- FIN Row para Elemento de formulario -->
+
+
+
+
+
+                                    </div>
+                                    <br>
+
+                                
                                     <div class="form-actions">
-                                        <div class="text-center" style="padding-top: 65px;">
-                                            <button type="submit" value="btnGenerarReporte" name="accion"
-                                                    class="btn btn-outline-success">Generar Listado
+                                        <div class="text-center">
+                                                <a class="btn btn-outline-danger" style="margin-left: 2rem" href="DetallePiking.php?Guia=<?php echo $txtIDH?>"><span > Regresar </span></a>
+                                            <button type="submit" value="btnBloquearLote" name="accion"
+                                                    class="btn btn-outline-success">Aplicar 
                                             </button>
                                         </div>
                                     </div>
-
-                                    </form>
-                                    
-                                    
-                        </div>
-
-                        <div class="card-body">
-                            <h4 class="card-title">Detalle de Inventario Ciclico</h4>
-                            <h6 class="card-subtitle"></h6>
-                            <br>
-                            <?php echo $Mensajeerror; ?>
-                            <?php echo $MensajeExito; ?>
-                            <br>
-                            <div >
-                                <!-- Column -->
-                                <div >
-                                    <div class="dataTables_wrapper" style="overflow-x: auto; " id="ExampleTab">
-                                    <table id="example" class="table table-striped" cellspacing="0" width="100%">
-                                        <thead>
-
-                                        <th>Carril</th>
-                                        <th>IDH</th>
-                                        <th>Linea</th>
-                                        <th>Estado</th>
-                                        <th>Descripcion</th>
-                                        <th>Fecha Produccion</th>
-                                        <th>Total</th>
-                                        
-                                        
-                                        </thead>
-
-                                        <tbody>
-                                        <?php
-                                        for ($i = 0; $i < $lista_Guias; $i++) {
-                                            echo "<tr>";
-
-                                            echo "<td>";
-                                            echo $lista_Guias['Carril'];
-                                            echo "</td>";
-
-                                            echo "<td>";
-                                            echo $lista_Guias['IDH'];
-                                            echo "</td>";
-
-                                            echo "<td>";
-                                            echo $lista_Guias['LINEA'];
-                                            echo "</td>";
-
-                                            echo "<td>";
-                                            echo $lista_Guias['Estado'];
-                                            echo "</td>";
-
-                                            echo "<td>";
-                                            echo $lista_Guias['Descripcion'];
-                                            echo "</td>";
-
-                                            echo "<td>";
-                                            echo date('d/m/Y', strtotime($lista_Guias['FProduccion']));
-                                            echo "</td>";
-
-                                            echo "<td>";
-                                            echo $lista_Guias['Total'];
-                                            $TotalPallets += $lista_Guias['Total'];
-                                            echo "</td>";
-
-                                            
-                                            $lista_Guias = $ejecutar_sentencia_Guias->fetch(PDO::FETCH_ASSOC);
-                                        }
-                                        ?>
-
-<!-- Linea de los totales -->
-<?php 
-
-
-
-echo "<tr>";
-
-echo "<td>";
-echo "Total de Pallets: ";
-echo "</td>";
-
-echo "<td>";
-echo "";
-echo "</td>";
-
-echo "<td>";
-echo "";
-echo "</td>";
-
-echo "<td>";
-echo "";
-echo "</td>";
-
-echo "<td>";
-echo "";
-echo "</td>";
-echo "<td>";
-echo "";
-echo "</td>";
-
-echo "<td>";
-echo $TotalPallets;
-
-echo "</td>";
-
-echo "<td>";
-echo "             ";
-echo "</td>";
-
-
-?>
-
-                                        </tbody>
-                                    </table>
-
-<br>
-<br>
-    <div class="container">
-        <div class="result-box">
-           
-        <h2 style="text-align: right: ;">El total de pallets es: <?php echo $TotalPallets; ?></h2>
-        </div>
-    </div>
-       <br>
-    <div class="container">
-    <button  type="button" class="btn btn-success" onclick="exportarExcel()">EXPORTAR A EXCEL</button>
-    </div>
-
-
-<script>
-    $(document).ready(function() {
-        $('#example').DataTable();
-    });
-
-    function imprimirTabla() {
-        window.print();
-    }
-
-    function exportarExcel() {
-        var tabla = document.getElementById('example');
-        var ws = XLSX.utils.table_to_sheet(tabla, {raw: true, defval: ""});
-        
-        // Recorrer todas las celdas y forzar tipo texto para mantener formato exacto
-        for (var cell in ws) {
-            if (cell[0] !== '!' && ws[cell].v !== undefined) {
-                ws[cell].t = 's'; // Forzar tipo string
-            }
-        }
-        
-        var wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-        XLSX.writeFile(wb, 'BoletaInventario.xlsx');
-    }
-</script>
-
-
-
-
-                                </div>
-
-
-                                </div>
-
+                                </form>
                             </div>
-
-
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -596,9 +424,41 @@ echo "</td>";
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
+<script src="../dist/js/JsBarcode.all.min.js"></script>
+    <script>
+        // Establece el tiempo de inactividad en milisegundos (5 minutos = 300,000 milisegundos)
+        const tiempoInactividad = 300000;
 
+        // Función que redirige al usuario a la página específica
+        function redirigir() {
+            window.location.href = 'index.php'; // Reemplaza 'pagina-destino.html' con la URL de la página a la que deseas redirigir al usuario.
+        }
 
+        let temporizadorInactividad;
 
+        // Función que reinicia el temporizador de inactividad
+        function reiniciarTemporizador() {
+            clearTimeout(temporizadorInactividad);
+            temporizadorInactividad = setTimeout(redirigir, tiempoInactividad);
+        }
+
+        // Agrega eventos para rastrear la actividad del usuario
+        document.addEventListener('mousemove', reiniciarTemporizador);
+        document.addEventListener('keypress', reiniciarTemporizador);
+
+        // Inicia el temporizador de inactividad al cargar la página
+        reiniciarTemporizador();
+    </script> 
+    <script>
+        <?php if ($MensajeExito != '') { ?>
+        setTimeout(function() {
+            window.location.href = 'DetallePiking.php?Guia=<?php echo $txtIDH; ?>';
+        }, 7000);
+        <?php } ?>
+    </script>
 </body>
+<script>
 
+    JsBarcode(".codigo").init();
+</script>
 </html>

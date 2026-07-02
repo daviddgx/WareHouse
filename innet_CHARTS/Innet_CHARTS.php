@@ -10,15 +10,21 @@ function GetNombreBodegas() {
         die("Error de conexión: " . $conn->connect_error);
     }
 
-    $sql = "
-        SELECT 
-    CONCAT('Bodega - ', CAST(p.Bodega AS SIGNED)) AS Descripcion,
+        $sql = "SELECT 
+    CONCAT(
+        'Bodega ',
+        CAST(p.Bodega AS SIGNED),
+        ' - ',
+        SUM(CASE WHEN p.Estado = 'Ocupada' THEN 1 ELSE 0 END)
+    ) AS Descripcion,
+    
     SUM(CASE WHEN p.Estado = 'Ocupada' THEN 1 ELSE 0 END) AS posiciones_ocupadas,
     SUM(CASE WHEN p.Estado = 'Libre' THEN 1 ELSE 0 END) AS posiciones_libres,
     COUNT(*) AS total_posiciones,
     ROUND(
         (SUM(CASE WHEN p.Estado = 'Ocupada' THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0)) * 100
     ) AS porcentaje_ocupacion
+
 FROM posiciones p
 WHERE p.Bodega <> 9
   AND NOT EXISTS (
@@ -27,8 +33,7 @@ WHERE p.Bodega <> 9
       WHERE t.ubicacion = p.Ubicacion
   )
 GROUP BY p.Bodega
-ORDER BY CAST(p.Bodega AS SIGNED) ASC;
-    ";
+ORDER BY CAST(p.Bodega AS SIGNED) ASC";
 
     $bodegas = array();
     $result = $conn->query($sql);

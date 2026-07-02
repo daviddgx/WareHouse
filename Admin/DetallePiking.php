@@ -300,6 +300,9 @@ ob_end_flush();
                                         <li class="nav-item active">
                                             <a class="btn btn-outline-warning" style="margin-left: 2rem" href="Mantenimiento_Piking_QuitarInventario.php?IDH=<?php echo $IDH_PAR?>"><span > Eliminar del inventario </span></a>
                                         </li>
+                                        <li class="nav-item active">
+                                            <a class="btn btn-outline-secondary" style="margin-left: 2rem" href="Mantenimiento_Piking_BloquearLote.php?IDH=<?php echo $IDH_PAR?>"><span > Bloquear O DesBloquear Lote </span></a>
+                                        </li>
                                     </ul>
                                 </div>
                             </nav>
@@ -319,6 +322,7 @@ ob_end_flush();
                                     <th>Fecha Ingreso</th>
                                     <th>Vencimiento</th>
                                     <th>Cuarentena</th>
+                                    <th>Estado</th>
                                     <th>Caltidad</th>
 
 
@@ -339,7 +343,7 @@ ob_end_flush();
                                         echo "</td>";
 
                                         echo "<td>";
-                                        echo $lista_Productos['FechaProduccion'];
+                                        echo date('d-m-Y', strtotime($lista_Productos['FechaProduccion']));
                                         echo "</td>";
 
                                         echo "<td>";
@@ -347,15 +351,24 @@ ob_end_flush();
                                         echo "</td>";
 
                                         echo "<td>";
-                                        echo $lista_Productos['FechaIngreso'];
+                                        echo date('d-m-Y', strtotime($lista_Productos['FechaIngreso']));
                                         echo "</td>";
 
                                         echo "<td>";
-                                        echo $lista_Productos['FechaVencimiento'];
+                                        echo date('d-m-Y', strtotime($lista_Productos['FechaVencimiento']));
                                         echo "</td>";
 
                                         echo "<td>";
-                                        echo $lista_Productos['FechaCuarentena'];
+                                        echo date('d-m-Y', strtotime($lista_Productos['FechaCuarentena']));
+                                        echo "</td>";
+
+                                        
+                                        echo "<td>";
+                                        if ($lista_Productos['EstatusProducto'] == 'Bloqueado') {
+                                            echo "<span style='color: red;'>Bloqueado</span>";
+                                        } else {
+                                            echo "Libre";
+                                        }
                                         echo "</td>";
 
                                         echo "<td>";

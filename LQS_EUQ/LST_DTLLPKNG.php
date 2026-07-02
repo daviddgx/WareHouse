@@ -7,7 +7,7 @@ try{
 
 
     //paso 3 hacer la sentencia sql y ejecutarla
-    $sqlDatos = "SELECT IDH,Origen,FechaProduccion,LoteProduccion,FechaIngreso,FechaVencimiento,FechaCuarentena, Count(*) as Cantidad FROM `detalle_piking` where IDH = $IDH_PAR and Estatus is null GROUP by IDH,Origen,FechaProduccion,LoteProduccion,FechaIngreso,FechaVencimiento,FechaCuarentena";
+    $sqlDatos = "SELECT IDH,Origen,FechaProduccion,LoteProduccion,FechaIngreso,FechaVencimiento,FechaCuarentena,EstatusProducto, Count(*) as Cantidad FROM `detalle_piking` where IDH = $IDH_PAR and Estatus is null GROUP by IDH,Origen,FechaProduccion,LoteProduccion,FechaIngreso,FechaVencimiento,FechaCuarentena";
     $ejecutar_sentencia_Productos = $conn->query($sqlDatos);
     if(!$ejecutar_sentencia_Productos)
     {

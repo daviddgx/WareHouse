@@ -1,0 +1,51 @@
+<?php
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../schema_certificados_mantenimiento.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  http_response_code(405);
+  die('Método no permitido');
+}
+
+$conn = db();
+ensure_certificados_mantenimiento_schema($conn);
+
+$id = (int)($_POST['id'] ?? 0);
+if ($id <= 0) {
+  http_response_code(400);
+  die('ID inválido');
+}
+
+$exists = $conn->prepare('SELECT id, anulado FROM certificados_mantenimiento WHERE id=? LIMIT 1');
+$exists->bind_param('i', $id);
+$exists->execute();
+$certificado = $exists->get_result()->fetch_assoc();
+$exists->close();
+
+if (!$certificado) {
+  http_response_code(404);
+  die('Certificado no encontrado');
+}
+
+if ((int)$certificado['anulado'] === 1) {
+  header('Location: listado.php?anulado=0&motivo=ya_anulado');
+  exit;
+}
+
+$stmt = $conn->prepare('UPDATE certificados_mantenimiento SET anulado=1, fecha_anulacion=NOW() WHERE id=? AND anulado=0 LIMIT 1');
+if (!$stmt) {
+  http_response_code(500);
+  die('No fue posible preparar la anulación');
+}
+$stmt->bind_param('i', $id);
+$ok = $stmt->execute();
+$rows = $stmt->affected_rows;
+$stmt->close();
+
+if (!$ok || $rows < 1) {
+  header('Location: listado.php?anulado=0');
+  exit;
+}
+
+header('Location: listado.php?anulado=1');
+exit;

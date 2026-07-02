@@ -2,6 +2,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/schema_tortillas.php';
 require_once __DIR__ . '/schema_rellenitos.php';
+require_once __DIR__ . '/schema_chiles.php';
 
 $deliveredOrders = 0;
 $satisfiedClients = 0;
@@ -16,11 +17,14 @@ try {
 
   ensure_tortilla_schema($conn);
   ensure_rellenitos_schema($conn);
+  ensure_chiles_schema($conn);
 
   $tortillaDelivered = 0;
   $tortillaClients = 0;
   $rellenitoDelivered = 0;
   $rellenitoClients = 0;
+  $chilesDelivered = 0;
+  $chilesClients = 0;
 
   if ($result = $conn->query("SELECT COUNT(*) AS delivered_orders, COUNT(DISTINCT codigo) AS satisfied_clients FROM tortilla_orders WHERE estado='Despachado'")) {
     $row = $result->fetch_assoc();
@@ -40,8 +44,17 @@ try {
     $result->free();
   }
 
-  $deliveredOrders = $tortillaDelivered + $rellenitoDelivered;
-  $satisfiedClients = $tortillaClients + $rellenitoClients;
+  if ($result = $conn->query("SELECT COUNT(*) AS delivered_orders, COUNT(DISTINCT codigo) AS satisfied_clients FROM chiles_orders WHERE estado='Despachado'")) {
+    $row = $result->fetch_assoc();
+    if ($row) {
+      $chilesDelivered = (int)($row['delivered_orders'] ?? 0);
+      $chilesClients = (int)($row['satisfied_clients'] ?? 0);
+    }
+    $result->free();
+  }
+
+  $deliveredOrders = $tortillaDelivered + $rellenitoDelivered + $chilesDelivered;
+  $satisfiedClients = $tortillaClients + $rellenitoClients + $chilesClients;
 } catch (Throwable $e) {
   $statsError = 'No se pudieron cargar las métricas en este momento.';
 }
@@ -653,6 +666,43 @@ try {
             <p class="text-white-50 small mb-3">Calientito y reconfortante, perfecto para la tarde.</p>
             <a href="Atoles.php" class="btn btn-outline-light w-100">
               Ir a Atoles <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Certificados de Mantenimiento -->
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="125">
+          <div class="menu-card h-100">
+            <div class="d-flex align-items-center mb-2">
+              <lord-icon
+                src="https://cdn.lordicon.com/fjvfsqea.json"
+                trigger="hover"
+                style="width:42px;height:42px;margin-right:.5rem">
+              </lord-icon>
+              <div class="title">Certificados de Mantenimiento</div>
+            </div>
+            <p class="text-white-50 small mb-3">Crea, consulta e imprime certificados con código QR.</p>
+            <a href="CertificadosMantnimiento/formulario.php" class="btn btn-outline-light w-100">
+              Ir a Certificados <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+          </div>
+        </div>
+
+
+        <!-- Chiles -->
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="175">
+          <div class="menu-card h-100">
+            <div class="d-flex align-items-center mb-2">
+              <lord-icon
+                src="https://cdn.lordicon.com/ypobdojb.json"
+                trigger="hover"
+                style="width:42px;height:42px;margin-right:.5rem">
+              </lord-icon>
+              <div class="title">Control de Chiles</div>
+            </div>
+            <p class="text-white-50 small mb-3">Registra pedidos por porción y unidad con control de cambio.</p>
+            <a href="Chiles.php" class="btn btn-outline-light w-100">
+              Ir a Chiles <i class="bi bi-arrow-right ms-1"></i>
             </a>
           </div>
         </div>

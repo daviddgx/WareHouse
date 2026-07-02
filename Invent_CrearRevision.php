@@ -519,15 +519,7 @@ echo "</td>";
 
     function exportarExcel() {
         var tabla = document.getElementById('example');
-        var ws = XLSX.utils.table_to_sheet(tabla, {raw: true, defval: ""});
-        
-        // Recorrer todas las celdas y forzar tipo texto para mantener formato exacto
-        for (var cell in ws) {
-            if (cell[0] !== '!' && ws[cell].v !== undefined) {
-                ws[cell].t = 's'; // Forzar tipo string
-            }
-        }
-        
+        var ws = XLSX.utils.table_to_sheet(tabla);
         var wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
         XLSX.writeFile(wb, 'BoletaInventario.xlsx');

@@ -26,7 +26,7 @@ function DisponibleparaPikear($IDH){
 
     include '../LQS_EUQ/Auth.php';
 
-    $sentencia = $pdo->prepare("select count(*) as Bultos from  detalle_piking where IDH = $IDH and Estatus is null");
+    $sentencia = $pdo->prepare("select count(*) as Bultos from  detalle_piking where IDH = $IDH and Estatus is null and EstatusProducto != 'Bloqueado'");
     $sentencia->execute();
     $Count =  $sentencia->fetch(PDO::FETCH_LAZY);
 
@@ -460,7 +460,7 @@ ob_end_flush();
                                                 $conn = new mysqli($servername, $username, $password, $dbname);
                                                 $IDH = $lista_Guias['Material'];
                                                // $cargos = "SELECT distinct(LoteProduccion) as Lotes FROM dbs9098416.detalle_piking where IDH = $IDH  and Estatus is null order by LoteProduccion desc;";
-                                                $cargos = "SELECT DISTINCT(LoteProduccion) as Lotes, count(*) as Bultos FROM dbs9098416.detalle_piking WHERE IDH = $IDH  and Estatus is null group by LoteProduccion ORDER BY CASE WHEN LoteProduccion LIKE 'G.M %' THEN STR_TO_DATE(SUBSTRING(LoteProduccion, 5), '%d-%m-%Y') ELSE STR_TO_DATE(LoteProduccion, '%d-%m-%Y') END DESC ;";
+                                                $cargos = "SELECT DISTINCT(LoteProduccion) as Lotes, count(*) as Bultos FROM dbs9098416.detalle_piking WHERE IDH = $IDH  and Estatus is null and EstatusProducto != 'Bloqueado' group by LoteProduccion ORDER BY CASE WHEN LoteProduccion LIKE 'G.M %' THEN STR_TO_DATE(SUBSTRING(LoteProduccion, 5), '%d-%m-%Y') ELSE STR_TO_DATE(LoteProduccion, '%d-%m-%Y') END DESC ;";
 
                                                 $result = $conn->query($cargos);
                                                

@@ -26,8 +26,7 @@ function Alcanza( $Lote, $IDH, $Guia,$CajasDespacho) {
     $conn0 = new mysqli($servername, $username, $password, $dbname);
     $SQL = "SELECT COUNT(*) AS Disponibles FROM detalle_piking WHERE LoteProduccion = '$Lote' AND IDH = $IDH AND Estatus IS NULL";
 
-    echo"-------------------- ";
-    echo " Cajas para Alcanza: " . $CajasDespacho;
+   
 
     $result = $conn0->query($SQL);
 
@@ -73,13 +72,7 @@ if ($result->num_rows > 0) {
         $CajasDespacho = $row1['Cajas'];
         $ID_DespachoDG = $row1['IdRegistro'];
 
-        echo"---InicioDatos---". "\n";
-        echo " Lote: " .$Lote."\n";
-        echo " IDH: " .$IDH."\n";
-        echo " CajasDespacho: " .$CajasDespacho."\n";
-        echo " BultosDespachables: " .$BultosDespachables."\n";
-        echo " ID_DespachoDG: " .$ID_DespachoDG."\n";
-        echo"--FinDatos----". "\n";
+       
         
 
 try {
@@ -90,7 +83,7 @@ try {
        
       //  echo "Validacion si alcanza " . $NoBucle;
         if (Alcanza( $Lote, $IDH, $Guia,$CajasDespacho)) {
-            echo "Alcanza TRUE, No. de Bucle: " . $NoBucle;
+            //echo "Alcanza TRUE, No. de Bucle: " . $NoBucle;
             $FechaActualREG = date('Y-m-d H:i:s');
             $SQL00 = "INSERT INTO despachos (Guia_Carga, Entrega, IDH, Descripcion, Posicion, Rampa, Fecha_Hora_Despacho, FechaRealizado, Operador, Estado) VALUES (?, NULL, ?, NULL, NULL, NULL, ?, ?, 'PIKING', 'Despachado')";
             $stmt00 = $conexion->prepare($SQL00);
@@ -98,9 +91,9 @@ try {
 
         
             $SQL0 = "UPDATE detalle_piking SET Estatus = 'Despachado', ID_Despacho = $ID_DespachoDG, Transporte = $Guia  WHERE IDH = $IDH AND Estatus IS NULL AND LoteProduccion = '$Lote' LIMIT $CajasDespacho";
-            echo "   \n-- Si Alcanza --\n  "; 
-            echo $SQL0;
-            echo "   \n--\n  ";
+            // echo "   \n-- Si Alcanza --\n  "; 
+            // echo $SQL0;
+            // echo "   \n--\n  ";
             $stmt0 = $conexion->prepare($SQL0);
             $stmt0->execute();
             
@@ -111,12 +104,12 @@ try {
 
         } else {
         
-            echo "Alcanza FALSE, No. de Bucle: " . $NoBucle;
-            echo"-- Bultos despachables: $BultosDespachables se intentan despachar: $CajasDespacho para el IDH:  $IDH";
+           // echo "Alcanza FALSE, No. de Bucle: " . $NoBucle;
+           // echo"-- Bultos despachables: $BultosDespachables se intentan despachar: $CajasDespacho para el IDH:  $IDH";
             $SQL0 = "UPDATE detalle_piking SET Estatus = 'Despachado', ID_Despacho = $ID_DespachoDG, Transporte = $Guia  WHERE IDH = $IDH AND Estatus IS NULL AND LoteProduccion = '$Lote' LIMIT $BultosDespachables";
             
-            echo $SQL0;
-            echo "   \n--\n  ";
+           // echo $SQL0;
+           // echo "   \n--\n  ";
             $stmt0 = $conexion->prepare($SQL0);
             $stmt0->execute();
             

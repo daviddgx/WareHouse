@@ -52,7 +52,7 @@ switch ($accion) {
         $txtBultos =   (isset($_POST['txtBultos'])) ? $_POST['txtBultos'] : "";
   
         for ($i = 1; $i <= $txtBultos; $i++) {
-            $sentencia = $pdo->prepare("INSERT INTO `dbs9098416`.`detalle_piking`(`Bodega`,`Carril`,`Posicion`,`Nivel`,`Ubicacion`,`Estado`,`IDH`,`PaletCompleto`,`UnidadesEnPallet`,`Origen`,`FechaProduccion`,`LoteProduccion`,`FechaIngreso`,`FechaVencimiento`,`FechaCuarentena`,`Cantidad`,`EstatusProducto`,`Verificador`,`UsuarioMontaCargas`,`Turno`,`EstatusUbicacion`,`Observaciones`,`Estatus`,`ID_Despacho`,`Transporte`)VALUES(NULL,NULL,NULL,NULL,NULL,NULL,$txtIDH,NULL,1,'APP','$txtLote','$txtLote','$txtLote',NULL,NULL,$txtBultos,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);");
+            $sentencia = $pdo->prepare("INSERT INTO `dbs9098416`.`detalle_piking`(`Bodega`,`Carril`,`Posicion`,`Nivel`,`Ubicacion`,`Estado`,`IDH`,`PaletCompleto`,`UnidadesEnPallet`,`Origen`,`FechaProduccion`,`LoteProduccion`,`FechaIngreso`,`FechaVencimiento`,`FechaCuarentena`,`Cantidad`,`EstatusProducto`,`Verificador`,`UsuarioMontaCargas`,`Turno`,`EstatusUbicacion`,`Observaciones`,`Estatus`,`ID_Despacho`,`Transporte`)VALUES(NULL,NULL,NULL,NULL,NULL,NULL,$txtIDH,NULL,1,'APP','$txtLote','$txtLote','$txtLote',NULL,NULL,$txtBultos,'Libre',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);");
             $sentencia->execute();
         }
 

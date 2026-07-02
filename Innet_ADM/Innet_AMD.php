@@ -254,34 +254,46 @@ function LiberarCuarentena(){
 
 }
 
-function LiberarCuarentenaHoy(){
-
-    date_default_timezone_set('America/Guatemala');
-    $fecha = date("Y") . '-' . date("m") . '-' . date("d");
-
-
+function LiberarCuarentenaHoy() {
 
     include '../LQS_EUQ/Auth.php';
-    $sentencia = $pdo->prepare("SELECT Count(*) as Unidades FROM posiciones  WHERE DATE(FechaCuarentena) = CURDATE();");
 
-    $sentencia->execute();
-    $Count =  $sentencia->fetch(PDO::FETCH_LAZY);
+    $fecha = date('Y-m-d');
 
-    return  $Count['Unidades'];
+    $sentencia = $pdo->prepare("
+        SELECT COUNT(*) AS Unidades
+        FROM posiciones
+        WHERE DATE(FechaCuarentena) = :fecha
+    ");
 
+    $sentencia->execute([
+        ':fecha' => $fecha
+    ]);
+
+    return $sentencia->fetch(PDO::FETCH_ASSOC)['Unidades'];
 }
 
-function  LiberarUnidadesCuarentena(){
+function LiberarUnidadesCuarentena() {
 
-    date_default_timezone_set('America/Guatemala');
-    $fecha = date("Y") . '-' . date("m") . '-' . date("d");
     include '../LQS_EUQ/Auth.php';
 
-    $sentencia = $pdo->prepare("Update dbs9098416.posiciones  set  EstatusUbicacion = 'Libre'  where date(FechaCuarentena) <= date('$fecha') and EstatusUbicacion = 'Cuarentena'; ");
-    $sentencia->execute();
+    $fecha = date('Y-m-d');
+    $fechaLimite = $fecha . ' 23:59:59';
 
+    $observacion = "Liberada de Cuarentena por APP: $fecha";
 
+    $sentencia = $pdo->prepare("
+        UPDATE posiciones
+        SET Observaciones = :obs,
+            EstatusUbicacion = 'Libre'
+        WHERE FechaCuarentena <= :fechaLimite
+        AND EstatusUbicacion = 'Cuarentena'
+    ");
 
+    $sentencia->execute([
+        ':obs' => $observacion,
+        ':fechaLimite' => $fechaLimite
+    ]);
 }
 
 function CapacidadTotalFIFO(){

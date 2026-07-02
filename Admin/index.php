@@ -1,3 +1,4 @@
+
 <?php
 ob_start();
 session_start();
@@ -910,7 +911,7 @@ ob_end_flush();
                                                     Proximos a vencer
                                                      <button id="downloadCSV" class="btn btn-primary btn-sm" style="margin-left: 10px;">Descargar Reporte</button>
                                                 </h4>
-                                                <canvas id="Top10AVencer" height="200"></canvas>
+                                                <canvas id="Top10AVencer" height="150"></canvas>
                                             </div>
                                         </div>
                                     </div>
@@ -2359,7 +2360,7 @@ ORDER BY FechaVencimiento;";
 
 <script>
     // Top 10 a Vencer
-    var colores = ["#c2411d", "#c2411d", "#c2411d", "#7ea64f", "#91ab4f", "#a5b04e", "#b9b54e", "#cdba4d", "#e1bf4d", "#f5b14c"];
+    var colores = ["#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d" ];
 
     new Chart(document.getElementById("Top10AVencer").getContext('2d'), {
         type: 'bar',
@@ -2433,7 +2434,21 @@ try {
     include '../LQS_EUQ/Connect.php';
     $conn = new mysqli($servername, $username, $password, $dbname);
 
-    $sql = "SELECT PK.IDH,PR.Descripcion,date(PK.FechaVencimiento) as Fecha, count(*) as Bultos FROM `detalle_piking` PK inner join productos PR on PK.IDH = PR.IDH where PK.Transporte is null  and date(PK.FechaVencimiento) is not null and date(PK.FechaVencimiento) <= DATE_ADD(CURDATE(), INTERVAL 1 YEAR) GROUP by PK.IDH,date(PK.FechaVencimiento) order by date(PK.FechaVencimiento) asc Limit 10;";
+    $sql = "SELECT
+    PK.IDH,
+    PR.Descripcion,
+    DATE(PK.FechaVencimiento) AS Fecha,
+    COUNT(*) AS Bultos
+FROM detalle_piking PK
+INNER JOIN productos PR
+    ON PK.IDH = PR.IDH
+WHERE PK.Transporte IS NULL
+  AND PK.FechaVencimiento IS NOT NULL
+  AND PK.FechaVencimiento <= DATE_ADD(CURDATE(), INTERVAL 1 YEAR)
+  AND COALESCE(PK.EstatusProducto, '') <> 'Bloqueado'
+GROUP BY PK.IDH, DATE(PK.FechaVencimiento)
+ORDER BY PK.FechaVencimiento ASC
+LIMIT 10;";
     $result = $conn->query($sql);
 
     // Inicializar arrays para las etiquetas y los conjuntos de datos
@@ -2460,7 +2475,7 @@ try {
 
 <script>
     // Top 10 a Vencer
-    var colores = ["#c2411d", "#c2411d", "#c2411d", "#7ea64f", "#91ab4f", "#a5b04e", "#b9b54e", "#cdba4d", "#e1bf4d", "#f5b14c"];
+    var colores = ["#c2411d", "#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d","#c2411d"];
 
     new Chart(document.getElementById("Top10AVencerPK").getContext('2d'), {
         type: 'bar',
@@ -2535,13 +2550,13 @@ try {
             <?php
             include '../LQS_EUQ/Connect.php';
             $conn = new mysqli($servername, $username, $password, $dbname);
-            $sql = "SELECT PK.IDH,PR.Descripcion,date(PK.FechaVencimiento) as Fecha, count(*) as Bultos FROM `detalle_piking` PK
+            $sql = "SELECT PK.IDH, PR.Descripcion, DATE_FORMAT(PK.FechaVencimiento, '%d-%m-%Y') as Fecha, count(*) as Bultos FROM `detalle_piking` PK
 inner join productos PR on PK.IDH = PR.IDH
-where PK.Transporte is null  and date(PK.FechaVencimiento) is not null and date(PK.FechaVencimiento) <= DATE_ADD(CURDATE(), INTERVAL 1 YEAR) GROUP by PK.IDH,date(PK.FechaVencimiento) order by date(PK.FechaVencimiento) asc";
+where PK.Transporte is null  and date(PK.FechaVencimiento) is not null and date(PK.FechaVencimiento) <= DATE_ADD(CURDATE(), INTERVAL 3 YEAR) GROUP by PK.IDH, date(PK.FechaVencimiento) order by date(PK.FechaVencimiento) asc";
             $result = $conn->query($sql);
             if ($result->num_rows > 0) {
                 while ($row = $result->fetch_assoc()) {
-                    echo '["' . $row['IDH'] . '", "' . $row['Descripcion'] . '", "' . $row['FechaVencimiento'] . '", "' . $row['Bultos'] . '"],';
+                    echo '["' . $row['IDH'] . '", "' . $row['Descripcion'] . '", "' . $row['Fecha'] . '", "' . $row['Bultos'] . '"],';
                 }
             }
             ?>

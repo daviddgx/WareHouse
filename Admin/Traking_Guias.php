@@ -1,75 +1,115 @@
 <?php
+
 ob_start();
 session_start();
+
+date_default_timezone_set('America/Guatemala');
+
 $currentDate = date('Y-m-d');
 
-if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
+if (
+    !isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) ||
+    $_SESSION['Usuario'] === '' ||
+    $_SESSION['UsuarioFecha'] !== $currentDate
+) {
     header('Location: ../Innet/505.html');
+    exit;
 }
-
 
 include '../LQS_EUQ/LST_GCDS.php';
-date_default_timezone_set('America/Guatemala');
-$fecha = date("d") . '-' . date("m") . '-' . date("Y");
 
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-} else {
-}
+$fecha = date('d-m-Y');
 
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
 
-
-
-
-// Fin de la conexion
-
-
-// Validar formulario y grabar informacion
-
-
+// Aquí puedes agregar posteriormente la validación
+// de formularios o procesamiento de información.
 
 ob_end_flush();
+
 ?>
 <!DOCTYPE html>
-<html dir="ltr" lang="en">
+<html dir="ltr" lang="es">
 
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <!-- Tell the browser to be responsive to screen width -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <!-- Favicon icon -->
-    <link rel="icon" type="image/png" sizes="16x16" href="../assets/images/Sertero/LogoCBP.png">
-    <title>Henkel CBP / AdminFIFO</title>
-    <!-- Custom CSS -->
-    <link href="../assets/extra-libs/c3/c3.min.css" rel="stylesheet">
-    <link href="../assets/libs/chartist/dist/chartist.min.css" rel="stylesheet">
-    <link href="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.css" rel="stylesheet"/>
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
-    <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
-    <link href="../dist/css/style.min.css" rel="stylesheet">
-    <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-   <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
+    <meta charset="utf-8">
+
+    <meta
+        http-equiv="X-UA-Compatible"
+        content="IE=edge"
+    >
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <meta
+        name="description"
+        content=""
+    >
+
+    <meta
+        name="author"
+        content=""
+    >
 
     <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-    />
-    <![endif]-->
+        rel="icon"
+        type="image/png"
+        sizes="16x16"
+        href="../assets/images/Sertero/LogoCBP.png"
+    >
+
+    <title>Henkel CBP / AdminFIFO</title>
+
+    <!-- Estilos principales -->
+    <link
+        href="../assets/extra-libs/c3/c3.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="../assets/libs/chartist/dist/chartist.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="../dist/css/Custom/PreLoaderStyle.css"
+    >
+
+    <link
+        href="../dist/css/Custom/adminContainer.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="../dist/css/style.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="../dist/css/Custom/ConEst.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    >
+
     <style>
-        Select {
+
+        select {
             height: 10px !important;
         }
 
@@ -83,14 +123,14 @@ ob_end_flush();
         }
 
         .btn-Sertero {
-            color: #fff;
+            color: #ffffff;
             background-color: #ed3131;
             border-color: #ed3737;
         }
 
         .page-item.active .page-link {
             z-index: 1;
-            color: #fff;
+            color: #ffffff;
             background-color: #ed3131;
             border-color: #ed3131;
         }
@@ -104,427 +144,832 @@ ob_end_flush();
             position: relative;
             z-index: 1;
         }
+
+        /*
+         * Mantiene los botones alineados cuando aparece
+         * el spinner.
+         */
+        .btn-accion-tabla,
+        .btn-confirmar-accion {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            min-width: 105px;
+        }
+
+        /*
+         * Apariencia de botón bloqueado.
+         */
+        .boton-procesando {
+            pointer-events: none !important;
+            cursor: not-allowed !important;
+            opacity: 0.65 !important;
+        }
+
+        /*
+         * Ajuste del spinner de Bootstrap.
+         */
+        .spinner-boton {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
+        }
+
     </style>
+
 </head>
 
 <body>
-<!-- ============================================================== -->
-<!-- Preloader - style you can find in spinners.css -->
-<!-- ============================================================== -->
+
+<!-- =============================================================== -->
+<!-- Preloader -->
+<!-- =============================================================== -->
+
 <div class="preloader">
+
     <div class="lds-ripple">
+
         <div class="preloader">
-            <br></br>
+
+            <br>
+
             <div class="logoPre">
-                <img src="../assets/images/Sertero/LogoHenkel.png" width="300px" height="auto">
-                <!-- Sertero<span style="color:#e88733">CBP</span> -->
+
+                <img
+                    src="../assets/images/Sertero/LogoHenkel.png"
+                    width="300"
+                    height="auto"
+                    alt="Henkel"
+                >
+
             </div>
+
             <div class="loader-frame">
-                <div class="loader1" id="loader1"></div>
-                <div class="loader2" id="loader2"></div>
+
+                <div
+                    class="loader1"
+                    id="loader1"
+                ></div>
+
+                <div
+                    class="loader2"
+                    id="loader2"
+                ></div>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
-<!-- ============================================================== -->
-<!-- Main wrapper - style you can find in pages.scss -->
-<!-- ============================================================== -->
-<div id="main-wrapper" data-theme="light" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
-     data-sidebar-position="fixed" data-header-position="fixed" data-boxed-layout="full">
-    <!-- ============================================================== -->
-    <!-- Topbar header - style you can find in pages.scss -->
-    <!-- ============================================================== -->
-    <header class="topbar" data-navbarbg="skin6">
+
+<!-- =============================================================== -->
+<!-- Contenedor principal -->
+<!-- =============================================================== -->
+
+<div
+    id="main-wrapper"
+    data-theme="light"
+    data-layout="vertical"
+    data-navbarbg="skin6"
+    data-sidebartype="full"
+    data-sidebar-position="fixed"
+    data-header-position="fixed"
+    data-boxed-layout="full"
+>
+
+    <!-- =========================================================== -->
+    <!-- Encabezado -->
+    <!-- =========================================================== -->
+
+    <header
+        class="topbar"
+        data-navbarbg="skin6"
+    >
+
         <nav class="navbar top-navbar navbar-expand-md">
-            <div class="navbar-header" data-logobg="skin6">
-                <!-- This is for the sidebar toggle which is visible on mobile only -->
-                <a class="nav-toggler waves-effect waves-light d-block d-md-none" href="javascript:void(0)"><i
-                            class="ti-menu ti-close"></i></a>
+
+            <div
+                class="navbar-header"
+                data-logobg="skin6"
+            >
+
+                <a
+                    class="nav-toggler waves-effect waves-light d-block d-md-none"
+                    href="javascript:void(0)"
+                >
+                    <i class="ti-menu ti-close"></i>
+                </a>
 
                 <div class="navbar-brand">
-                    <!-- Logo icon -->
+
                     <a href="index.php">
+
                         <b class="logo-icon">
-                            <!-- Dark Logo icon -->
-                            <img src="../assets/images/Sertero/LogoCBP.png" width="auto" height="40" class="" -->
-                            <!-- Light Logo icon -->
-                            <img src="../assets/images/logo-icon.png" alt="homepage" width="auto" height="10"
-                                 class="light-logo"/>
+
+                            <img
+                                src="../assets/images/Sertero/LogoCBP.png"
+                                width="auto"
+                                height="40"
+                                alt="CBP"
+                            >
+
+                            <img
+                                src="../assets/images/logo-icon.png"
+                                alt="Homepage"
+                                width="auto"
+                                height="10"
+                                class="light-logo"
+                            >
+
                         </b>
-                        <!--End Logo icon -->
-                        <!-- Logo text -->
+
                         <span class="logo-text">
-                                <!-- dark Logo text -->
-                                <img src="../assets/images/logo-text.png" alt="homepage" class="dark-logo" width="auto"
-                                     height="40"/>
-                            <!-- Light Logo text -->
-                                <img src="../assets/images/logo-light-text.png" class="light-logo" alt="homepage"/>
-                            </span>
+
+                            <img
+                                src="../assets/images/logo-text.png"
+                                alt="Homepage"
+                                class="dark-logo"
+                                width="auto"
+                                height="40"
+                            >
+
+                            <img
+                                src="../assets/images/logo-light-text.png"
+                                class="light-logo"
+                                alt="Homepage"
+                            >
+
+                        </span>
+
                     </a>
+
                 </div>
-                <!-- ============================================================== -->
-                <!-- End Logo -->
-                <!-- ============================================================== -->
-                <!-- ============================================================== -->
-                <!-- Toggle which is visible on mobile only -->
-                <!-- ============================================================== -->
-                <a class="topbartoggler d-block d-md-none waves-effect waves-light" href="javascript:void(0)"
-                   data-toggle="collapse" data-target="#navbarSupportedContent"
-                   aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><i
-                            class="ti-more"></i></a>
+
+                <a
+                    class="topbartoggler d-block d-md-none waves-effect waves-light"
+                    href="javascript:void(0)"
+                    data-toggle="collapse"
+                    data-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation"
+                >
+                    <i class="ti-more"></i>
+                </a>
+
             </div>
-            <!-- ============================================================== -->
-            <!-- End Logo -->
-            <!-- ============================================================== -->
-            <div class="navbar-collapse collapse" id="navbarSupportedContent">
-                <!-- ============================================================== -->
-                <!-- toggle and nav items -->
-                <!-- ============================================================== -->
+
+            <div
+                class="navbar-collapse collapse"
+                id="navbarSupportedContent"
+            >
+
                 <ul class="navbar-nav float-left mr-auto ml-3 pl-1">
 
-                    <!-- ============================================================== -->
-                    <!-- create new -->
-                    <!-- ============================================================== -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <i data-feather="settings" class="svg-icon"></i>
-                        </a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <a class="dropdown-item" href="javascript:ReloadPage();">Actualizar Pagina</a>
 
+                        <a
+                            class="nav-link dropdown-toggle"
+                            href="#"
+                            id="navbarDropdown"
+                            role="button"
+                            data-toggle="dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                        >
+                            <i
+                                data-feather="settings"
+                                class="svg-icon"
+                            ></i>
+                        </a>
+
+                        <div
+                            class="dropdown-menu"
+                            aria-labelledby="navbarDropdown"
+                        >
+
+                            <a
+                                class="dropdown-item"
+                                href="javascript:ReloadPage();"
+                            >
+                                Actualizar página
+                            </a>
 
                         </div>
+
                     </li>
 
-
                 </ul>
-                
-                <!-- ============================================================== -->
-                <!-- Right side toggle and nav items -->
-                <!-- ============================================================== -->
-                <ul class="navbar-nav float-right"> <p id="status" class="online">Online</p>
-                    <!-- ============================================================== -->
-                    <!-- Search -->
-                    <!-- ============================================================== -->
-                    <!--                    <li class="nav-item d-none d-md-block">-->
-                    <!--                        <a class="nav-link" href="javascript:void(0)">-->
-                    <!--                            <form>-->
-                    <!--                                <div class="customize-input">-->
-                    <!--                                    <input class="form-control custom-shadow custom-radius border-0 bg-white"-->
-                    <!--                                           type="search" placeholder="Search" aria-label="Search">-->
-                    <!--                                    <i class="form-control-icon" data-feather="search"></i>-->
-                    <!--                                </div>-->
-                    <!--                            </form>-->
-                    <!--                        </a>-->
-                    <!--                    </li>-->
-                    <!-- ============================================================== -->
-                    <!-- User profile and search -->
-                    <!-- ============================================================== -->
+
+                <ul class="navbar-nav float-right">
+
+                    <p
+                        id="status"
+                        class="online"
+                    >
+                        Online
+                    </p>
+
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="javascript:void(0)" data-toggle="dropdown"
-                           aria-haspopup="true" aria-expanded="false">
-                            <img src="../assets/images/users/<?php echo $_SESSION['pic']; ?> " alt="user"
-                                 class="rounded-circle"
-                                 width="40">
-                            <span class="ml-2 d-none d-lg-inline-block"><span>Bienvenido,</span> <span
-                                        class="text-dark"> <?php echo $_SESSION['USR']; ?> </span> <i
-                                        data-feather="chevron-down"
-                                        class="svg-icon"></i></span>
+
+                        <a
+                            class="nav-link dropdown-toggle"
+                            href="javascript:void(0)"
+                            data-toggle="dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                        >
+
+                            <img
+                                src="../assets/images/users/<?php
+                                    echo htmlspecialchars(
+                                        $_SESSION['pic'] ?? '',
+                                        ENT_QUOTES,
+                                        'UTF-8'
+                                    );
+                                ?>"
+                                alt="Usuario"
+                                class="rounded-circle"
+                                width="40"
+                            >
+
+                            <span class="ml-2 d-none d-lg-inline-block">
+
+                                <span>Bienvenido,</span>
+
+                                <span class="text-dark">
+                                    <?php
+                                        echo htmlspecialchars(
+                                            $_SESSION['USR'] ?? '',
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        );
+                                    ?>
+                                </span>
+
+                                <i
+                                    data-feather="chevron-down"
+                                    class="svg-icon"
+                                ></i>
+
+                            </span>
+
                         </a>
+
                         <div class="dropdown-menu dropdown-menu-right user-dd animated flipInY">
 
-                            <a class="dropdown-item" href="javascript:PerfilAdminFifo()"><i data-feather="settings"
-                                                                                            class="svg-icon mr-2 ml-1"></i>
-                                Mi Perfil</a>
+                            <a
+                                class="dropdown-item"
+                                href="javascript:PerfilAdminFifo();"
+                            >
+
+                                <i
+                                    data-feather="settings"
+                                    class="svg-icon mr-2 ml-1"
+                                ></i>
+
+                                Mi perfil
+
+                            </a>
+
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="javascript:Salir();"><i data-feather="power"
-                                                                                   class="svg-icon mr-2 ml-1"></i>
-                                Salir</a>
+
+                            <a
+                                class="dropdown-item"
+                                href="javascript:Salir();"
+                            >
+
+                                <i
+                                    data-feather="power"
+                                    class="svg-icon mr-2 ml-1"
+                                ></i>
+
+                                Salir
+
+                            </a>
 
                         </div>
+
                     </li>
-                    <!-- ============================================================== -->
-                    <!-- User profile and search -->
-                    <!-- ============================================================== -->
+
                 </ul>
+
             </div>
+
         </nav>
+
     </header>
-    <!-- ============================================================== -->
-    <!-- End Topbar header -->
-    <!-- ============================================================== -->
-    <!-- ============================================================== -->
-    <!-- Left Sidebar - style you can find in sidebar.scss  -->
-    <!-- ============================================================== -->
-    <aside class="left-sidebar" data-sidebarbg="skin6">
-        <!-- Sidebar scroll-->
-        <div class="scroll-sidebar" data-sidebarbg="skin6">
-            <!-- Sidebar navigation-->
+
+    <!-- =========================================================== -->
+    <!-- Menú lateral -->
+    <!-- =========================================================== -->
+
+    <aside
+        class="left-sidebar"
+        data-sidebarbg="skin6"
+    >
+
+        <div
+            class="scroll-sidebar"
+            data-sidebarbg="skin6"
+        >
+
             <?php include 'Menu.php'; ?>
-            <!-- End Sidebar navigation -->
+
         </div>
-        <!-- End Sidebar scroll-->
+
     </aside>
+
+    <!-- =========================================================== -->
+    <!-- Contenido de la página -->
+    <!-- =========================================================== -->
 
     <div class="page-wrapper">
 
-       
-        <!-- ============================================================== -->
-        <!-- End Bread crumb and right sidebar toggle -->
-        <!-- ============================================================== -->
-        <!-- ============================================================== -->
-        <!-- Container fluid  -->
-        <!-- ============================================================== -->
         <div class="container-fluid animate__animated animate__fadeIn">
+
             <div class="row">
+
                 <div class="col-12">
+
                     <div class="card">
 
                         <div class="card-body">
-                            <h4 class="card-title">Traking de Guias</h4>
-                            <h6 class="card-subtitle">Dar seguimiento al proceso de las guias</h6>
+
+                            <h4 class="card-title">
+                                Tracking de Guías
+                            </h4>
+
+                            <h6 class="card-subtitle">
+                                Dar seguimiento al proceso de las guías
+                            </h6>
+
                             <br>
+
                             <?php echo $Mensajeerror; ?>
                             <?php echo $MensajeExito; ?>
+
                             <br>
-                            <div >
-                                <!-- Column -->
-                                <div >
-                                    <div class="dataTables_wrapper" style="overflow-x: auto;">
-                                    <table id="example" class="table table-striped  " cellspacing="0" width="100%">
-                                        <thead>
 
-                                        <th>Guia</th>
+                            <div>
 
-                                        <th>Fecha Pedido</th>
-                                        <th>Fecha Entrega</th>
-                                        <th>Destino</th>
-                                        <th>Lugar</th>
-                                        <th>Transportista</th>
-                                        <th>Pais</th>
-                                        <th>Estatus</th>
-                                        <th>Piloto</th>
-                                        <th>Semaforo</th>
-                                        <th>Detalle</th>
-                                        <th>Resumen</th>
-                                        <th>Despachar</th>
+                                <div>
 
-                                        </thead>
+                                    <div
+                                        class="dataTables_wrapper"
+                                        style="overflow-x: auto;"
+                                    >
 
-                                        <tbody>
-                                        <?php
-                                        for ($i = 0; $i < $lista_Guias; $i++) {
-                                            echo "<tr>";
+                                        <table
+                                            id="example"
+                                            class="table table-striped"
+                                            cellspacing="0"
+                                            width="100%"
+                                        >
 
-                                            echo "<td>";
-                                            echo $lista_Guias['Transporte'];
-                                            echo "</td>";
+                                            <thead>
 
-                                            echo "<td>";
-                                            echo $lista_Guias['FechaPedido'];
-                                            echo "</td>";
+                                                <tr>
 
-                                            echo "<td>";
-                                            echo $lista_Guias['FechaEngrega'];
-                                            echo "</td>";
+                                                    <th>Guía</th>
+                                                    <th>Fecha Pedido</th>
+                                                    <th>Fecha Entrega</th>
+                                                    <th>Destino</th>
+                                                    <th>Lugar</th>
+                                                    <th>Transportista</th>
+                                                    <th>País</th>
+                                                    <th>Estatus</th>
+                                                    <th>Piloto</th>
+                                                    <th>Semáforo</th>
+                                                    <th>Detalle</th>
+                                                    <th>Resumen</th>
+                                                    <th>Despachar</th>
 
-                                            echo "<td>";
-                                            echo $lista_Guias['NombreDestino'];
-                                            echo "</td>";
+                                                </tr>
 
-                                            echo "<td>";
-                                            echo $lista_Guias['lugar'];
-                                            echo "</td>";
+                                            </thead>
 
-                                            echo "<td>";
-                                            echo $lista_Guias['Transportista'];
-                                            echo "</td>";
+                                            <tbody>
 
-                                            echo "<td>";
-                                            echo $lista_Guias['pais'];
-                                            echo "</td>";
+                                            <?php
 
-                                            echo "<td>";
-                                            echo $lista_Guias['Estatus'];
-                                            echo "</td>";
+                                            for ($i = 0; $i < $lista_Guias; $i++) {
 
-                                            echo "<td>";
-                                            echo $lista_Guias['Piloto'];
-                                            echo "</td>";
+                                                /*
+                                                 * Se guardan los valores para evitar repetir
+                                                 * constantemente el acceso al arreglo.
+                                                 */
+                                                $transporte = $lista_Guias['Transporte'] ?? '';
+                                                $fechaPedido = $lista_Guias['FechaPedido'] ?? '';
+                                                $fechaEntrega = $lista_Guias['FechaEngrega'] ?? '';
+                                                $nombreDestino = $lista_Guias['NombreDestino'] ?? '';
+                                                $lugar = $lista_Guias['lugar'] ?? '';
+                                                $transportista = $lista_Guias['Transportista'] ?? '';
+                                                $pais = $lista_Guias['pais'] ?? '';
+                                                $estatus = $lista_Guias['Estatus'] ?? '';
+                                                $piloto = $lista_Guias['Piloto'] ?? '';
 
-                                            // Iconos
-                                            echo "<td>";
-                                            {
-                                                //Estatus del Producto
-                                                switch ($lista_Guias['Estatus']){
-                                                    case 'Producido' :
-                                                        echo '<img src="../assets/images/Iconos/circuloNaranja.png" class="" --="" width="auto" height="40">';
+                                                /*
+                                                 * Valores preparados para mostrarse en HTML.
+                                                 */
+                                                $transporteHtml = htmlspecialchars(
+                                                    $transporte,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                $fechaPedidoHtml = htmlspecialchars(
+                                                    $fechaPedido,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                $fechaEntregaHtml = htmlspecialchars(
+                                                    $fechaEntrega,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                $nombreDestinoHtml = htmlspecialchars(
+                                                    $nombreDestino,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                $lugarHtml = htmlspecialchars(
+                                                    $lugar,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                $transportistaHtml = htmlspecialchars(
+                                                    $transportista,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                $paisHtml = htmlspecialchars(
+                                                    $pais,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                $estatusHtml = htmlspecialchars(
+                                                    $estatus,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                $pilotoHtml = htmlspecialchars(
+                                                    $piloto,
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+
+                                                /*
+                                                 * Valor preparado para enviarse por la URL.
+                                                 */
+                                                $transporteUrl = urlencode($transporte);
+
+                                                echo '<tr>';
+
+                                                echo '<td>' .
+                                                    $transporteHtml .
+                                                '</td>';
+
+                                                echo '<td>' .
+                                                    $fechaPedidoHtml .
+                                                '</td>';
+
+                                                echo '<td>' .
+                                                    $fechaEntregaHtml .
+                                                '</td>';
+
+                                                echo '<td>' .
+                                                    $nombreDestinoHtml .
+                                                '</td>';
+
+                                                echo '<td>' .
+                                                    $lugarHtml .
+                                                '</td>';
+
+                                                echo '<td>' .
+                                                    $transportistaHtml .
+                                                '</td>';
+
+                                                echo '<td>' .
+                                                    $paisHtml .
+                                                '</td>';
+
+                                                echo '<td>' .
+                                                    $estatusHtml .
+                                                '</td>';
+
+                                                echo '<td>' .
+                                                    $pilotoHtml .
+                                                '</td>';
+
+                                                /*
+                                                 * Columna Semáforo.
+                                                 */
+                                                echo '<td>';
+
+                                                switch ($estatus) {
+
+                                                    case 'Producido':
+
+                                                        echo '
+                                                            <img
+                                                                src="../assets/images/Iconos/circuloNaranja.png"
+                                                                width="auto"
+                                                                height="40"
+                                                                alt="Producido"
+                                                            >
+                                                        ';
+
                                                         break;
 
-                                                    case 'Despachando' :
-                                                        echo '<img src="../assets/images/Iconos/circuloAmarillo.png" class="" --="" width="auto" height="40">';
+                                                    case 'Despachando':
+
+                                                        echo '
+                                                            <img
+                                                                src="../assets/images/Iconos/circuloAmarillo.png"
+                                                                width="auto"
+                                                                height="40"
+                                                                alt="Despachando"
+                                                            >
+                                                        ';
+
                                                         break;
 
-                                                    case 'Despachado' :
-                                                        echo '<img src="../assets/images/Iconos/circuloVerde.png" class="" --="" width="auto" height="40">';
+                                                    case 'Despachado':
+
+                                                        echo '
+                                                            <img
+                                                                src="../assets/images/Iconos/circuloVerde.png"
+                                                                width="auto"
+                                                                height="40"
+                                                                alt="Despachado"
+                                                            >
+                                                        ';
+
                                                         break;
 
-                                                    case 'Corregir' :
-                                                        echo '<img src="../assets/images/Iconos/producido.png" class="" --="" width="auto" height="40">';
+                                                    case 'Corregir':
+
+                                                        echo '
+                                                            <img
+                                                                src="../assets/images/Iconos/producido.png"
+                                                                width="auto"
+                                                                height="40"
+                                                                alt="Corregir"
+                                                            >
+                                                        ';
+
                                                         break;
 
-                                                    default :
-                                                        echo '<img src="../assets/images/Iconos/circuloRojo.png" class="" --="" width="auto" height="40">';
-                                                        break;
+                                                    default:
 
+                                                        echo '
+                                                            <img
+                                                                src="../assets/images/Iconos/circuloRojo.png"
+                                                                width="auto"
+                                                                height="40"
+                                                                alt="Pendiente"
+                                                            >
+                                                        ';
+
+                                                        break;
                                                 }
-                                            }
-                                            echo "</td>";
 
+                                                echo '</td>';
 
-                                            echo "<td>";
-                                            {
-                                                //Detalle Guias
-                                                switch ($lista_Guias['Estatus']){
-                                                    case 'Pendiente' :
+                                                /*
+                                                 * Columna Detalle.
+                                                 */
+                                                echo '<td>';
 
-                                                        echo '<a href="DetalleGuias.php?Guia=' . $lista_Guias['Transporte'] . '"class="btn btn-outline-secondary"><span class="far fa-edit mr-2"></span>Detalle</a>';
-                                                        break;
+                                                if ($estatus === 'Pendiente') {
 
+                                                    echo '
+                                                        <a
+                                                            href="DetalleGuias.php?Guia=' .
+                                                                $transporteUrl .
+                                                            '"
+                                                            class="btn btn-outline-secondary btn-accion-tabla"
+                                                            data-titulo="Cargando detalle"
+                                                            data-mensaje="Se está abriendo el detalle de la guía ' .
+                                                                $transporteHtml .
+                                                            '."
+                                                            data-procesando="Cargando..."
+                                                        >
+                                                            <span class="far fa-edit mr-2 icono-boton"></span>
+                                                            <span class="texto-boton">Detalle</span>
+                                                        </a>
+                                                    ';
 
+                                                } else {
 
-                                                    default :
-
-                                                        echo '<a href="DetalleGuiasDespachadas.php?Guia=' . $lista_Guias['Transporte'] . '"class="btn btn-outline-secondary"><span class="far fa-edit mr-2"></span>Detalle</a>';
-                                                        break;
-
+                                                    echo '
+                                                        <a
+                                                            href="DetalleGuiasDespachadas.php?Guia=' .
+                                                                $transporteUrl .
+                                                            '"
+                                                            class="btn btn-outline-secondary btn-accion-tabla"
+                                                            data-titulo="Cargando detalle"
+                                                            data-mensaje="Se está abriendo el detalle de la guía ' .
+                                                                $transporteHtml .
+                                                            '."
+                                                            data-procesando="Cargando..."
+                                                        >
+                                                            <span class="far fa-edit mr-2 icono-boton"></span>
+                                                            <span class="texto-boton">Detalle</span>
+                                                        </a>
+                                                    ';
                                                 }
-                                            }
-                                            echo "</td>";
 
-                                            {
-                                                echo "<td>";
-                                                //Resumen Guias
-                                                switch ($lista_Guias['Estatus']){
-                                                    case 'Despachando' :
-                                                        echo '<a href="ResumenGuia.php?Guia=' . $lista_Guias['Transporte'] . '"class="btn btn-outline-info"><span class="far fa-file mr-2"></span>Resumen</a>';
+                                                echo '</td>';
+
+                                                /*
+                                                 * Columna Resumen.
+                                                 */
+                                                echo '<td>';
+
+                                                switch ($estatus) {
+
+                                                    case 'Despachando':
+                                                    case 'FiFo Calculado':
+
+                                                        echo '
+                                                            <a
+                                                                href="ResumenGuia.php?Guia=' .
+                                                                    $transporteUrl .
+                                                                '"
+                                                                class="btn btn-outline-info btn-accion-tabla"
+                                                                data-titulo="Cargando resumen"
+                                                                data-mensaje="Se está preparando el resumen de la guía ' .
+                                                                    $transporteHtml .
+                                                                '."
+                                                                data-procesando="Cargando..."
+                                                            >
+                                                                <span class="far fa-file mr-2 icono-boton"></span>
+                                                                <span class="texto-boton">Resumen</span>
+                                                            </a>
+                                                        ';
+
                                                         break;
 
-                                                    case 'FiFo Calculado' :
-                                                        echo '<a href="ResumenGuia.php?Guia=' . $lista_Guias['Transporte'] . '"class="btn btn-outline-info"><span class="far fa-file mr-2"></span>Resumen</a>';
+                                                    default:
+
+                                                        echo '';
 
                                                         break;
-
-                                                    default :
-                                                        break;
-
                                                 }
-                                                echo "</td>";
-                                            }
 
-                                            {
-                                                echo "<td>";
-                                                //Despachar Guias
-                                                switch ($lista_Guias['Estatus']){
-                                                    case 'Pendiente' :
+                                                echo '</td>';
+
+                                                /*
+                                                 * Columna Despachar / Corregir.
+                                                 */
+                                                echo '<td>';
+
+                                                switch ($estatus) {
+
+                                                    case 'Pendiente':
+
+                                                        echo '';
+
                                                         break;
 
-                                                    case 'FiFo Calculado' :
-                                                        echo '<a href="DespacharGuia.php?Guia=' . $lista_Guias['Transporte'] . '" id="BTNEnviar'.$i.'" class="btn btn-outline-success"><span class="far fa-paper-plane mr-2"></span>Despachar</a>';
+                                                    case 'FiFo Calculado':
 
-                                                       echo"<script>
-                                                            $(document).ready(function() {
-                                                                $('.BTNEnviar".$i."').click(function() {
-                                                                    $(this).removeClass('far fa-paper-plane').addClass('spinner-border spinner-border-sm ');
-                                                                    $(this).prop('disabled', true);
-                                                                });
-                                                            });
-                                                        </script>";
+                                                        echo '
+                                                            <a
+                                                                href="DespacharGuia.php?Guia=' .
+                                                                    $transporteUrl .
+                                                                '"
+                                                                class="btn btn-outline-success btn-confirmar-accion"
+                                                                data-titulo="¿Desea despachar esta guía?"
+                                                                data-mensaje="La guía ' .
+                                                                    $transporteHtml .
+                                                                ' será enviada al proceso de despacho."
+                                                                data-confirmar="Sí, despachar"
+                                                                data-procesando="Despachando..."
+                                                                data-color="#28a745"
+                                                            >
+                                                                <span class="far fa-paper-plane mr-2 icono-boton"></span>
+                                                                <span class="texto-boton">Despachar</span>
+                                                            </a>
+                                                        ';
+
                                                         break;
 
-                                                    case 'Corregir' :
-                                                        echo '<a href="CorregirGuia.php?Guia=' . $lista_Guias['Transporte'] . '" id="BTNEnviar'.$i.'" class="btn btn-outline-danger"><span class="far fa-hourglass mr-2"></span>Corregir</a>';
+                                                    case 'Corregir':
 
-                                                        echo"<script>
-                                                            $(document).ready(function() {
-                                                                $('.BTNEnviar".$i."').click(function() {
-                                                                    $(this).removeClass('far fa-paper-plane').addClass('spinner-border spinner-border-sm ');
-                                                                    $(this).prop('disabled', true);
-                                                                });
-                                                            });
-                                                        </script>";
+                                                        echo '
+                                                            <a
+                                                                href="CorregirGuia.php?Guia=' .
+                                                                    $transporteUrl .
+                                                                '"
+                                                                class="btn btn-outline-danger btn-confirmar-accion"
+                                                                data-titulo="¿Desea corregir esta guía?"
+                                                                data-mensaje="Será dirigido a la pantalla para corregir la guía ' .
+                                                                    $transporteHtml .
+                                                                '."
+                                                                data-confirmar="Sí, corregir"
+                                                                data-procesando="Cargando..."
+                                                                data-color="#dc3545"
+                                                            >
+                                                                <span class="far fa-hourglass mr-2 icono-boton"></span>
+                                                                <span class="texto-boton">Corregir</span>
+                                                            </a>
+                                                        ';
+
                                                         break;
 
+                                                    default:
 
+                                                        echo '';
 
-                                                    default :
                                                         break;
-
                                                 }
-                                                echo "</td>";
+
+                                                echo '</td>';
+
+                                                echo '</tr>';
+
+                                                /*
+                                                 * Carga el siguiente registro del resultado PDO.
+                                                 */
+                                                $lista_Guias = $ejecutar_sentencia_Guias->fetch(
+                                                    PDO::FETCH_ASSOC
+                                                );
                                             }
 
+                                            ?>
 
-                                            echo "</tr>";
+                                            </tbody>
 
-                                            $lista_Guias = $ejecutar_sentencia_Guias->fetch(PDO::FETCH_ASSOC);
-                                        }
-                                        ?>
-                                        </tbody>
-                                    </table>
+                                        </table>
 
+                                    </div>
 
-
-
-                                </div>
                                 </div>
 
                             </div>
 
-
                         </div>
+
                     </div>
+
                 </div>
+
             </div>
+
         </div>
-        <!-- ============================================================== -->
-        <!-- End Container fluid  -->
-        <!-- ============================================================== -->
-        <!-- ============================================================== -->
-        <!-- footer -->
-        <!-- ============================================================== -->
+
+        <!-- ======================================================= -->
+        <!-- Pie de página -->
+        <!-- ======================================================= -->
+
         <footer class="footer text-center text-muted">
-            2023 ® All Rights Reserved by Sertero. Designed and Developed by <a
-                    href="https://qbit-Lab.com">Qbit-Lab</a>.
+
+            2023 ® All Rights Reserved by Sertero.
+
+            Designed and Developed by
+
+            <a href="https://qbit-Lab.com">
+                Qbit-Lab
+            </a>.
+
         </footer>
-        <!-- ============================================================== -->
-        <!-- End footer -->
-        <!-- ============================================================== -->
+
     </div>
-    <!-- ============================================================== -->
-    <!-- End Page wrapper  -->
-    <!-- ============================================================== -->
+
 </div>
-<!-- ============================================================== -->
-<!-- End Wrapper -->
-<!-- ============================================================== -->
-<!-- End Wrapper -->
-<!-- ============================================================== -->
-<!-- All Jquery -->
-<!-- ============================================================== -->
+
+<!-- =============================================================== -->
+<!-- JavaScript -->
+<!-- =============================================================== -->
+
+<!-- jQuery -->
 <script src="../assets/libs/jquery/dist/jquery.min.js"></script>
+
+<!-- Bootstrap -->
 <script src="../assets/libs/popper.js/dist/umd/popper.min.js"></script>
 <script src="../assets/libs/bootstrap/dist/js/bootstrap.min.js"></script>
-<!-- apps -->
-<!-- apps -->
+
+<!-- Scripts del sistema -->
 <script src="../dist/js/app-style-switcher.js"></script>
 <script src="../dist/js/feather.min.js"></script>
 <script src="../assets/libs/perfect-scrollbar/dist/perfect-scrollbar.jquery.min.js"></script>
 <script src="../dist/js/sidebarmenu.js"></script>
-<!--Custom JavaScript -->
 <script src="../dist/js/custom.min.js"></script>
-<!--This page JavaScript -->
+
+<!-- Gráficas -->
 <script src="../assets/extra-libs/c3/d3.min.js"></script>
 <script src="../assets/extra-libs/c3/c3.min.js"></script>
 <script src="../assets/libs/chartist/dist/chartist.min.js"></script>
@@ -533,44 +978,380 @@ ob_end_flush();
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
-<!--Scripts para DataTables-->
+
+<!-- DataTables -->
 <script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
-<script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    $(document).ready(function() {
-        $('#example').DataTable( {
+
+    $(document).ready(function () {
+
+        /*
+         * Inicialización de DataTables.
+         *
+         * Se evita utilizar también datatable-basic.init.js,
+         * porque podría intentar inicializar la misma tabla dos veces.
+         */
+        const tabla = $('#example').DataTable({
             language: {
                 url: 'datatables_espanol.json'
+            },
+            responsive: false,
+            autoWidth: false
+        });
+
+        /**
+         * Convierte el botón seleccionado en un botón con spinner
+         * y bloquea nuevos clics.
+         *
+         * @param {jQuery} $boton
+         * @param {string} textoProcesando
+         */
+        function activarSpinner($boton, textoProcesando) {
+
+            const $icono = $boton.find('.icono-boton');
+            const $texto = $boton.find('.texto-boton');
+
+            /*
+             * Evita activar dos veces el mismo botón.
+             */
+            if ($boton.hasClass('boton-procesando')) {
+                return;
             }
-        } );
-    } );
+
+            /*
+             * Guarda los valores originales por si en algún momento
+             * se necesita restaurar el botón.
+             */
+            $boton.data(
+                'clases-icono-originales',
+                $icono.attr('class')
+            );
+
+            $boton.data(
+                'texto-original',
+                $texto.text()
+            );
+
+            /*
+             * Bloquea el botón.
+             */
+            $boton.addClass('boton-procesando disabled');
+
+            $boton.attr({
+                'aria-disabled': 'true',
+                'tabindex': '-1'
+            });
+
+            /*
+             * Cambia el icono por el spinner.
+             */
+            $icono
+                .removeClass()
+                .addClass(
+                    'spinner-border spinner-border-sm spinner-boton mr-2'
+                )
+                .attr({
+                    'role': 'status',
+                    'aria-hidden': 'true'
+                });
+
+            /*
+             * Cambia el texto.
+             */
+            $texto.text(textoProcesando);
+        }
+
+        /**
+         * Restaura el botón cuando ocurre un error o se cancela
+         * la navegación.
+         *
+         * @param {jQuery} $boton
+         */
+        function restaurarBoton($boton) {
+
+            const $icono = $boton.find('.icono-boton');
+            const $texto = $boton.find('.texto-boton');
+
+            const clasesOriginales =
+                $boton.data('clases-icono-originales');
+
+            const textoOriginal =
+                $boton.data('texto-original');
+
+            $boton.removeClass(
+                'boton-procesando disabled'
+            );
+
+            $boton.removeAttr(
+                'aria-disabled tabindex'
+            );
+
+            if (clasesOriginales) {
+                $icono.attr(
+                    'class',
+                    clasesOriginales
+                );
+            }
+
+            if (textoOriginal) {
+                $texto.text(
+                    textoOriginal
+                );
+            }
+        }
+
+        /**
+         * Botones Detalle y Resumen.
+         *
+         * Se usa delegación de eventos para que funcione correctamente
+         * aunque DataTables cambie, ordene o reconstruya las filas.
+         */
+        $(document).on(
+            'click',
+            '.btn-accion-tabla',
+            function (event) {
+
+                event.preventDefault();
+
+                const $boton = $(this);
+
+                if ($boton.hasClass('boton-procesando')) {
+                    return;
+                }
+
+                const url = $boton.attr('href');
+
+                const titulo =
+                    $boton.data('titulo') ||
+                    'Procesando';
+
+                const mensaje =
+                    $boton.data('mensaje') ||
+                    'Espere un momento.';
+
+                const textoProcesando =
+                    $boton.data('procesando') ||
+                    'Cargando...';
+
+                activarSpinner(
+                    $boton,
+                    textoProcesando
+                );
+
+                Swal.fire({
+                    icon: 'info',
+                    title: titulo,
+                    text: mensaje,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    timer: 700,
+                    timerProgressBar: true
+                }).then(function () {
+
+                    if (url) {
+                        window.location.href = url;
+                    } else {
+
+                        restaurarBoton($boton);
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'No se pudo continuar',
+                            text: 'El botón no tiene una dirección válida.',
+                            confirmButtonText: 'Aceptar'
+                        });
+                    }
+                });
+            }
+        );
+
+        /**
+         * Botones Despachar y Corregir.
+         */
+        $(document).on(
+            'click',
+            '.btn-confirmar-accion',
+            function (event) {
+
+                event.preventDefault();
+
+                const $boton = $(this);
+
+                if ($boton.hasClass('boton-procesando')) {
+                    return;
+                }
+
+                const url =
+                    $boton.attr('href');
+
+                const titulo =
+                    $boton.data('titulo') ||
+                    '¿Desea continuar?';
+
+                const mensaje =
+                    $boton.data('mensaje') ||
+                    '';
+
+                const textoConfirmar =
+                    $boton.data('confirmar') ||
+                    'Sí, continuar';
+
+                const textoProcesando =
+                    $boton.data('procesando') ||
+                    'Procesando...';
+
+                const colorConfirmacion =
+                    $boton.data('color') ||
+                    '#28a745';
+
+                Swal.fire({
+                    icon: 'question',
+                    title: titulo,
+                    text: mensaje,
+                    showCancelButton: true,
+                    confirmButtonText: textoConfirmar,
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: colorConfirmacion,
+                    cancelButtonColor: '#6c757d',
+                    reverseButtons: true,
+                    focusCancel: true,
+                    allowOutsideClick: false,
+                    allowEscapeKey: true
+                }).then(function (resultado) {
+
+                    /*
+                     * Si el usuario cancela, no se ejecuta ninguna acción.
+                     */
+                    if (!resultado.isConfirmed) {
+                        return;
+                    }
+
+                    /*
+                     * Activa el spinner únicamente en el botón seleccionado.
+                     */
+                    activarSpinner(
+                        $boton,
+                        textoProcesando
+                    );
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Acción confirmada',
+                        text: 'La solicitud se está procesando.',
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        timer: 650,
+                        timerProgressBar: true
+                    }).then(function () {
+
+                        if (url) {
+
+                            window.location.href = url;
+
+                        } else {
+
+                            restaurarBoton($boton);
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'No se pudo continuar',
+                                text: 'El botón no tiene una dirección válida.',
+                                confirmButtonText: 'Aceptar'
+                            });
+                        }
+                    });
+                });
+            }
+        );
+
+        /**
+         * Cuando el usuario regresa con el botón Atrás del navegador,
+         * algunos navegadores recuperan la página desde la memoria.
+         * Este evento restaura cualquier botón que haya quedado bloqueado.
+         */
+        window.addEventListener(
+            'pageshow',
+            function (event) {
+
+                if (event.persisted) {
+
+                    $('.boton-procesando').each(
+                        function () {
+                            restaurarBoton($(this));
+                        }
+                    );
+                }
+            }
+        );
+
+    });
+
 </script>
 
-    <script>
-        // Establece el tiempo de inactividad en milisegundos (5 minutos = 300,000 milisegundos)
-        const tiempoInactividad = 300000;
+<script>
 
-        // Función que redirige al usuario a la página específica
-        function redirigir() {
-            window.location.href = 'index.php'; // Reemplaza 'pagina-destino.html' con la URL de la página a la que deseas redirigir al usuario.
-        }
+    /*
+     * Tiempo máximo de inactividad:
+     * 5 minutos = 300,000 milisegundos.
+     */
+    const tiempoInactividad = 300000;
 
-        let temporizadorInactividad;
+    let temporizadorInactividad;
 
-        // Función que reinicia el temporizador de inactividad
-        function reiniciarTemporizador() {
-            clearTimeout(temporizadorInactividad);
-            temporizadorInactividad = setTimeout(redirigir, tiempoInactividad);
-        }
+    /**
+     * Redirige al usuario cuando se supera el tiempo
+     * máximo de inactividad.
+     */
+    function redirigir() {
+        window.location.href = 'index.php';
+    }
 
-        // Agrega eventos para rastrear la actividad del usuario
-        document.addEventListener('mousemove', reiniciarTemporizador);
-        document.addEventListener('keypress', reiniciarTemporizador);
+    /**
+     * Reinicia el temporizador de inactividad.
+     */
+    function reiniciarTemporizador() {
 
-        // Inicia el temporizador de inactividad al cargar la página
-        reiniciarTemporizador();
-    </script> 
+        clearTimeout(temporizadorInactividad);
+
+        temporizadorInactividad = setTimeout(
+            redirigir,
+            tiempoInactividad
+        );
+    }
+
+    /*
+     * Eventos que indican actividad del usuario.
+     */
+    [
+        'mousemove',
+        'mousedown',
+        'keypress',
+        'scroll',
+        'touchstart'
+    ].forEach(function (evento) {
+
+        document.addEventListener(
+            evento,
+            reiniciarTemporizador,
+            {
+                passive: true
+            }
+        );
+    });
+
+    /*
+     * Inicia el temporizador.
+     */
+    reiniciarTemporizador();
+
+</script>
+
 </body>
 
 </html>

@@ -2,12 +2,11 @@
 $error = "";
 $mensajeExito = "";
 //$servername="localhost:3306";
-$servername="db5010754261.hosting-data.io";
+$servername="localhost:3306";
 $username="dbu2953297";
 $password="zecsyd-nafwoQ-kypky3";
 $dbname="dbs9098416";
-//$servernamePDO="mysql:dbname=dbs9098416;host=localhost:3306";
-$servernamePDO="mysql:dbname=dbs9098416;host=db5010754261.hosting-data.io";
+$servernamePDO="mysql:dbname=dbs9098416;host=localhost:3306";
 
 
 try {

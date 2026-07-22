@@ -4,10 +4,10 @@ session_start();
 
 
 //ANCHOR -  Redireccion a HTPPS
-if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') {
-    echo "NO DISPONE DE CONEXIÓN HTTPS";
-    header('Location: https://apps-sertero.com/');
-}
+//if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 'on') {
+ //   echo "NO DISPONE DE CONEXIÓN HTTPS";
+ //   header('Location: https://apps-sertero.com/');
+//}
 
 
 

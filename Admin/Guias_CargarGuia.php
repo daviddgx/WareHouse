@@ -730,6 +730,17 @@ ob_end_flush();
                             return;
                         }
 
+                        if (actionName === 'delete' && !hasPendingGuides) {
+                            showAlert({
+                                title: 'Sin registros',
+                                text: 'Sin registros para eliminar.',
+                                icon: 'info',
+                                confirmButtonText: 'Entendido',
+                                confirmButtonColor: '#ed3131'
+                            });
+                            return;
+                        }
+
                         if (actionName === 'upload' && !validateFile(true)) return;
                         if (form.dataset.pending === 'true') return;
 

@@ -11,6 +11,26 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../Innet_ADM/Innet_AMD.php';
 
+// Este proceso puede tardar mas que una peticion web. Debe ejecutarse con PHP
+// CLI y nunca deben existir dos instancias modificando las mismas tablas.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(400);
+    exit('Este proceso solo puede ejecutarse desde PHP CLI.' . PHP_EOL);
+}
+set_time_limit(0);
+
+$lockPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'warehouse_estatus_bodegas.lock';
+$lockHandle = fopen($lockPath, 'c');
+if ($lockHandle === false) {
+    fwrite(STDERR, 'No fue posible crear el archivo de bloqueo del proceso.' . PHP_EOL);
+    exit(1);
+}
+if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
+    fwrite(STDERR, 'El proceso ya se encuentra en ejecucion; se omite esta instancia.' . PHP_EOL);
+    fclose($lockHandle);
+    exit(0);
+}
+
 $procesos = [
     'GraphEstatusBodegas' => 'Generar estatus diario de bodegas',
     'Limpiar_Nulls' => 'Limpiar ubicaciones con valores nulos',
@@ -40,4 +60,6 @@ foreach ($procesos as $funcion => $descripcion) {
     }
 }
 
+flock($lockHandle, LOCK_UN);
+fclose($lockHandle);
 exit($errores ? 1 : 0);

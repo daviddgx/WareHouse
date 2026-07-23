@@ -1,20 +1,12 @@
 <?php
-ob_start();
-session_start();
-$currentDate = date('Y-m-d');
+require_once __DIR__ . '/session_guard.php';
 
-if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
-    header('Location: ../Innet/505.html');
-}
+ob_start();
 
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/LST_BDGS.php';
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
-
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-}
 
 // Variables de entorno
 $MensajeExito = '';

@@ -1,20 +1,9 @@
 <?php
-ob_start();
-
 declare(strict_types=1);
-
-session_start();
-$currentDate = date('Y-m-d');
+define('ADMIN_SESSION_JSON_RESPONSE', true);
+require_once dirname(__DIR__, 2) . '/session_guard.php';
 
 header('Content-Type: application/json');
-
-if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
-    http_response_code(401);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Sesión inválida',
-    ]);
-}
 
 require_once __DIR__ . '/providers.php';
 

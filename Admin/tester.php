@@ -1,11 +1,7 @@
 <?php
-ob_start();
-session_start();
-$currentDate = date('Y-m-d');
+require_once __DIR__ . '/session_guard.php';
 
-if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
-    header('Location: ../Innet/505.html');
-}
+ob_start();
 // 3. Inserter Unidades Pallet en "Detalle Guias"
 //3.1 recorre el detalle del despacho para ingresar las unidades a calcular, dependiendo si hay palles o piking
 

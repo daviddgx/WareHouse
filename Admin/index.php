@@ -1,16 +1,11 @@
-
 <?php
-ob_start();
-session_start();
+require_once __DIR__ . '/session_guard.php';
 
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-}
+ob_start();
+date_default_timezone_set('America/Guatemala');
 
 $TotalTarimas=0;
 $TotalPiking=0;
-
-date_default_timezone_set('America/Guatemala');
 
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 
@@ -43,15 +38,8 @@ switch ($accion) {
 
 include '../Innet_ADM/Innet_AMD.php';
 
-// Variables de resumen Grafica 1
-// Limpia las ubicaciones de produccion que viene en Null
-GraphEstatusBodegas();
-Limpiar_Nulls();
-//AgregarValorAsignaciones();
-LimpiarExesoPiking();
-// Bloquear carriles piking en bodebas
-BloquearCarrilesPiking();
-//Recalcular Pallets Completos
+// Las tareas de mantenimiento se ejecutan desde
+// cron/actualizar_estatus_bodegas.php, no durante la carga del dashboard.
 $CapacidadTotal = CapacidadTotalFIFO();
 $UbicacionesLibres = UnidadesLibresFIFO();
 $Exactitud = "99%";

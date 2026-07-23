@@ -1,20 +1,10 @@
 <?php
+require_once __DIR__ . '/session_guard.php';
+
 
 ob_start();
-session_start();
 
 date_default_timezone_set('America/Guatemala');
-
-$currentDate = date('Y-m-d');
-
-if (
-    !isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) ||
-    $_SESSION['Usuario'] === '' ||
-    $_SESSION['UsuarioFecha'] !== $currentDate
-) {
-    header('Location: ../Innet/505.html');
-    exit;
-}
 
 include '../LQS_EUQ/LST_GCDS.php';
 

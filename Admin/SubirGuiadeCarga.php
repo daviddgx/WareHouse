@@ -1,11 +1,6 @@
 <?php
-session_start();
-$currentDate = date('Y-m-d');
+require_once __DIR__ . '/session_guard.php';
 
-if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
-    header('Location: ../Innet/505.html');
-    exit;
-}
 
 ob_start();
 include '../LQS_EUQ/Auth.php';

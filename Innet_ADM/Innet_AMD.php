@@ -497,21 +497,30 @@ function InserterDetalleGuias($Transporte,$Entrega,$Material,$Cajas,$PesoNeto,$P
 }
 
 function Limpiar_Nulls(){
-
-    $Proceso = false;
-
     // Limpiar las Ubicaciones que estan actualmente con valor NULL
     try {
-        include '../LQS_EUQ/Auth.php';
+        include __DIR__ . '/../LQS_EUQ/Auth.php';
+        if (!isset($pdo) || !($pdo instanceof PDO)) {
+            throw new RuntimeException('No fue posible abrir la conexion a MySQL.');
+        }
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $sentencia = $pdo->prepare("CALL LimpiarNullUbicaciones();");
         $sentencia->execute();
-        $Proceso = true;
-    } catch (Exception $exception){
-        echo "Se encontro el siguente Error en el proceso Limpiar_Nulls: ". $exception -> getMessage() ;
-        $Proceso = false;
-
+        // Los CALL pueden dejar conjuntos de resultados pendientes y conservar
+        // recursos/bloqueos de la conexion hasta que estos se consuman.
+        while ($sentencia->nextRowset()) {
+            // Consumir todos los resultados del procedimiento.
+        }
+        $sentencia->closeCursor();
+        $pdo = null;
+    } catch (Throwable $exception){
+        $pdo = null;
+        throw new RuntimeException(
+            "Error en el proceso Limpiar_Nulls: " . $exception->getMessage(),
+            (int) $exception->getCode(),
+            $exception
+        );
     }
-    
 }
 
 
@@ -536,17 +545,27 @@ function AgregarValorAsignaciones(){
 
 
 function GraphEstatusBodegas(){
-
-    $Proceso = false;
-
     // Traer los valores de las graficas de dias actuales
     try {
-        include '../LQS_EUQ/Auth.php';
+        include __DIR__ . '/../LQS_EUQ/Auth.php';
+        if (!isset($pdo) || !($pdo instanceof PDO)) {
+            throw new RuntimeException('No fue posible abrir la conexion a MySQL.');
+        }
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $sentencia = $pdo->prepare("CALL GenEstatusBodegasDiaria()");
         $sentencia->execute();
-        
-    } catch (Exception $exception){
-        echo "Se necesita revisar el procedimiento de generacion de estauts de bodegas diarias: ". $exception -> getMessage() ;
+        while ($sentencia->nextRowset()) {
+            // Consumir todos los resultados del procedimiento.
+        }
+        $sentencia->closeCursor();
+        $pdo = null;
+    } catch (Throwable $exception){
+        $pdo = null;
+        throw new RuntimeException(
+            "Error al generar el estatus diario de bodegas: " . $exception->getMessage(),
+            (int) $exception->getCode(),
+            $exception
+        );
     }
 }
 

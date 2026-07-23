@@ -1,21 +1,12 @@
 <?php
-ob_start();
-session_start();
-$currentDate = date('Y-m-d');
+require_once __DIR__ . '/session_guard.php';
 
-if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
-    header('Location: ../Innet/505.html');
-}
+ob_start();
 
 
 
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
-
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-} else {
-}
 
 
 
@@ -32,12 +23,6 @@ date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 $fechaConsulta = date("Y") . '-' . date("m") . '-' . date("d");
 $hora = date(' G:i:s ', time());
-
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-} else {
-
-}
 
 date_default_timezone_set('America/Guatemala');
 $hora = date('G:i', time());

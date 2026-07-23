@@ -1,21 +1,14 @@
 <?php
-ob_start();
-session_start();
-$currentDate = date('Y-m-d');
+require_once __DIR__ . '/session_guard.php';
 
-if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
-    header('Location: ../Innet/505.html');
-}
+ob_start();
 
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/LST_GSCRS.php';
+$lista_Guias = isset($lista_Guias) && is_array($lista_Guias) ? $lista_Guias : false;
+$hayGuiasPendientes = is_array($lista_Guias) && !empty($lista_Guias);
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
-
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-} else {
-}
 
 // Variables de entorno
 $MensajeExito = '';
@@ -92,44 +85,78 @@ ob_end_flush();
         }
     </style>
     <style>
-        .zmdi-upload{
-            padding: 0px 15px 0px 0px;
-        }
-        .zmdi-upload:hover{
-            color: black;
-            transition: color 0.2s linear 0.2s;
-        }
-
-        .file-input__input {
-
+        :root {
+            --guide-primary: #ed3131;
+            --guide-primary-dark: #c51f1f;
+            --guide-text: #263238;
+            --guide-muted: #6c757d;
+            --guide-border: #e6e9ed;
+            --guide-surface: #f7f8fa;
         }
 
-        .file-input__label {
+        .guide-hero {
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            color: #fff;
+            border-radius: 16px;
+            background: linear-gradient(125deg, #b71919 0%, var(--guide-primary) 58%, #ff6868 100%);
+            box-shadow: 0 12px 28px rgba(237, 49, 49, .18);
+        }
+
+        .guide-hero h2 { color: #fff; margin-bottom: .35rem; font-weight: 700; }
+        .guide-hero p { margin: 0; color: rgba(255, 255, 255, .88); }
+        .guide-step { display: inline-block; margin-bottom: .65rem; padding: .3rem .7rem; border-radius: 999px; background: rgba(255,255,255,.18); font-size: .75rem; font-weight: 700; letter-spacing: .04em; }
+
+        .workflow-card {
+            border: 1px solid var(--guide-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(36, 46, 66, .06);
+            overflow: hidden;
+        }
+
+        .workflow-card .card-body { padding: 1.6rem; }
+        .section-heading { display: flex; align-items: flex-start; gap: .85rem; margin-bottom: 1.25rem; }
+        .section-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 42px; height: 42px; color: var(--guide-primary); border-radius: 12px; background: rgba(237,49,49,.09); }
+        .section-heading h4 { margin: 0 0 .25rem; color: var(--guide-text); font-weight: 700; }
+        .section-heading p { margin: 0; color: var(--guide-muted); }
+
+        .upload-zone {
+            position: relative;
+            display: block;
+            padding: 2.2rem 1rem;
+            border: 2px dashed #cfd5dc;
+            border-radius: 14px;
+            background: var(--guide-surface);
             cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #fff;
-            font-size: 14px;
-            padding: 10px 12px;
-            background-color: #ff0000;
-            box-shadow: 0px 0px 2px rgb(0, 0, 0);
+            transition: border-color .2s ease, background .2s ease, transform .2s ease;
         }
 
-        .btn-enviar{
-            color: #fff;
-            font-weight: 600;
-            padding: 10px 45px;
-            background-color: #767676;
-            border: none;
-            border-radius: 2px;
-        }
-        .btn-enviar:hover{
-            color: #b3b3b3;
-        }
+        .upload-zone:hover, .upload-zone.is-dragging { border-color: var(--guide-primary); background: #fff7f7; transform: translateY(-1px); }
+        .upload-zone.has-file { border-style: solid; border-color: #28a745; background: #f4fcf6; }
+        .file-input__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+        .upload-icon { width: 50px; height: 50px; margin-bottom: .8rem; color: var(--guide-primary); }
+        .upload-title { display: block; color: var(--guide-text); font-size: 1rem; font-weight: 700; }
+        .upload-help, .selected-file { display: block; margin-top: .35rem; color: var(--guide-muted); font-size: .85rem; }
+        .selected-file { color: #218838; font-weight: 600; }
 
+        .guide-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem; margin-top: 1.25rem; }
+        .guide-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-width: 170px; min-height: 44px; border-radius: 10px; font-weight: 700; transition: transform .15s ease, box-shadow .15s ease; }
+        .guide-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 7px 16px rgba(36,46,66,.13); }
+        .guide-btn:disabled { cursor: not-allowed; opacity: .65; }
+        .guide-btn-primary { color: #fff; border: 1px solid var(--guide-primary); background: var(--guide-primary); }
+        .guide-btn-primary:hover:not(:disabled) { color: #fff; background: var(--guide-primary-dark); border-color: var(--guide-primary-dark); }
+
+        .guide-table-wrap { overflow-x: auto; border: 1px solid var(--guide-border); border-radius: 12px; }
+        .guide-table-wrap .table { margin-bottom: 0; }
+        .guide-table-wrap thead th { border: 0; background: #f4f6f8; color: #46505a; font-size: .75rem; text-transform: uppercase; letter-spacing: .035em; white-space: nowrap; }
+        .guide-table-wrap tbody td { vertical-align: middle; }
+        .processing-spinner { width: 1rem; height: 1rem; border: 2px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 50%; animation: guide-spin .7s linear infinite; }
+        @keyframes guide-spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 575.98px) {
+            .guide-hero, .workflow-card .card-body { padding: 1.2rem; }
+            .guide-btn { width: 100%; }
+        }
     </style>
 
 
@@ -308,53 +335,49 @@ ob_end_flush();
         <div class="container-fluid animate__animated animate__fadeIn">
             <div class="row">
                 <div class="col-12">
-                    <div class="card">
+                    <div class="guide-hero">
+                        <span class="guide-step">GESTI&Oacute;N DE GU&Iacute;AS</span>
+                        <h2>Cargar nuevas gu&iacute;as</h2>
+                        <p>Importe el archivo CSV, revise la informaci&oacute;n detectada y confirme la carga.</p>
+                    </div>
+
+                    <div class="card workflow-card">
 
                         <div class="card-body">
-                            <h4 class="card-title">Cargar nuevas Guías</h4>
-                            <h6 class="card-subtitle">Cargue la guía en formato de Excel </h6>
-
                             <?php echo $Mensajeerror; ?>
                             <?php echo $MensajeExito; ?>
 
 
 
-                            <div class="card text-center">
+                            <div class="card workflow-card text-center">
 
                                 <div class="card-body">
-                                    <h4 class="card-title">Selecciones el archivo para cargar las guias</h4>
-                                    <h6 class="card-subtitle">El archivo debe estar en formato CSV</h6>
-                                    <br>
+                                    <div class="section-heading text-left">
+                                        <span class="section-icon"><i data-feather="upload-cloud"></i></span>
+                                        <div>
+                                            <h4>1. Seleccione el archivo</h4>
+                                            <p>Utilice el archivo CSV generado para la carga de gu&iacute;as.</p>
+                                        </div>
+                                    </div>
                                     <!-- Start First Cards -->
                                     <div class="row">
                                         <!-- Column -->
                                         <div class="col-md-12 text-center">
 
-                                            <form action="SubirGuiadeCarga.php" method="POST" enctype="multipart/form-data">
-                                                <div class="file-input text-center">
-                                                    <input type="file" name="dataGuias" id="file-input" class="file-input__label" accept="text/csv"/>
+                                            <form id="upload-guides-form" class="js-confirm-form" action="SubirGuiadeCarga.php" method="POST" enctype="multipart/form-data" data-action="upload">
+                                                <label class="upload-zone" id="upload-zone" for="file-input">
+                                                    <input type="file" name="dataGuias" id="file-input" class="file-input__input" accept=".csv,text/csv" required>
+                                                    <i data-feather="file-plus" class="upload-icon"></i>
+                                                    <span class="upload-title">Arrastre el archivo aqu&iacute; o haga clic para buscarlo</span>
+                                                    <span class="upload-help">Solo se admiten archivos CSV de hasta 10 MB</span>
+                                                    <span class="selected-file" id="selected-file" aria-live="polite"></span>
+                                                </label>
+                                                <div class="guide-actions">
+                                                    <button type="submit" name="subir" class="btn guide-btn guide-btn-primary">
+                                                        <i data-feather="upload"></i><span>Subir archivo CSV</span>
+                                                    </button>
                                                 </div>
-                                                <div class="text-center mt-5">
-                                                    <input type="submit" name="subir" class="btn-enviar text-center" value="Subir Archivo CSV"/>
-                                                </div>
-                                                <br>
                                             </form>
-
-                                            <div class="modal" id="errorModal" tabindex="-1" role="dialog">
-                                                <div class="modal-dialog modal-dialog-centered" role="document">
-                                                    <div class="modal-content" ">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">No se ha seleccionado el archivo</h5>
-                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                                <span aria-hidden="true">&times;</span>
-                                                            </button>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            <p>Por favor, selecciona un archivo antes de subirlo.</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
 
 
 
@@ -368,27 +391,31 @@ ob_end_flush();
                         </div>
                     </div>
 
-                            <div class="card">
+                            <div class="card workflow-card">
 
                                 <div class="card-body">
-                                    <h4 class="card-title">Guias Cargadas Recientemente</h4>
-                                    <h6 class="card-subtitle">Valide la Informacion cargada y posteriormente Guarde la informacion. </h6>
-                                    <br>
+                                    <div class="section-heading">
+                                        <span class="section-icon"><i data-feather="check-square"></i></span>
+                                        <div>
+                                            <h4>2. Revise y confirme</h4>
+                                            <p>Compruebe la informaci&oacute;n antes de guardarla definitivamente.</p>
+                                        </div>
+                                    </div>
                                     <!-- Start First Cards -->
-                                    <form action="CargarGuias.php" method="POST">
+                                    <form class="js-confirm-form" action="CargarGuias.php" method="POST" data-action="save">
                                         <div class="form-actions">
                                             <div class="text-center">
                                                 <br>
 
                                                 <button type="submit" value="btnModificar" name="Procesar"
-                                                        class="btn btn-outline-success">Guardar Carga
+                                                        class="btn btn-success guide-btn"><i data-feather="save"></i><span>Guardar carga</span>
                                                 </button>
 
                                             </div>
                                         </div>
                                     </form>
                                     <br>
-                                    <div >
+                                    <div class="guide-table-wrap">
                                         <!-- Column -->
                                         <div >
 
@@ -413,7 +440,7 @@ ob_end_flush();
                                                     </thead>
                                                     <tbody>
                                                     <?php
-                                                    for ($i = 0; $i < $lista_Guias; $i++) {
+                                                    while (is_array($lista_Guias)) {
                                                         echo "<tr>";
 
                                                         echo "<td>";
@@ -459,6 +486,9 @@ ob_end_flush();
 
                                                         $lista_Guias = $ejecutar_sentencia_Guias->fetch(PDO::FETCH_ASSOC);
                                                     }
+                                                    if (!$hayGuiasPendientes) {
+                                                        echo '<tr><td colspan="9" class="text-center text-muted py-4">No hay gu&iacute;as pendientes de procesar.</td></tr>';
+                                                    }
                                                     ?>
                                                     </tbody>
                                                 </table>
@@ -469,13 +499,13 @@ ob_end_flush();
                                         </div>
 
                                     </div>
-                                    <form action="EliminarGuiasPre.php" method="POST">
+                                    <form class="js-confirm-form" action="EliminarGuiasPre.php" method="POST" data-action="delete">
                                         <div class="form-actions">
                                             <div class="text-center">
                                                 <br>
 
                                                 <button type="submit" value="btnModificar" name="Procesar"
-                                                        class="btn btn-outline-danger">Eliminar Carga
+                                                        class="btn btn-outline-danger guide-btn"><i data-feather="trash-2"></i><span>Eliminar carga</span>
                                                 </button>
 
                                             </div>
@@ -524,6 +554,7 @@ ob_end_flush();
 <script src="../assets/libs/jquery/dist/jquery.min.js"></script>
 <script src="../assets/libs/popper.js/dist/umd/popper.min.js"></script>
 <script src="../assets/libs/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <!-- apps -->
 <!-- apps -->
 <script src="../dist/js/app-style-switcher.js"></script>
@@ -555,12 +586,180 @@ ob_end_flush();
         </script>
 
         <script>
-            document.querySelector('input[type="submit"]').addEventListener('click', function (event) {
-                if (!document.querySelector('input[type="file"]').files.length) {
-                    event.preventDefault();
-                    $("#errorModal").modal("show");
+            (function () {
+                'use strict';
+
+                const fileInput = document.getElementById('file-input');
+                const uploadZone = document.getElementById('upload-zone');
+                const selectedFile = document.getElementById('selected-file');
+                const maxFileSize = 10 * 1024 * 1024;
+                const hasPendingGuides = <?php echo $hayGuiasPendientes ? 'true' : 'false'; ?>;
+
+                const actions = {
+                    upload: {
+                        title: '¿Subir este archivo?',
+                        text: 'Se analizará el CSV antes de guardar las guías.',
+                        icon: 'question',
+                        confirmText: 'Sí, subir archivo',
+                        loadingText: 'Subiendo archivo...'
+                    },
+                    save: {
+                        title: '¿Guardar la carga?',
+                        text: 'Las guías revisadas se guardarán definitivamente.',
+                        icon: 'question',
+                        confirmText: 'Sí, guardar',
+                        loadingText: 'Guardando carga...'
+                    },
+                    delete: {
+                        title: '¿Eliminar la carga?',
+                        text: 'Se descartarán todas las guías de la precarga actual.',
+                        icon: 'warning',
+                        confirmText: 'Sí, eliminar',
+                        loadingText: 'Eliminando carga...',
+                        danger: true
+                    }
+                };
+
+                function showAlert(options) {
+                    if (window.Swal) {
+                        return Swal.fire(options);
+                    }
+
+                    return Promise.resolve({ isConfirmed: window.confirm(options.text || options.title) });
                 }
-            });
+
+                function showFileError(message) {
+                    showAlert({
+                        title: 'Archivo no válido',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonColor: '#ed3131'
+                    });
+                }
+
+                function validateFile(showError) {
+                    const file = fileInput.files[0];
+                    if (!file) {
+                        if (showError) showFileError('Seleccione un archivo CSV antes de continuar.');
+                        return false;
+                    }
+
+                    if (!file.name.toLowerCase().endsWith('.csv')) {
+                        if (showError) showFileError('El archivo debe tener extensión .csv.');
+                        return false;
+                    }
+
+                    if (file.size > maxFileSize) {
+                        if (showError) showFileError('El archivo supera el tamaño máximo permitido de 10 MB.');
+                        return false;
+                    }
+
+                    return true;
+                }
+
+                function updateFileState() {
+                    const file = fileInput.files[0];
+                    const valid = validateFile(false);
+                    uploadZone.classList.toggle('has-file', Boolean(file && valid));
+                    selectedFile.textContent = file
+                        ? file.name + ' · ' + (file.size / 1024).toFixed(1) + ' KB'
+                        : '';
+
+                    if (file && !valid) validateFile(true);
+                }
+
+                function setSubmitting(form, text) {
+                    document.querySelectorAll('.js-confirm-form button[type="submit"]').forEach(function (button) {
+                        button.disabled = true;
+                    });
+
+                    const button = form.querySelector('button[type="submit"]');
+                    if (button) {
+                        button.innerHTML = '<span class="processing-spinner" aria-hidden="true"></span><span>' + text + '</span>';
+                        button.setAttribute('aria-busy', 'true');
+                    }
+                }
+
+                fileInput.addEventListener('change', updateFileState);
+                ['dragenter', 'dragover'].forEach(function (eventName) {
+                    uploadZone.addEventListener(eventName, function (event) {
+                        event.preventDefault();
+                        uploadZone.classList.add('is-dragging');
+                    });
+                });
+                ['dragleave', 'drop'].forEach(function (eventName) {
+                    uploadZone.addEventListener(eventName, function (event) {
+                        event.preventDefault();
+                        uploadZone.classList.remove('is-dragging');
+                    });
+                });
+                uploadZone.addEventListener('drop', function (event) {
+                    if (event.dataTransfer.files.length) {
+                        fileInput.files = event.dataTransfer.files;
+                        updateFileState();
+                    }
+                });
+
+                document.querySelectorAll('.js-confirm-form').forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        event.preventDefault();
+
+                        const actionName = form.dataset.action;
+                        const action = actions[actionName];
+                        if (!action) return;
+
+                        if (actionName === 'upload' && hasPendingGuides) {
+                            showAlert({
+                                title: 'Carga pendiente',
+                                text: 'Procese las cargas pendientes antes de cargar un nuevo archivo.',
+                                icon: 'warning',
+                                confirmButtonText: 'Entendido',
+                                confirmButtonColor: '#ed3131'
+                            });
+                            return;
+                        }
+
+                        if (actionName === 'save' && !hasPendingGuides) {
+                            showAlert({
+                                title: 'Sin registros',
+                                text: 'Ningún registro para cargar.',
+                                icon: 'info',
+                                confirmButtonText: 'Entendido',
+                                confirmButtonColor: '#ed3131'
+                            });
+                            return;
+                        }
+
+                        if (actionName === 'upload' && !validateFile(true)) return;
+                        if (form.dataset.pending === 'true') return;
+
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        form.dataset.pending = 'true';
+                        if (submitButton) submitButton.disabled = true;
+
+                        showAlert({
+                            title: action.title,
+                            text: action.text,
+                            icon: action.icon,
+                            showCancelButton: true,
+                            confirmButtonText: action.confirmText,
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: action.danger ? '#dc3545' : '#28a745',
+                            cancelButtonColor: '#6c757d',
+                            reverseButtons: true,
+                            focusCancel: action.danger
+                        }).then(function (result) {
+                            if (!result.isConfirmed) {
+                                form.dataset.pending = 'false';
+                                if (submitButton) submitButton.disabled = false;
+                                return;
+                            }
+                            setSubmitting(form, action.loadingText);
+                            form.submit();
+                        });
+                    });
+                });
+            }());
         </script>
     <script>
         // Establece el tiempo de inactividad en milisegundos (5 minutos = 300,000 milisegundos)

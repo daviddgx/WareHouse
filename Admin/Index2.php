@@ -1,6 +1,7 @@
 <?php
+require_once __DIR__ . '/session_guard.php';
+
 ob_start();
-session_start();
 
 
 //ANCHOR -  Redireccion a HTPPS

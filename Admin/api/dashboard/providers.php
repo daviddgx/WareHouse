@@ -1,13 +1,8 @@
 <?php
-ob_start();
-session_start();
-$currentDate = date('Y-m-d');
-
-if (!isset($_SESSION['Usuario'], $_SESSION['UsuarioFecha']) || $_SESSION['Usuario'] === '' || $_SESSION['UsuarioFecha'] !== $currentDate) {
-    header('Location: ../../../Innet/505.html');
-    
-}
 declare(strict_types=1);
+define('ADMIN_SESSION_JSON_RESPONSE', true);
+require_once dirname(__DIR__, 2) . '/session_guard.php';
+
 
 require_once __DIR__ . '/../../../LQS_EUQ/Connect.php';
 

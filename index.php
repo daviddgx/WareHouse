@@ -13,14 +13,131 @@ session_start();
 
 include 'LQS_EUQ/Auth.php';
 
+/**
+ * Obtiene la IP visible para la aplicación.
+ * HTTP_X_FORWARDED_FOR solo se conserva como dato de auditoría porque puede ser
+ * manipulado si el servidor no está detrás de un proxy de confianza.
+ */
+function obtenerDireccionIP()
+{
+    return isset($_SERVER['REMOTE_ADDR'])
+        ? substr((string) $_SERVER['REMOTE_ADDR'], 0, 45)
+        : null;
+}
+
+/**
+ * Registra un intento de acceso sin interrumpir el login si la bitácora falla.
+ * Nunca recibe ni almacena la contraseña.
+ */
+function registrarIntentoLogin($conn, $usuario, $resultado, $motivo = null)
+{
+    try {
+        $ip = obtenerDireccionIP();
+        $ipsProxy = isset($_SERVER['HTTP_X_FORWARDED_FOR'])
+            ? substr((string) $_SERVER['HTTP_X_FORWARDED_FOR'], 0, 500)
+            : null;
+        $agente = isset($_SERVER['HTTP_USER_AGENT'])
+            ? substr((string) $_SERVER['HTTP_USER_AGENT'], 0, 1000)
+            : null;
+        $plataforma = isset($_SERVER['HTTP_SEC_CH_UA_PLATFORM'])
+            ? trim(substr((string) $_SERVER['HTTP_SEC_CH_UA_PLATFORM'], 0, 100), '"')
+            : null;
+        $idioma = isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])
+            ? substr((string) $_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 100)
+            : null;
+        $metodo = isset($_SERVER['REQUEST_METHOD'])
+            ? substr((string) $_SERVER['REQUEST_METHOD'], 0, 10)
+            : null;
+        $uri = isset($_SERVER['REQUEST_URI'])
+            ? substr((string) $_SERVER['REQUEST_URI'], 0, 500)
+            : null;
+        $referente = isset($_SERVER['HTTP_REFERER'])
+            ? substr((string) $_SERVER['HTTP_REFERER'], 0, 1000)
+            : null;
+
+        // Cabeceras habituales de Cloudflare; quedan NULL si no están disponibles.
+        $pais = isset($_SERVER['HTTP_CF_IPCOUNTRY'])
+            ? substr((string) $_SERVER['HTTP_CF_IPCOUNTRY'], 0, 2)
+            : null;
+        $region = isset($_SERVER['HTTP_CF_REGION'])
+            ? substr((string) $_SERVER['HTTP_CF_REGION'], 0, 150)
+            : null;
+        $ciudad = isset($_SERVER['HTTP_CF_IPCITY'])
+            ? substr((string) $_SERVER['HTTP_CF_IPCITY'], 0, 150)
+            : null;
+        $latitud = isset($_SERVER['HTTP_CF_IPLATITUDE'])
+            ? (float) $_SERVER['HTTP_CF_IPLATITUDE']
+            : null;
+        $longitud = isset($_SERVER['HTTP_CF_IPLONGITUDE'])
+            ? (float) $_SERVER['HTTP_CF_IPLONGITUDE']
+            : null;
+
+        // Reverse DNS puede funcionar como nombre de dispositivo en una red local.
+        $nombreDispositivo = $ip ? @gethostbyaddr($ip) : null;
+        if ($nombreDispositivo === $ip) {
+            $nombreDispositivo = null;
+        }
+
+        $idSesionHash = session_id() !== ''
+            ? hash('sha256', session_id())
+            : null;
+        $datosAdicionales = json_encode(array(
+            'host_solicitado' => isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : null,
+            'es_https' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'accept' => isset($_SERVER['HTTP_ACCEPT']) ? $_SERVER['HTTP_ACCEPT'] : null
+        ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $sqlAuditoria = "INSERT INTO dbs9098416.AuditoriaIntentosLogin
+            (Usuario, Resultado, Motivo, DireccionIP, IPsProxy, NombreDispositivo,
+             AgenteUsuario, Plataforma, Idioma, MetodoHTTP, URI, Referente,
+             PaisCodigo, Region, Ciudad, Latitud, Longitud, IdSesionHash, DatosAdicionales)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        $stmtAuditoria = $conn->prepare($sqlAuditoria);
+        if (!$stmtAuditoria) {
+            error_log('No se pudo preparar la auditoría de login: ' . $conn->error);
+            return;
+        }
+
+        $stmtAuditoria->bind_param(
+            'sssssssssssssssddss',
+            $usuario,
+            $resultado,
+            $motivo,
+            $ip,
+            $ipsProxy,
+            $nombreDispositivo,
+            $agente,
+            $plataforma,
+            $idioma,
+            $metodo,
+            $uri,
+            $referente,
+            $pais,
+            $region,
+            $ciudad,
+            $latitud,
+            $longitud,
+            $idSesionHash,
+            $datosAdicionales
+        );
+        if (!$stmtAuditoria->execute()) {
+            error_log('No se pudo registrar la auditoría de login: ' . $stmtAuditoria->error);
+        }
+        $stmtAuditoria->close();
+    } catch (Throwable $ex) {
+        error_log('Error al registrar la auditoría de login: ' . $ex->getMessage());
+    }
+}
+
 
 // FuncionLogin
 
 
 if (!empty($_POST['Entrar'])) {
     
-    $LUser = $_POST['UserLog'];
-    $LClave = $_POST['ClaveLog'];
+    $LUser = trim((string) $_POST['UserLog']);
+    $LClave = (string) $_POST['ClaveLog'];
 
 
     // Creamos la conexion
@@ -37,19 +154,48 @@ if (!empty($_POST['Entrar'])) {
 
 
 
-        $sql = "SELECT * FROM dbs9098416.usuarios_app where Nombre_Usuario = '$LUser' and Clave_Usuario = '$LClave';";
-        $result = $conn->query($sql);
-        // Fin Obtencion de datos
         try {
+            $sql = "SELECT Nombre_Usuario, Nombre, Apellido, Foto, TipoUsuario
+                    FROM dbs9098416.usuarios_app
+                    WHERE Nombre_Usuario = ? AND Clave_Usuario = ?
+                    LIMIT 1";
+            $stmtLogin = $conn->prepare($sql);
+            if (!$stmtLogin) {
+                throw new RuntimeException('No se pudo preparar la consulta de autenticación.');
+            }
 
+            $stmtLogin->bind_param('ss', $LUser, $LClave);
+            if (!$stmtLogin->execute()) {
+                throw new RuntimeException('No se pudo ejecutar la consulta de autenticación.');
+            }
 
+            $stmtLogin->store_result();
 
-            if ($result->num_rows > 0) {
+            if ($stmtLogin->num_rows > 0) {
+                $stmtLogin->bind_result(
+                    $usuarioEncontrado,
+                    $nombreEncontrado,
+                    $apellidoEncontrado,
+                    $fotoEncontrada,
+                    $tipoUsuarioEncontrado
+                );
+                $stmtLogin->fetch();
+
+                $row = array(
+                    'Nombre_Usuario' => $usuarioEncontrado,
+                    'Nombre' => $nombreEncontrado,
+                    'Apellido' => $apellidoEncontrado,
+                    'Foto' => $fotoEncontrada,
+                    'TipoUsuario' => $tipoUsuarioEncontrado
+                );
+                $stmtLogin->free_result();
+
+                registrarIntentoLogin($conn, $LUser, 'SATISFACTORIO', 'CREDENCIALES_VALIDAS');
+                session_regenerate_id(true);
                 //Salida de datos del query
 
                 // Cambiamos los IF anidados por Switch/Case para mejorar el rendimiento
 
-                while ($row = $result->fetch_assoc()) {
                     $sessionDate = date('Y-m-d');
 
                     switch ($row['TipoUsuario']) {
@@ -114,13 +260,14 @@ if (!empty($_POST['Entrar'])) {
                             header('Location: MontaCargas2/index.php');
                             break;
                     }
-                }
             } else {
+                registrarIntentoLogin($conn, $LUser, 'FALLIDO', 'CREDENCIALES_INVALIDAS');
                 $error =
                     '<div class="alert alert-danger" role="alert"><p><strong> Usuario o Clave incorrecta, intentelo de nuevo o actualice su clave en la seccion de ayuda. </div>';
                 // $row = $result->fetch_assoc();
             }
-        } catch (Exception $ex) {
+        } catch (Throwable $ex) {
+            registrarIntentoLogin($conn, $LUser, 'FALLIDO', 'ERROR_AUTENTICACION');
             $error = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
                                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                         <span aria-hidden="true">×</span>
@@ -130,6 +277,10 @@ if (!empty($_POST['Entrar'])) {
         }
         //comprovacion de dadtos
         //fin comprovacion de datos
+        if (isset($stmtLogin) && $stmtLogin instanceof mysqli_stmt) {
+            $stmtLogin->close();
+        }
+        $conn->close();
     }
 
     // Fin de la conexion
@@ -145,10 +296,7 @@ ob_end_flush();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sertero CBP</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="../assets/images/sertero/LogoCBP.png" width="auto" height="auto">
+    <link rel="icon" href="assets/images/favicon.png">
     <style>
         :root {
             color-scheme: light dark;
@@ -337,6 +485,314 @@ ob_end_flush();
                 background-attachment: scroll;
             }
         }
+        /* Identidad visual compartida con la página 505 */
+        :root {
+            color-scheme: dark;
+            --bg: #07111f;
+            --surface: rgba(15, 30, 49, .76);
+            --surface-border: rgba(255, 255, 255, .12);
+            --text: #f7fafc;
+            --muted: #a9b8ca;
+            --accent: #ff912b;
+        }
+
+        body {
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: 24px;
+            display: grid;
+            place-items: center;
+            overflow-x: hidden;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 16% 18%, rgba(255, 145, 43, .15), transparent 28rem),
+                radial-gradient(circle at 90% 85%, rgba(58, 105, 255, .14), transparent 30rem),
+                var(--bg);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: .2;
+            background-image:
+                linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: linear-gradient(to bottom, #000, transparent 85%);
+        }
+
+        .top-bar {
+            position: fixed;
+            top: 26px;
+            right: 32px;
+            z-index: 5;
+            padding: 0;
+            color: var(--muted);
+            background: none;
+            backdrop-filter: none;
+            font-size: .8rem;
+        }
+
+        .weather-info { display: none; }
+
+        .main-content {
+            width: min(1080px, 100%);
+            min-height: min(680px, calc(100dvh - 48px));
+            grid-template-columns: minmax(0, 1.08fr) minmax(330px, .92fr);
+            gap: 0;
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid var(--surface-border);
+            border-radius: 30px;
+            background: var(--surface);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, .4);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            animation: loginEnter .6s cubic-bezier(.2, .8, .2, 1) both;
+        }
+
+        .brand-card, .login-card {
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .brand-card {
+            position: relative;
+            justify-content: center;
+            padding: clamp(36px, 6vw, 70px);
+            background:
+                linear-gradient(110deg, rgba(5, 16, 29, .94), rgba(5, 16, 29, .66)),
+                url("assets/images/Sertero/WMS.jpeg") center/cover no-repeat;
+            overflow: hidden;
+        }
+
+        .brand-card::after {
+            content: "";
+            position: absolute;
+            width: 340px;
+            aspect-ratio: 1;
+            right: -110px;
+            bottom: -120px;
+            border: 1px solid rgba(255, 145, 43, .24);
+            border-radius: 50%;
+            box-shadow:
+                0 0 0 38px rgba(255, 145, 43, .035),
+                0 0 0 80px rgba(255, 145, 43, .018);
+            animation: loginBreathe 4s ease-in-out infinite;
+        }
+
+        .brand-identity {
+            position: absolute;
+            top: clamp(32px, 5vw, 54px);
+            left: clamp(36px, 6vw, 70px);
+            display: inline-flex;
+            align-items: center;
+            gap: 11px;
+            font-weight: 780;
+        }
+
+        .sertero-logo {
+            width: min(205px, 48vw);
+            height: auto;
+            display: block;
+            filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .35));
+        }
+
+        .eyebrow {
+            margin: 0 0 14px;
+            color: var(--accent);
+            font-size: .78rem;
+            font-weight: 800;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+
+        .brand-card h1 {
+            max-width: 560px;
+            font-size: clamp(2.3rem, 4.8vw, 4.4rem);
+            line-height: .99;
+            letter-spacing: -.055em;
+        }
+
+        .brand-card p {
+            max-width: 540px;
+            color: var(--muted);
+            font-size: 1.04rem;
+            line-height: 1.7;
+        }
+
+        .brand-card > * { position: relative; z-index: 1; }
+
+        .logistics-modules {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            margin-top: 8px;
+        }
+
+        .module {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 11px;
+            border: 1px solid rgba(255,255,255,.13);
+            border-radius: 9px;
+            color: #dce7f1;
+            background: rgba(4, 14, 25, .52);
+            backdrop-filter: blur(8px);
+            font-size: .75rem;
+            font-weight: 680;
+        }
+
+        .module-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255, 145, 43, .13);
+        }
+
+        .login-card {
+            justify-content: center;
+            padding: clamp(36px, 6vw, 64px);
+            border-left: 1px solid var(--surface-border);
+            background: rgba(5, 15, 27, .36);
+        }
+
+        .login-card h2 {
+            font-size: clamp(1.65rem, 3vw, 2.1rem);
+            text-align: left;
+            letter-spacing: -.03em;
+        }
+
+        .login-intro {
+            margin: -10px 0 4px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .login-card form { display: grid; gap: 20px; }
+        .field { display: grid; gap: 8px; }
+
+        .field label {
+            color: #dbe5ef;
+            font-size: .85rem;
+            font-weight: 680;
+        }
+
+        .password-wrap { position: relative; }
+
+        .form-control {
+            min-height: 52px;
+            padding: 0 46px 0 16px;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 13px;
+            color: var(--text);
+            background: rgba(4, 14, 25, .55);
+            font: inherit;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent);
+            background: rgba(4, 14, 25, .82);
+            box-shadow: 0 0 0 4px rgba(255, 145, 43, .1);
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            min-width: 38px;
+            min-height: 38px;
+            border: 0;
+            border-radius: 9px;
+            color: var(--muted);
+            background: transparent;
+            cursor: pointer;
+            transform: translateY(-50%);
+        }
+
+        .toggle-password:hover { color: var(--accent); background: rgba(255,255,255,.05); }
+        .message-container:empty { display: none; }
+
+        .message-container .alert {
+            margin: 0;
+            padding: 12px 14px;
+            border: 1px solid rgba(255, 125, 137, .22);
+            border-radius: 11px;
+            color: #ffd9dc;
+            background: rgba(255, 125, 137, .08);
+            line-height: 1.5;
+        }
+
+        .message-container p { margin: 0; }
+        .message-container .close { display: none; }
+
+        .effect-button {
+            min-height: 52px;
+            gap: 9px;
+            padding: 0 19px;
+            border-radius: 13px;
+            color: #032b27;
+            background: var(--accent);
+            box-shadow: 0 10px 30px rgba(255, 145, 43, .2);
+            font-weight: 760;
+        }
+
+        .effect-button:hover, .effect-button:focus {
+            color: #032b27;
+            background: #ffa44f;
+            box-shadow: 0 14px 34px rgba(255, 145, 43, .24);
+        }
+
+        .effect-button:disabled { cursor: wait; opacity: .7; transform: none; }
+
+        .privacy {
+            margin: 2px 0 0;
+            color: #718499;
+            font-size: .76rem;
+            line-height: 1.55;
+            text-align: center;
+        }
+
+        .footer-note { display: none; }
+
+        @keyframes loginEnter {
+            from { opacity: 0; transform: translateY(18px) scale(.985); }
+        }
+
+        @keyframes loginBreathe {
+            50% { transform: scale(1.04); opacity: .72; }
+        }
+
+        @media (max-width: 780px) {
+            body { padding: 16px; }
+            .top-bar { position: absolute; top: 30px; right: 22px; }
+            .top-info span:first-child { display: none; }
+            .main-content { grid-template-columns: 1fr; border-radius: 24px; }
+            .brand-card { min-height: 430px; padding-top: 120px; }
+            .login-card { border-top: 1px solid var(--surface-border); border-left: 0; }
+        }
+
+        @media (max-width: 430px) {
+            body { padding: 0; }
+            .main-content { min-height: 100dvh; border: 0; border-radius: 0; }
+            .brand-card, .login-card { padding: 30px 22px; }
+            .brand-card { min-height: 410px; padding-top: 110px; }
+            .brand-identity { left: 22px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .01ms !important;
+            }
+        }
     </style>
 </head>
 
@@ -353,32 +809,45 @@ ob_end_flush();
 
     <main class="main-content">
         <section class="brand-card">
-            <img src="../assets/images/Sertero/LogoHenkel.png" alt="Sertero" style="max-width: 180px; height: auto;">
-            <h1>Pantalla de acceso Sertero</h1>
+            <div class="brand-identity">
+                <img class="sertero-logo" src="assets/images/Sertero/LogoHenkel.png"
+                     alt="Sertero">
+            </div>
+            <br>
+            <br>
+            <p class="eyebrow">Warehouse Management System</p>
+            <h1>Logística conectada. Operación bajo control.</h1>
             <p>
-                Bienvenido
-                Sistema Logistico
-
-                Control de Posiciones, planificacion y control de despachos, Inventario, Picking.
-
-                Conectividad en tiempo real interoperabilidad con montacargas
+                Una plataforma central para coordinar inventario, ubicaciones, picking,
+                despachos y movimientos de montacargas en tiempo real.
             </p>
-            <p style="font-size: 0.9rem; color: rgba(244, 247, 251, 0.7);">
-                Interfaz optimizada y responsiva. 
-            </p>
+            <div class="logistics-modules" aria-label="Módulos del sistema">
+                <span class="module"><span class="module-dot"></span>Inventario</span>
+                <span class="module"><span class="module-dot"></span>Picking</span>
+                <span class="module"><span class="module-dot"></span>Despachos</span>
+                <span class="module"><span class="module-dot"></span>Montacargas</span>
+            </div>
         </section>
 
         <section class="login-card">
-            <h2>Ingreso al sistema</h2>
-            <form role="form" action="" method="post">
-                <div>
-                    <input type="text" name="UserLog" placeholder="Usuario" class="form-control" id="UserLog" required>
+            <h2>Bienvenido de nuevo</h2>
+            <p class="login-intro">Ingresa tus credenciales para continuar.</p>
+            <form id="loginForm" role="form" action="" method="post">
+                <div class="field">
+                    <label for="UserLog">Usuario</label>
+                    <input type="text" name="UserLog" placeholder="Escribe tu usuario"
+                           class="form-control" id="UserLog" autocomplete="username"
+                           maxlength="100" autocapitalize="none" spellcheck="false" required autofocus>
                 </div>
                 <div>
                     <input type="password" name="ClaveLog" placeholder="Contraseña" class="form-control" id="ClaveLog" required>
                 </div>
-                <div class="message-container"><?php echo $error . $mensajeExito; ?></div>
-                <button type="submit" name="Entrar"  value="Entrar"class="effect-button">Entrar al Sistema</button>
+                <div class="message-container" role="alert" aria-live="polite"><?php echo $error . $mensajeExito; ?></div>
+                <button type="submit" name="Entrar" value="Entrar" class="effect-button" id="submitButton">
+                    <span id="submitText">Entrar al sistema</span>
+                    <span aria-hidden="true">→</span>
+                </button>
+                <p class="privacy">Acceso exclusivo para personal autorizado. Los intentos de ingreso son auditados.</p>
             </form>
         </section>
     </main>
@@ -402,6 +871,37 @@ ob_end_flush();
 
         updateDateTime();
         setInterval(updateDateTime, 1000);
+
+        const loginForm = document.getElementById('loginForm');
+        const passwordInput = document.getElementById('ClaveLog');
+        const passwordContainer = passwordInput.parentElement;
+        const togglePassword = document.createElement('button');
+
+        passwordContainer.classList.add('field', 'password-wrap');
+        passwordInput.setAttribute('autocomplete', 'current-password');
+        togglePassword.type = 'button';
+        togglePassword.className = 'toggle-password';
+        togglePassword.textContent = 'Ver';
+        togglePassword.setAttribute('aria-label', 'Mostrar contraseña');
+        togglePassword.setAttribute('aria-pressed', 'false');
+        passwordContainer.appendChild(togglePassword);
+
+        togglePassword.addEventListener('click', () => {
+            const showing = passwordInput.type === 'text';
+            passwordInput.type = showing ? 'password' : 'text';
+            togglePassword.textContent = showing ? 'Ver' : 'Ocultar';
+            togglePassword.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+            togglePassword.setAttribute('aria-pressed', String(!showing));
+            passwordInput.focus();
+        });
+
+        loginForm.addEventListener('submit', () => {
+            if (!loginForm.checkValidity()) return;
+            const submitButton = document.getElementById('submitButton');
+            submitButton.setAttribute('aria-busy', 'true');
+            submitButton.style.pointerEvents = 'none';
+            document.getElementById('submitText').textContent = 'Validando acceso…';
+        });
 
         const weatherStatus = document.getElementById('weather-status');
 

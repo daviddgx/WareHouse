@@ -26,6 +26,7 @@ $txtPesoNetoUnitario =  "";
 $txtPesoBrutoUnitario =  "";
 $txtPesoNetoCaja = "";
 $txtPesoBrutoCaja = "";
+$txtPesoPorPallet = "";
 $txtFoto =  "";
 $txtDiasCuarentena = "";
 $txtDiasVencimiento =  "";
@@ -64,6 +65,7 @@ switch ($accion) {
         $txtPesoBrutoUnitario = (isset($_POST['txtPesoBrutoUnitario'])) ? $_POST['txtPesoBrutoUnitario'] : "";
         $txtPesoNetoCaja = (isset($_POST['txtPesoNetoCaja'])) ? $_POST['txtPesoNetoCaja'] : "";
         $txtPesoBrutoCaja = (isset($_POST['txtPesoBrutoCaja'])) ? $_POST['txtPesoBrutoCaja'] : "";
+        $txtPesoPorPallet = (isset($_POST['txtPesoPorPallet'])) ? $_POST['txtPesoPorPallet'] : "";
         $txtFoto = $txtIDH . ".JPG" ;
         $txtDiasCuarentena = (isset($_POST['txtDiasCuarentena'])) ? $_POST['txtDiasCuarentena'] : "";
         $txtDiasVencimiento = (isset($_POST['txtDiasVencimiento'])) ? $_POST['txtDiasVencimiento'] : "";
@@ -75,12 +77,41 @@ switch ($accion) {
 
         //Actualizar datos del registro
 
-        $SQL = "insert into dbs9098416.productos (IDH,CodigoDeBarras,Descripcion,Marca,LINEA,UNIDADESXMEDIDA,UMEDIDA,BASE,ALTURA,CAJASXPALET,PESONETOUNIDAD,PESOBRUTOUNIDAD, PESONETOCAJA, PESOBRUTOCAJA, FOTO, DIASCUARENTENA, DIASVENCIMIENTO, ESTADO, MINIMOPICKING,MAXIMOPICKING ) values (".$txtIDH.", ".$txtIDH.", '".$txtDescripcion."',  '".$txtMarca."', '".$txtLINEA."', ".$txtUnidadPorMedida.", '".$txtUnidadDeMedida."', ".$txtBase.", ".$txtAltura.", ".$txtCajasPorPalet.", ".$txtPesoNetoUnitario.", ".$txtPesoBrutoUnitario.", ".$txtPesoNetoCaja.", ".$txtPesoBrutoCaja.", '".$txtFoto."', ".$txtDiasCuarentena.", ".$txtDiasVencimiento.",'".$txtEstado."', ".$txtUnidadesMinimas.", ".$txtUnidadesMaximas.")" ;
+        $SQL = "INSERT INTO dbs9098416.productos
+            (IDH, CodigoDeBarras, Descripcion, Marca, LINEA, UNIDADESXMEDIDA, UMEDIDA,
+             BASE, ALTURA, CAJASXPALET, PESONETOUNIDAD, PESOBRUTOUNIDAD, PESONETOCAJA,
+             PESOBRUTOCAJA, PESOPORPALLET, FOTO, DIASCUARENTENA, DIASVENCIMIENTO,
+             ESTADO, MINIMOPICKING, MAXIMOPICKING)
+            VALUES
+            (:IDH, :CodigoDeBarras, :Descripcion, :Marca, :LINEA, :UNIDADESXMEDIDA, :UMEDIDA,
+             :BASE, :ALTURA, :CAJASXPALET, :PESONETOUNIDAD, :PESOBRUTOUNIDAD, :PESONETOCAJA,
+             :PESOBRUTOCAJA, :PESOPORPALLET, :FOTO, :DIASCUARENTENA, :DIASVENCIMIENTO,
+             :ESTADO, :MINIMOPICKING, :MAXIMOPICKING)";
 
         $sentencia = $pdo->prepare($SQL);
-
-
-            $sentencia->execute();
+        $sentencia->execute([
+            ':IDH' => $txtIDH,
+            ':CodigoDeBarras' => $txtIDH,
+            ':Descripcion' => $txtDescripcion,
+            ':Marca' => $txtMarca,
+            ':LINEA' => $txtLINEA,
+            ':UNIDADESXMEDIDA' => $txtUnidadPorMedida,
+            ':UMEDIDA' => $txtUnidadDeMedida,
+            ':BASE' => $txtBase,
+            ':ALTURA' => $txtAltura,
+            ':CAJASXPALET' => $txtCajasPorPalet,
+            ':PESONETOUNIDAD' => $txtPesoNetoUnitario,
+            ':PESOBRUTOUNIDAD' => $txtPesoBrutoUnitario,
+            ':PESONETOCAJA' => $txtPesoNetoCaja,
+            ':PESOBRUTOCAJA' => $txtPesoBrutoCaja,
+            ':PESOPORPALLET' => $txtPesoPorPallet,
+            ':FOTO' => $txtFoto,
+            ':DIASCUARENTENA' => $txtDiasCuarentena,
+            ':DIASVENCIMIENTO' => $txtDiasVencimiento,
+            ':ESTADO' => $txtEstado,
+            ':MINIMOPICKING' => $txtUnidadesMinimas,
+            ':MAXIMOPICKING' => $txtUnidadesMaximas
+        ]);
 
             $MensajeExito = '<div class="alert alert-secondary" role="alert">
                                     <strong>Excelente   -- </strong> Informcaion del producto Guardada.
@@ -580,6 +611,17 @@ ob_end_flush();
                                             </div>
                                         </div>
                                         <!-- FIN Row para Elemento de formulario -->
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Peso por Pallet</label>
+                                                    <input name="txtPesoPorPallet" type="number" min="0" step="0.001"
+                                                           class="form-control"
+                                                           value="<?php echo htmlspecialchars($txtPesoPorPallet, ENT_QUOTES, 'UTF-8'); ?>" required>
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         <!--INICIO Row para Elemento de formulario -->
                                         <div class="row">

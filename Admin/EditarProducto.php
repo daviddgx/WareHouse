@@ -20,17 +20,23 @@ $error = '';
 
 try {
 
-    $IDH_SESION = $_GET['Guia'];
-    $sql = "SELECT * FROM dbs9098416.productos where IDH = '" . $IDH_SESION . "'";
+    $IDH_SESION = filter_input(INPUT_GET, 'Guia', FILTER_VALIDATE_INT);
+    if ($IDH_SESION === false || $IDH_SESION === null) {
+        throw new InvalidArgumentException('El identificador del producto no es válido.');
+    }
+    $sql = "SELECT * FROM dbs9098416.productos WHERE IDH = :IDH";
 
     $sentencia = $pdo->prepare(
         $sql,
         array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true)
     );
 
-    $sentencia->execute();
+    $sentencia->execute([':IDH' => $IDH_SESION]);
 
-    $Producto = $sentencia->fetch(PDO::FETCH_LAZY);
+    $Producto = $sentencia->fetch(PDO::FETCH_ASSOC);
+    if (!$Producto) {
+        throw new RuntimeException('El producto solicitado no existe.');
+    }
     $txtIDH = $Producto['IDH'];
     $txtCodigoDeBarras = $Producto['CodigoDeBarras'];
     $txtDescripcion = $Producto['Descripcion'];
@@ -45,6 +51,7 @@ try {
     $txtPesoBrutoUnitario = $Producto['PESOBRUTOUNIDAD'];
     $txtPesoNetoCaja = $Producto['PESONETOCAJA'];
     $txtPesoBrutoCaja = $Producto['PESOBRUTOCAJA'];
+    $txtPesoPorPallet = $Producto['PESOPORPALLET'];
     $txtFoto = $Producto['FOTO'];
     $txtDiasCuarentena = $Producto['DIASCUARENTENA'];
     $txtDiasVencimiento = $Producto['DIASVENCIMIENTO'];
@@ -74,7 +81,8 @@ switch ($accion) {
 
 
 
-        $txtIDH = (isset($_POST['txtIDH'])) ? $_POST['txtIDH'] : "";
+        // El ID de la URL, ya validado al cargar la página, es la referencia autoritativa.
+        $txtIDH = $IDH_SESION;
         $txtDescripcion = (isset($_POST['txtDescripcion'])) ? $_POST['txtDescripcion'] : "";
         $txtMarca = (isset($_POST['txtMarca'])) ? $_POST['txtMarca'] : "";
         $txtLinea = (isset($_POST['txtLinea'])) ? $_POST['txtLinea'] : "";
@@ -87,7 +95,8 @@ switch ($accion) {
         $txtPesoBrutoUnitario = (isset($_POST['txtPesoBrutoUnitario'])) ? $_POST['txtPesoBrutoUnitario'] : "";
         $txtPesoNetoCaja = (isset($_POST['txtPesoNetoCaja'])) ? $_POST['txtPesoNetoCaja'] : "";
         $txtPesoBrutoCaja = (isset($_POST['txtPesoBrutoCaja'])) ? $_POST['txtPesoBrutoCaja'] : "";
-        $txtFoto = (isset($_FILES['txtFoto']["txtFoto"])) ? $_FILES['txtFoto'] : $txtFoto;
+        $txtPesoPorPallet = (isset($_POST['txtPesoPorPallet'])) ? $_POST['txtPesoPorPallet'] : "";
+        $fotoAnterior = $Producto['FOTO'];
         $txtDiasCuarentena = (isset($_POST['txtDiasCuarentena'])) ? $_POST['txtDiasCuarentena'] : "";
         $txtDiasVencimiento = (isset($_POST['txtDiasVencimiento'])) ? $_POST['txtDiasVencimiento'] : "";
         $txtEstado = (isset($_POST['txtEstado'])) ? $_POST['txtEstado'] : "";
@@ -96,61 +105,172 @@ switch ($accion) {
 
 
 
+        $camposNuevos = [
+            'Descripcion' => $txtDescripcion,
+            'Marca' => $txtMarca,
+            'LINEA' => $txtLinea,
+            'UNIDADESXMEDIDA' => $txtUnidadPorMedida,
+            'UMEDIDA' => $txtUnidadDeMedida,
+            'BASE' => $txtBase,
+            'ALTURA' => $txtAltura,
+            'CAJASXPALET' => $txtCajasPorPalet,
+            'PESONETOUNIDAD' => $txtPesoNetoUnitario,
+            'PESOBRUTOUNIDAD' => $txtPesoBrutoUnitario,
+            'PESONETOCAJA' => $txtPesoNetoCaja,
+            'PESOBRUTOCAJA' => $txtPesoBrutoCaja,
+            'PESOPORPALLET' => $txtPesoPorPallet,
+            'DIASCUARENTENA' => $txtDiasCuarentena,
+            'DIASVENCIMIENTO' => $txtDiasVencimiento,
+            'ESTADO' => $txtEstado,
+            'MINIMOPICKING' => $txtUnidadesMinimas,
+            'MAXIMOPICKING' => $txtUnidadesMaximas
+        ];
+
+        $usuarioAuditoria = $_SESSION['Usuario'] ?? 'Usuario no identificado';
+        $direccionIP = $_SERVER['REMOTE_ADDR'] ?? null;
+        $ipsProxy = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? null;
+        $agenteUsuario = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        $idSesionHash = session_id() !== '' ? hash('sha256', session_id()) : null;
+        $idEventoAuditoria = bin2hex(random_bytes(16));
+
         try {
-            $sentencia = $pdo->prepare('UPDATE dbs9098416.productos SET Descripcion=:Descripcion,  Marca=:Marca, LINEA=:LINEA, UNIDADESXMEDIDA=:UNIDADESXMEDIDA, UMEDIDA=:UMEDIDA, BASE=:BASE, ALTURA=:ALTURA, CAJASXPALET=:CAJASXPALET, PESONETOUNIDAD=:PESONETOUNIDAD, PESOBRUTOUNIDAD=:PESOBRUTOUNIDAD, PESONETOCAJA=:PESONETOCAJA, PESOBRUTOCAJA=:PESOBRUTOCAJA, DIASCUARENTENA=:DIASCUARENTENA, DIASVENCIMIENTO=:DIASVENCIMIENTO, ESTADO=:ESTADO, MINIMOPICKING=:MINIMOPICKING, MAXIMOPICKING=:MAXIMOPICKING where IDH=:IDH');
+            $pdo->beginTransaction();
 
+            // El bloqueo evita que dos ediciones simultáneas auditen valores anteriores incorrectos.
+            $consultaAnterior = $pdo->prepare(
+                'SELECT Descripcion, Marca, LINEA, UNIDADESXMEDIDA, UMEDIDA, BASE, ALTURA,
+                        CAJASXPALET, PESONETOUNIDAD, PESOBRUTOUNIDAD, PESONETOCAJA,
+                        PESOBRUTOCAJA, PESOPORPALLET, DIASCUARENTENA, DIASVENCIMIENTO,
+                        ESTADO, MINIMOPICKING, MAXIMOPICKING
+                 FROM dbs9098416.productos
+                 WHERE IDH = :IDH
+                 FOR UPDATE'
+            );
+            $consultaAnterior->execute([':IDH' => $txtIDH]);
+            $camposAnteriores = $consultaAnterior->fetch(PDO::FETCH_ASSOC);
 
-            $sentencia->bindParam(':IDH', $txtIDH);
-            $sentencia->bindParam(':Descripcion', $txtDescripcion);
-            $sentencia->bindParam(':Marca', $txtMarca);
-            $sentencia->bindParam(':LINEA', $txtLinea);
-            $sentencia->bindParam(':UNIDADESXMEDIDA', $txtUnidadPorMedida);
-            $sentencia->bindParam(':UMEDIDA', $txtUnidadDeMedida);
-            $sentencia->bindParam(':BASE', $txtBase);
-            $sentencia->bindParam(':ALTURA', $txtAltura);
-            $sentencia->bindParam(':CAJASXPALET', $txtCajasPorPalet);
-            $sentencia->bindParam(':PESONETOUNIDAD', $txtPesoNetoUnitario);
-            $sentencia->bindParam(':PESOBRUTOUNIDAD', $txtPesoBrutoUnitario);
-            $sentencia->bindParam(':PESONETOCAJA', $txtPesoNetoCaja);
-            $sentencia->bindParam(':PESOBRUTOCAJA', $txtPesoBrutoCaja);
-            $sentencia->bindParam(':DIASCUARENTENA', $txtDiasCuarentena);
-            $sentencia->bindParam(':DIASVENCIMIENTO', $txtDiasVencimiento);
-            $sentencia->bindParam(':ESTADO', $txtEstado);
-            $sentencia->bindParam(':MINIMOPICKING', $txtUnidadesMinimas);
-            $sentencia->bindParam(':MAXIMOPICKING', $txtUnidadesMaximas);
+            if (!$camposAnteriores) {
+                throw new RuntimeException('El producto que intenta modificar no existe.');
+            }
 
+            $sentencia = $pdo->prepare('UPDATE dbs9098416.productos SET Descripcion=:Descripcion, Marca=:Marca, LINEA=:LINEA, UNIDADESXMEDIDA=:UNIDADESXMEDIDA, UMEDIDA=:UMEDIDA, BASE=:BASE, ALTURA=:ALTURA, CAJASXPALET=:CAJASXPALET, PESONETOUNIDAD=:PESONETOUNIDAD, PESOBRUTOUNIDAD=:PESOBRUTOUNIDAD, PESONETOCAJA=:PESONETOCAJA, PESOBRUTOCAJA=:PESOBRUTOCAJA, PESOPORPALLET=:PESOPORPALLET, DIASCUARENTENA=:DIASCUARENTENA, DIASVENCIMIENTO=:DIASVENCIMIENTO, ESTADO=:ESTADO, MINIMOPICKING=:MINIMOPICKING, MAXIMOPICKING=:MAXIMOPICKING WHERE IDH=:IDH');
+            $parametrosActualizacion = [':IDH' => $txtIDH];
+            foreach ($camposNuevos as $campo => $valor) {
+                $parametrosActualizacion[':' . $campo] = $valor;
+            }
+            $sentencia->execute($parametrosActualizacion);
 
+            $insertarAuditoria = $pdo->prepare(
+                'INSERT INTO dbs9098416.AuditoriaCambiosProductos
+                    (IdEvento, IDH, Campo, ValorAnterior, ValorNuevo, Usuario,
+                     DireccionIP, IPsProxy, AgenteUsuario, IdSesionHash)
+                 VALUES
+                    (:IdEvento, :IDH, :Campo, :ValorAnterior, :ValorNuevo, :Usuario,
+                     :DireccionIP, :IPsProxy, :AgenteUsuario, :IdSesionHash)'
+            );
 
+            foreach ($camposNuevos as $campo => $valorNuevo) {
+                $valorAnterior = $camposAnteriores[$campo];
+                $sonIguales = is_numeric($valorAnterior) && is_numeric($valorNuevo)
+                    ? (float) $valorAnterior === (float) $valorNuevo
+                    : (string) $valorAnterior === (string) $valorNuevo;
 
+                if ($sonIguales) {
+                    continue;
+                }
 
-            $sentencia->execute();
+                $insertarAuditoria->execute([
+                    ':IdEvento' => $idEventoAuditoria,
+                    ':IDH' => $txtIDH,
+                    ':Campo' => $campo,
+                    ':ValorAnterior' => $valorAnterior,
+                    ':ValorNuevo' => $valorNuevo,
+                    ':Usuario' => $usuarioAuditoria,
+                    ':DireccionIP' => $direccionIP,
+                    ':IPsProxy' => $ipsProxy,
+                    ':AgenteUsuario' => $agenteUsuario,
+                    ':IdSesionHash' => $idSesionHash
+                ]);
+            }
 
-        } catch (Exception $ex) {
-            echo "Se genero un Error" . $ex->getMessage();
+            $pdo->commit();
+        } catch (Throwable $ex) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Error al actualizar/auditar producto ' . $txtIDH . ': ' . $ex->getMessage());
+            $Mensajeerror = '<div class="alert alert-warning" role="alert">'
+                . '<strong>No fue posible actualizar el producto.</strong>'
+                . '</div>';
+            break;
         }
         // Bloque para actualizar la foto
 
         $fecha = new DateTime();
-        $nombreArchivo = ($txtFoto != "") ? $fecha->getTimestamp() . "_" . $_FILES["txtFoto"]["name"] : $txtFoto;
-        $tmpFoto = $_FILES["txtFoto"]["tmp_name"];
+        $nombreOriginalFoto = $_FILES['txtFoto']['name'] ?? '';
+        $tmpFoto = $_FILES['txtFoto']['tmp_name'] ?? '';
+        $nombreArchivo = $tmpFoto !== ''
+            ? $fecha->getTimestamp() . '_' . basename($nombreOriginalFoto)
+            : $fotoAnterior;
 
         if ($tmpFoto != "") {
-            move_uploaded_file($tmpFoto, "../assets/images/Productos/" . $nombreArchivo);
-
-            if (isset($Usuario["Foto"])) {
-                if (file_exists("../assets/images/Productos/" . $Usuario["Foto"])) {
-                    if ($Usuario["Foto"] != "imagen.jpg") {
-                        unlink("../assets/images/Productos/" . $Usuario["Foto"]);
-                    }
-                }
+            if (!move_uploaded_file($tmpFoto, "../assets/images/Productos/" . $nombreArchivo)) {
+                error_log('No se pudo mover la fotografía cargada para el producto ' . $txtIDH);
+                $Mensajeerror = '<div class="alert alert-warning" role="alert">'
+                    . '<strong>No fue posible guardar la fotografía del producto.</strong>'
+                    . '</div>';
+                break;
             }
 
-            $sentencia = $pdo->prepare("UPDATE dbs9098416.productos SET Foto=:Foto where IDH=:id;");
-            $sentencia->bindParam(':Foto', $nombreArchivo);
-            $sentencia->bindParam(':id', $txtIDH);
+            try {
+                $pdo->beginTransaction();
 
+                $sentencia = $pdo->prepare(
+                    "UPDATE dbs9098416.productos SET Foto = :Foto WHERE IDH = :IDH"
+                );
+                $sentencia->execute([
+                    ':Foto' => $nombreArchivo,
+                    ':IDH' => $txtIDH
+                ]);
 
-            $sentencia->execute();
+                $insertarFotoAuditoria = $pdo->prepare(
+                    'INSERT INTO dbs9098416.AuditoriaCambiosProductos
+                        (IdEvento, IDH, Campo, ValorAnterior, ValorNuevo, Usuario,
+                         DireccionIP, IPsProxy, AgenteUsuario, IdSesionHash)
+                     VALUES
+                        (:IdEvento, :IDH, :Campo, :ValorAnterior, :ValorNuevo, :Usuario,
+                         :DireccionIP, :IPsProxy, :AgenteUsuario, :IdSesionHash)'
+                );
+                $insertarFotoAuditoria->execute([
+                    ':IdEvento' => $idEventoAuditoria,
+                    ':IDH' => $txtIDH,
+                    ':Campo' => 'FOTO',
+                    ':ValorAnterior' => $fotoAnterior,
+                    ':ValorNuevo' => $nombreArchivo,
+                    ':Usuario' => $usuarioAuditoria,
+                    ':DireccionIP' => $direccionIP,
+                    ':IPsProxy' => $ipsProxy,
+                    ':AgenteUsuario' => $agenteUsuario,
+                    ':IdSesionHash' => $idSesionHash
+                ]);
+
+                $pdo->commit();
+
+                $rutaFotoAnterior = "../assets/images/Productos/" . $fotoAnterior;
+                if ($fotoAnterior !== '' && $fotoAnterior !== 'imagen.jpg'
+                    && $fotoAnterior !== $nombreArchivo && file_exists($rutaFotoAnterior)) {
+                    unlink($rutaFotoAnterior);
+                }
+            } catch (Throwable $ex) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                error_log('Error al actualizar/auditar foto del producto ' . $txtIDH . ': ' . $ex->getMessage());
+                $Mensajeerror = '<div class="alert alert-warning" role="alert">'
+                    . '<strong>No fue posible actualizar la fotografía del producto.</strong>'
+                    . '</div>';
+                break;
+            }
             $_SESSION['pic'] = $nombreArchivo;
             $MensajeExito = '<div class="alert alert-secondary" role="alert">
                                                 <strong>Excelente!   -- </strong> Los datos se actualizaron correctamente
@@ -427,15 +547,13 @@ ob_end_flush();
                                                         <?php echo '<option value="' . $txtMarca . '">' . $txtMarca . '</option>'; ?>
 
                                                         <?php
-                                                        $conn = new mysqli($servername, $username, $password, $dbname);
-                                                        $cargos = "SELECT distinct(Marca) FROM dbs9098416.productos where Marca not in('$txtMarca') ;";
-
-                                                        $result = $conn->query($cargos);
-                                                        if ($result->num_rows > 0) {
-                                                            while ($row = $result->fetch_assoc()) {
-
-                                                                echo '<option value="' . $row['Marca'] . '">' . $row['Marca'] . '</option>';
-                                                            }
+                                                        $consultaMarcas = $pdo->prepare(
+                                                            'SELECT DISTINCT Marca FROM dbs9098416.productos WHERE Marca <> :Marca ORDER BY Marca'
+                                                        );
+                                                        $consultaMarcas->execute([':Marca' => $txtMarca]);
+                                                        while ($row = $consultaMarcas->fetch(PDO::FETCH_ASSOC)) {
+                                                            $marca = htmlspecialchars($row['Marca'], ENT_QUOTES, 'UTF-8');
+                                                            echo '<option value="' . $marca . '">' . $marca . '</option>';
                                                         }
                                                         ?>
                                                         <option  value="nueva" >
@@ -459,15 +577,13 @@ ob_end_flush();
 
 
                                                         <?php
-                                                        $conn = new mysqli($servername, $username, $password, $dbname);
-                                                        $cargos = "SELECT distinct(linea) FROM dbs9098416.productos where linea not in('$txtLinea');";
-
-                                                        $result = $conn->query($cargos);
-                                                        if ($result->num_rows > 0) {
-                                                            while ($row = $result->fetch_assoc()) {
-
-                                                                echo '<option value="' . $row['linea'] . '">' . $row['linea'] . '</option>';
-                                                            }
+                                                        $consultaLineas = $pdo->prepare(
+                                                            'SELECT DISTINCT LINEA FROM dbs9098416.productos WHERE LINEA <> :Linea ORDER BY LINEA'
+                                                        );
+                                                        $consultaLineas->execute([':Linea' => $txtLinea]);
+                                                        while ($row = $consultaLineas->fetch(PDO::FETCH_ASSOC)) {
+                                                            $linea = htmlspecialchars($row['LINEA'], ENT_QUOTES, 'UTF-8');
+                                                            echo '<option value="' . $linea . '">' . $linea . '</option>';
                                                         }
                                                         ?>
                                                         <option value="nueva" class="ng-binding">
@@ -487,15 +603,13 @@ ob_end_flush();
 
 
                                                         <?php
-                                                        $conn = new mysqli($servername, $username, $password, $dbname);
-                                                        $cargos = "SELECT distinct(UMEDIDA) FROM dbs9098416.productos where UMEDIDA not in('$txtUnidadDeMedida') ;";
-
-                                                        $result = $conn->query($cargos);
-                                                        if ($result->num_rows > 0) {
-                                                            while ($row = $result->fetch_assoc()) {
-
-                                                                echo '<option value="' . $row['UMEDIDA'] . '">' . $row['UMEDIDA'] . '</option>';
-                                                            }
+                                                        $consultaUnidades = $pdo->prepare(
+                                                            'SELECT DISTINCT UMEDIDA FROM dbs9098416.productos WHERE UMEDIDA <> :Unidad ORDER BY UMEDIDA'
+                                                        );
+                                                        $consultaUnidades->execute([':Unidad' => $txtUnidadDeMedida]);
+                                                        while ($row = $consultaUnidades->fetch(PDO::FETCH_ASSOC)) {
+                                                            $unidad = htmlspecialchars($row['UMEDIDA'], ENT_QUOTES, 'UTF-8');
+                                                            echo '<option value="' . $unidad . '">' . $unidad . '</option>';
                                                         }
                                                         ?>
                                                         <option  value="nueva" class="ng-binding">
@@ -593,6 +707,17 @@ ob_end_flush();
                                             </div>
                                         </div>
                                         <!-- FIN Row para Elemento de formulario -->
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Peso por Pallet</label>
+                                                    <input name="txtPesoPorPallet" type="number" min="0" step="0.001"
+                                                           class="form-control"
+                                                           value="<?php echo htmlspecialchars($txtPesoPorPallet, ENT_QUOTES, 'UTF-8'); ?>" required>
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         <!--INICIO Row para Elemento de formulario -->
                                         <div class="row">

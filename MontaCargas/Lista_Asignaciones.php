@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'ValidarSesion.php';
 
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
@@ -69,6 +70,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
+    <link href="tablet.css" rel="stylesheet">
+    <script src="sesion-montacargas.js" defer></script>
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->

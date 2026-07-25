@@ -13,7 +13,7 @@ include '../LQS_EUQ/Auth.php';
 $MensajeExito = '';
 $Mensajeerror = '';
 $lista_Guias;
-$Ubicacion = $_GET['Posicion'];
+$Ubicacion = isset($_GET['Posicion']) ? trim($_GET['Posicion']) : '';
 $UsuarioActual = $_SESSION['Usuario'];
 
 
@@ -24,6 +24,10 @@ $UsuarioActual = $_SESSION['Usuario'];
 
 // Validar formulario y grabar informacion
 $accion = (isset($_POST['accion'])) ? $_POST['accion'] : "";
+
+if ($accion === '' && isset($_GET['registro']) && $_GET['registro'] === 'exitoso') {
+    $MensajeExito = '<div class="alert alert-success" role="alert"><strong>Ingreso exitoso --</strong> Información de la ubicación guardada correctamente, ya puede regresar.</div>';
+}
 
 switch ($accion) {
 
@@ -37,32 +41,67 @@ switch ($accion) {
     $LoteProduccion = (isset($_POST['txtLoteDeProduccion'])) ? $_POST['txtLoteDeProduccion'] : "";
     $FechaIngreso = date("Y-m-d");
     $FechaVencimiento = '';
-    $observaciones = (isset($_POST['txtObservaciones'])) ? $_POST['txtObservaciones'] : "";
+    $observaciones = (isset($_POST['txtObservaciones'])) ? trim($_POST['txtObservaciones']) : "";
+
+    if ($observaciones === '') {
+        $Mensajeerror = '<div class="alert alert-danger" role="alert"><strong>Observaciones es obligatorio.</strong> Explique el motivo del ajuste de inventario.</div>';
+        break;
+    }
     
 
 
   
 
-     $SQL = "update posiciones set Estado = 'Ocupada', IDH = '$IDH', PaletCompleto = '$PaletCompleto', UnidadesEnPallet = '$UnidadesEnPallet', Origen = 'Correccion de inventario', FechaProduccion = '$FechaProduccion_formateada', LoteProduccion = '$LoteProduccion', FechaIngreso = '$FechaIngreso', FechaVencimiento =(SELECT DATE_ADD('$FechaProduccion_formateada', INTERVAL DIASVENCIMIENTO DAY) FROM dbs9098416.productos where idh = $IDH) , Verificador = '$UsuarioActual' , UsuarioMontaCargas = 'APP', Observaciones = '' where Ubicacion = '$Ubicacion' and Estado = 'Libre';";
+     $SQL = "UPDATE posiciones
+             SET Estado = 'Ocupada', IDH = ?, PaletCompleto = ?, UnidadesEnPallet = ?,
+                 Origen = 'Correccion de inventario', FechaProduccion = ?,
+                 LoteProduccion = ?, FechaIngreso = ?,
+                 FechaVencimiento = (SELECT DATE_ADD(?, INTERVAL DIASVENCIMIENTO DAY)
+                                     FROM productos WHERE IDH = ?),
+                 Verificador = ?, UsuarioMontaCargas = 'APP', Observaciones = ?
+             WHERE Ubicacion = ? AND Estado = 'Libre'";
      //echo $SQL;
 
      // Crear conexion y realizar el Update
 
-            $sentencia = $pdo->prepare($SQL);
-            $sentencia->execute();
+            try {
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $pdo->beginTransaction();
+                $sentencia = $pdo->prepare($SQL);
+                $sentencia->execute(array(
+                    $IDH, $PaletCompleto, $UnidadesEnPallet, $FechaProduccion_formateada,
+                    $LoteProduccion, $FechaIngreso, $FechaProduccion_formateada, $IDH,
+                    $UsuarioActual, $observaciones, $Ubicacion
+                ));
+
+            // Solo registrar la bitácora cuando la ubicación realmente cambió.
+            if ($sentencia->rowCount() !== 1) {
+                $pdo->rollBack();
+                $Mensajeerror = '<div class="alert alert-warning" role="alert">La ubicación ya fue registrada o dejó de estar libre. No se generó una transacción duplicada.</div>';
+                break;
+            }
 
 
             // Registrar Bitacora
 
             $FechaIngreso = date("Y-m-d H:i:s");
-            $SQL = "insert into `Bitar_ConteoCiego` values('$Ubicacion','Agregar','$FechaIngreso','$UsuarioActual','$observaciones')";
+            $detalleBitacora = "Motivo: $observaciones | Ubicacion: $Ubicacion | IDH: $IDH | Pallet completo: $PaletCompleto | Unidades: $UnidadesEnPallet | Produccion: $FechaProduccion_formateada | Lote: $LoteProduccion | Fecha: $FechaIngreso | Origen: Correccion de inventario | Usuario: $UsuarioActual";
+            $SQL = "insert into `Bitar_ConteoCiego` values(?, 'Agregar', ?, ?, ?)";
             $sentencia = $pdo->prepare($SQL);
-            $sentencia->execute();
+            $sentencia->execute(array($Ubicacion, $FechaIngreso, $UsuarioActual, $detalleBitacora));
+            $pdo->commit();
 
+            // Post/Redirect/Get: una recarga o regreso del navegador ya no reenvía el POST.
+            header('Location: Invent_AgregarDetalle.php?Posicion=' . rawurlencode($Ubicacion) . '&registro=exitoso');
+            exit;
 
-            $MensajeExito = '<div class="alert alert-success" role="alert">
-<strong>Ingreso exitoso --</strong> Información de la ubicación guardada correctamente, ya puede regresar.
-</div>';
+            } catch (Exception $ex) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                error_log('Invent_AgregarDetalle: ' . $ex->getMessage());
+                $Mensajeerror = '<div class="alert alert-danger" role="alert">No fue posible guardar el registro. No se aplicó ningún cambio.</div>';
+            }
 
 
    // echo $txtBodega. "   " . $txtCarril;
@@ -366,9 +405,11 @@ ob_end_flush();
 
                                             <div class="col-md-4">
                                                 <div class="form-group">
-                                                    <label>Observaciones</label>
+                                                    <label>Observaciones <span class="text-danger">*</span></label>
                                                     <input name="txtObservaciones"  type="text"
-                                                           class="form-control" 
+                                                           class="form-control"
+                                                           maxlength="500"
+                                                           required
                                                            >
                                                 </div>
                                             </div>

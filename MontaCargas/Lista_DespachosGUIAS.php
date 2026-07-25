@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'ValidarSesion.php';
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/ListarDespachosGUIAS.php';
 include "../Innet_MTC/Innet_MTC.php";
@@ -66,6 +67,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
+    <link href="tablet.css" rel="stylesheet">
+    <script src="sesion-montacargas.js" defer></script>
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -374,12 +377,11 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                     </thead>
                                     <tbody>
                                     <?php
-                                    for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
-
-
+                                    while (is_array($lista_DespachoPRODUCCION)) {
                                         $IDGUIA = $lista_DespachoPRODUCCION['Guia_Carga'];
                                         $IDEntrega = $lista_DespachoPRODUCCION['Entrega'];
 
+                                        echo "<tr>";
                                         echo '<td class= "h3" >';
                                         echo $lista_DespachoPRODUCCION['Guia_Carga'];
                                         echo "</td>";

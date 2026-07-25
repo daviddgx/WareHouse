@@ -11,6 +11,12 @@ $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
+$alertaCalculo = $_SESSION['alerta_calculo_ubicaciones'] ?? null;
+unset($_SESSION['alerta_calculo_ubicaciones']);
+
+if (!isset($_SESSION['calculo_ubicaciones_tokens']) || !is_array($_SESSION['calculo_ubicaciones_tokens'])) {
+    $_SESSION['calculo_ubicaciones_tokens'] = [];
+}
 
 
 
@@ -93,6 +99,38 @@ ob_end_flush();
             overflow: hidden;
             position: relative;
             z-index: 1;
+        }
+
+        .guide-table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #e6e9ed;
+            border-radius: 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .guide-table-wrap table {
+            min-width: 1250px;
+            margin-bottom: 0;
+        }
+
+        .table-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 42px;
+            min-height: 38px;
+            border-radius: 9px;
+        }
+
+        .calculate-form {
+            display: inline-block;
+            margin: 0;
+        }
+
+        .btn-calculate:disabled {
+            cursor: wait;
+            opacity: .7;
         }
     </style>
 </head>
@@ -278,7 +316,7 @@ ob_end_flush();
                             <?php echo $Mensajeerror; ?>
                             <?php echo $MensajeExito; ?>
                             <br>
-                            <div >
+                            <div class="guide-table-wrap">
                                 <!-- Column -->
                                 <div >
 
@@ -353,11 +391,11 @@ ob_end_flush();
                                                     case 'Pendiente' :
                                                         break;
                                                     case 'FiFo Calculado' :
-                                                        echo '<a href="DetalleUbicacionesCalculadas.php?Guia=' . $lista_Guias['Transporte'] . '" class="far fa-hourglass  btn btn-Sertero "></a>';
+                                                        echo '<a href="DetalleUbicacionesCalculadas.php?Guia=' . urlencode($lista_Guias['Transporte']) . '" class="far fa-hourglass btn btn-Sertero table-action" title="Ver ubicaciones calculadas" aria-label="Ver ubicaciones calculadas"></a>';
                                                         break;
 
                                                     case 'Corregir' :
-                                                        echo '<a href="DetalleUbicacionesCalculadas.php?Guia=' . $lista_Guias['Transporte'] . '" class="far fa-hourglass  btn btn-Sertero "></a>';
+                                                        echo '<a href="DetalleUbicacionesCalculadas.php?Guia=' . urlencode($lista_Guias['Transporte']) . '" class="far fa-hourglass btn btn-Sertero table-action" title="Ver ubicaciones calculadas" aria-label="Ver ubicaciones calculadas"></a>';
                                                         break;
 
 
@@ -375,7 +413,16 @@ ob_end_flush();
                                                 //Calcular Ubicacion
                                                 switch ($lista_Guias['Estatus']){
                                                     case 'Pendiente' :
-                                                        echo '<a href="Calcular.php?Guia=' . $lista_Guias['Transporte'] . '" class="far fa-paper-plane btn btn-Sertero btn-enviar"></a>';
+                                                        $guia = (string) $lista_Guias['Transporte'];
+                                                        if (empty($_SESSION['calculo_ubicaciones_tokens'][$guia])) {
+                                                            $_SESSION['calculo_ubicaciones_tokens'][$guia] = bin2hex(random_bytes(32));
+                                                        }
+                                                        $tokenCalculo = $_SESSION['calculo_ubicaciones_tokens'][$guia];
+                                                        echo '<form action="Calcular.php" method="POST" class="calculate-form">';
+                                                        echo '<input type="hidden" name="Guia" value="' . htmlspecialchars($guia, ENT_QUOTES, 'UTF-8') . '">';
+                                                        echo '<input type="hidden" name="CalculoToken" value="' . htmlspecialchars($tokenCalculo, ENT_QUOTES, 'UTF-8') . '">';
+                                                        echo '<button type="submit" class="far fa-paper-plane btn btn-Sertero table-action btn-calculate" title="Calcular ubicaciones" aria-label="Calcular ubicaciones para la guía ' . htmlspecialchars($guia, ENT_QUOTES, 'UTF-8') . '" data-guia="' . htmlspecialchars($guia, ENT_QUOTES, 'UTF-8') . '"></button>';
+                                                        echo '</form>';
                                                         break;
                                                     default :
                                                         break;
@@ -432,6 +479,7 @@ ob_end_flush();
 <script src="../assets/libs/jquery/dist/jquery.min.js"></script>
 <script src="../assets/libs/popper.js/dist/umd/popper.min.js"></script>
 <script src="../assets/libs/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <!-- apps -->
 <!-- apps -->
 <script src="../dist/js/app-style-switcher.js"></script>
@@ -456,6 +504,8 @@ ob_end_flush();
 <script>
     $(document).ready(function() {
         $('#example').DataTable( {
+            scrollX: true,
+            autoWidth: false,
             language: {
                 url: 'datatables_espanol.json'
             }
@@ -465,10 +515,108 @@ ob_end_flush();
 
 <script>
     $(document).ready(function() {
-        $('.btn-enviar').click(function() {
-            $(this).removeClass('far fa-paper-plane').addClass('spinner-border spinner-border-sm ');
-            $(this).prop('disabled', true);
+        const serverAlert = <?php echo json_encode(
+            $alertaCalculo,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        ); ?>;
+
+        if (serverAlert && window.Swal) {
+            Swal.fire({
+                title: serverAlert.title,
+                text: serverAlert.text,
+                icon: serverAlert.icon || 'info',
+                confirmButtonText: 'Cerrar',
+                confirmButtonColor: '#ed3131'
+            });
+        }
+
+        $('.calculate-form').on('submit', function(event) {
+            event.preventDefault();
+
+            const form = this;
+            const button = form.querySelector('.btn-calculate');
+            const guia = button.getAttribute('data-guia');
+
+            if (form.dataset.submitting === 'true') {
+                return;
+            }
+
+            Swal.fire({
+                title: '¿Calcular ubicaciones?',
+                text: 'Se iniciará el proceso de cálculo de ubicaciones para la guía ' + guia + '. ¿Desea continuar?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, continuar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then(function(result) {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                form.dataset.submitting = 'true';
+                button.disabled = true;
+                button.classList.remove('far', 'fa-paper-plane');
+                button.classList.add('spinner-border', 'spinner-border-sm');
+                button.setAttribute('aria-busy', 'true');
+                button.setAttribute('aria-label', 'Calculando ubicaciones');
+
+                const processingMessages = [
+                    'Contando pallets...',
+                    'Determinando Piking...',
+                    'Buscando productos en bodegas...',
+                    'Revisando estado de los productos....',
+                    'Revisando cuarentenas ....',
+                    'Revisando disponibilidad de IDHs...',
+                    'Ya casi terminamos ...',
+                    'Afinando últimos cálculos'
+                ];
+                let messageIndex = 0;
+                let messageInterval = null;
+
+                Swal.fire({
+                    title: 'Calculando ubicaciones',
+                    html: '<p id="calculation-progress-message" class="mb-0"></p>',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    allowEnterKey: false,
+                    showConfirmButton: false,
+                    didOpen: function() {
+                        const messageElement = document.getElementById('calculation-progress-message');
+
+                        Swal.showLoading();
+
+                        function showNextMessage() {
+                            messageElement.textContent = processingMessages[messageIndex];
+                            messageIndex = (messageIndex + 1) % processingMessages.length;
+                        }
+
+                        showNextMessage();
+                        messageInterval = window.setInterval(showNextMessage, 1800);
+                    },
+                    willClose: function() {
+                        if (messageInterval) {
+                            window.clearInterval(messageInterval);
+                        }
+                    }
+                });
+
+                // Dar tiempo al navegador para pintar el modal antes de enviar el formulario.
+                window.setTimeout(function() {
+                    form.submit();
+                }, 75);
+            });
         });
+    });
+</script>
+
+<script>
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            window.location.reload();
+        }
     });
 </script>
 

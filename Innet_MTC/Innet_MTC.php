@@ -313,7 +313,9 @@ function DarValorListaPendientesPiking($NombreUsuario , $fechaConsulta){
 // Funciones de Movimientos
 
 function RegistrarBitacora($IDRegistro,$Fecha,$IDH,$Evento,$TipoEvento,$EstadoAnterior,$EstadoNuevo){
-    session_start();
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
     $Usuario = $_SESSION['Usuario'];
     include '../LQS_EUQ/Auth.php';
 
@@ -322,12 +324,15 @@ function RegistrarBitacora($IDRegistro,$Fecha,$IDH,$Evento,$TipoEvento,$EstadoAn
 
 }
 
-function DespacharProducto($IDRegistro,$Fecha){
+function DespacharProducto($IDRegistro, $Fecha, $Operador){
 
     include '../LQS_EUQ/Auth.php';
 
-    $sentencia = $pdo->prepare("UPDATE dbs9098416.despachos SET FechaRealizado = ?, Estado = 'Despachado'  WHERE (Movimiento = ?);");
-    $sentencia->execute([$Fecha, $IDRegistro]);
+    $sentencia = $pdo->prepare("UPDATE dbs9098416.despachos
+                                SET FechaRealizado = ?, Estado = 'Despachado'
+                                WHERE Movimiento = ? AND Operador = ? AND Estado = 'Pendiente';");
+    $sentencia->execute([$Fecha, $IDRegistro, $Operador]);
+    return $sentencia->rowCount() === 1;
 
 }
 

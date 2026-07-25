@@ -8,9 +8,14 @@ try{
 
 
     //paso 3 hacer la sentencia sql y ejecutarla
-    $sqlDatos = "SELECT distinct(Guia_Carga),Guias.NombreDestino as Destino FROM dbs9098416.despachos
-INNER join Guias on Guias.Transporte = despachos.Guia_Carga
-where Operador = '".$NombreUsuario."' and Estado = 'Pendiente'";
+    $sqlDatos = "SELECT despachos.Guia_Carga,
+                        MIN(despachos.Entrega) AS Entrega,
+                        Guias.NombreDestino AS Destino
+                 FROM dbs9098416.despachos
+                 INNER JOIN Guias ON Guias.Transporte = despachos.Guia_Carga
+                 WHERE despachos.Operador = '".$NombreUsuario."'
+                   AND despachos.Estado = 'Pendiente'
+                 GROUP BY despachos.Guia_Carga, Guias.NombreDestino";
     $ejecutar_sentencia_Despachos = $conn->query($sqlDatos);
     if(!$ejecutar_sentencia_Despachos)
     {

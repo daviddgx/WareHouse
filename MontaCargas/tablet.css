@@ -1,0 +1,330 @@
+/*
+ * Ajustes táctiles y responsivos del módulo MontaCargas.
+ * Diseñado para tablets de 10" en orientación vertical y horizontal.
+ */
+
+html {
+    font-size: 16px;
+}
+
+body {
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+}
+
+button,
+.btn,
+.form-control,
+.custom-select,
+select {
+    min-height: 44px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .65rem 1rem;
+    white-space: normal;
+}
+
+.form-control,
+.custom-select,
+select {
+    font-size: 1rem;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    min-width: 22px;
+    min-height: 22px;
+}
+
+.card {
+    margin-bottom: 1rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.card-title {
+    line-height: 1.35;
+}
+
+.table {
+    margin-bottom: .5rem;
+    font-size: .95rem;
+}
+
+.table th,
+.table td {
+    padding: .85rem .7rem;
+    vertical-align: middle;
+}
+
+.table th {
+    white-space: nowrap;
+}
+
+.table td .btn,
+.table td button {
+    min-width: 100px;
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+    min-height: 44px;
+    font-size: 1rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button,
+.page-link {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dataTables_scrollBody {
+    -webkit-overflow-scrolling: touch;
+}
+
+.sidebar-nav ul .sidebar-item .sidebar-link {
+    min-height: 48px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+.sidebar-nav .notify-no {
+    font-size: .8rem;
+    margin-left: .35rem;
+}
+
+@media (max-width: 1199.98px) {
+    #main-wrapper .nav-toggler {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        font-size: 1.35rem;
+    }
+
+    #main-wrapper .left-sidebar {
+        left: -260px;
+        width: 260px;
+        z-index: 1100;
+        box-shadow: 8px 0 20px rgba(0, 0, 0, .18);
+        transition: left .2s ease;
+    }
+
+    #main-wrapper.show-sidebar .left-sidebar {
+        left: 0;
+    }
+
+    #main-wrapper.show-sidebar .page-wrapper::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 1090;
+        background: rgba(20, 29, 38, .38);
+    }
+
+    #main-wrapper .page-wrapper {
+        margin-left: 0;
+    }
+
+    #main-wrapper .topbar .navbar-header {
+        width: auto;
+        min-width: 230px;
+    }
+
+    #main-wrapper .topbar .top-navbar .navbar-brand {
+        margin-right: .5rem;
+    }
+
+    .page-wrapper > .container-fluid {
+        padding: 18px;
+    }
+
+    .page-breadcrumb {
+        padding: 14px 18px 0;
+    }
+
+    .dataTables_wrapper .row > [class*="col-"] {
+        margin-bottom: .65rem;
+    }
+
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_length {
+        text-align: left;
+    }
+
+    .dataTables_wrapper .dataTables_filter input {
+        width: min(320px, calc(100vw - 130px));
+        margin-left: .5rem;
+    }
+
+    canvas {
+        max-height: 330px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    html {
+        font-size: 15px;
+    }
+
+    #main-wrapper .topbar .navbar-header {
+        min-width: 100%;
+        padding: 0 .5rem;
+    }
+
+    #main-wrapper .topbar .top-navbar .navbar-collapse {
+        top: 64px !important;
+    }
+
+    #main-wrapper .navbar-brand .logo-text {
+        display: none;
+    }
+
+    #main-wrapper .topbar .navbar-header .navbar-brand {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .page-wrapper > .container-fluid {
+        padding: 10px;
+    }
+
+    .page-breadcrumb {
+        padding: 10px 12px 0;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    .table {
+        font-size: .9rem;
+    }
+
+    .table th,
+    .table td {
+        padding: .75rem .55rem;
+    }
+
+    .card-body > .table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .dataTables_wrapper .dataTables_filter label,
+    .dataTables_wrapper .dataTables_length label {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .4rem;
+        width: 100%;
+    }
+
+    .dataTables_wrapper .dataTables_filter input {
+        flex: 1 1 180px;
+        width: auto;
+        margin-left: 0;
+    }
+
+    .dataTables_wrapper .dataTables_paginate {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .btn,
+    button[type="submit"],
+    input[type="submit"] {
+        min-height: 48px;
+    }
+
+    .swal2-popup {
+        width: calc(100% - 24px) !important;
+        padding: 1.25rem !important;
+    }
+}
+
+.modal-inactividad-mtc {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(18, 25, 32, .72);
+}
+
+.modal-inactividad-mtc.visible {
+    display: flex;
+}
+
+.modal-inactividad-contenido {
+    width: min(520px, 100%);
+    padding: 2rem;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .3);
+    text-align: center;
+}
+
+.modal-inactividad-icono {
+    margin-bottom: .5rem;
+    font-size: 2.5rem;
+}
+
+.modal-inactividad-contenido h2 {
+    margin-bottom: 1rem;
+    font-size: 1.55rem;
+}
+
+.modal-inactividad-contenido p {
+    margin-bottom: .25rem;
+    font-size: 1.05rem;
+}
+
+.cuenta-inactividad-mtc {
+    margin: .5rem 0 1.5rem;
+    color: #ed3131;
+    font-size: 3rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.modal-inactividad-acciones {
+    display: flex;
+    justify-content: center;
+    gap: .75rem;
+}
+
+@media (max-width: 575.98px) {
+    .modal-inactividad-contenido {
+        padding: 1.35rem;
+    }
+
+    .modal-inactividad-acciones {
+        flex-direction: column;
+    }
+
+    .modal-inactividad-acciones .btn {
+        width: 100%;
+    }
+}

@@ -537,7 +537,8 @@ ob_end_flush();
                             <h4 class="card-title">Recalcular Ubicaciones desde una Bodega Espesifica</h4>
                             <h6 class="card-subtitle">Puede Recalcular Ubicaciones para un IDH de de esta Guia basado en una Bodega Espesifica  </h6>
                             <br>
-                            <form role="form" action="" method="post" enctype="multipart/form-data">
+                            <form id="recalculate-idh-form" role="form" action="" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="accion" value="btnRecalcular">
 
                             <div class="row">
 
@@ -551,7 +552,7 @@ ob_end_flush();
 
                                             <?php
                                             $conn = new mysqli($servername, $username, $password, $dbname);
-                                            $cargos = "SELECT DISTINCT(Material) as Materiales , Count(*) as Unidades, productos.descripcion FROM dbs9098416.DetalleGuias Join productos on IDH = Material where Transporte = $NoGuia and Tipo = 'Pallets' GROUP by Material";
+                                            $cargos = "SELECT DISTINCT(Material) as Materiales , Count(*) as Unidades, productos.descripcion FROM dbs9098416.DetalleGuias Join productos on IDH = Material where Transporte = $NoGuia and Tipo = 'Pallets' GROUP by Materiales , productos.descripcion";
 
                                             $result = $conn->query($cargos);
                                             if ($result->num_rows > 0) {
@@ -581,7 +582,7 @@ ob_end_flush();
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <br>
-                                        <button type="submit" value="btnRecalcular" name="accion" id="btnRecalcular" class="btn btn-outline-success">Re Calcular para IDH</button>
+                                        <button type="submit" id="btnRecalcular" class="btn btn-outline-success">Re Calcular para IDH</button>
                                     </div>
                                 </div>
 
@@ -785,6 +786,7 @@ ob_end_flush();
     <script src="../assets/libs/jquery/dist/jquery.min.js"></script>
     <script src="../assets/libs/popper.js/dist/umd/popper.min.js"></script>
     <script src="../assets/libs/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- apps -->
     <!-- apps -->
     <script src="../dist/js/app-style-switcher.js"></script>
@@ -888,17 +890,90 @@ ob_end_flush();
     </script>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const btnRecalcular = document.getElementById("btnRecalcular");
-        btnRecalcular.addEventListener("click", function () {
-            // Cambia el contenido del botón a un spinner de Bootstrap
-            btnRecalcular.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('recalculate-idh-form');
+        const button = document.getElementById('btnRecalcular');
 
-            // Simula un proceso (puedes reemplazar esto con tu lógica real)
-            setTimeout(function () {
-                // Restaura el contenido original del botón después de un tiempo
-                //btnRecalcular.innerHTML = 'Por favor Espere ...';
-            }, 30000); // Cambia 3000 por el tiempo que dura tu proceso en milisegundos
+        if (!form || !button) {
+            return;
+        }
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            if (form.dataset.submitting === 'true') {
+                return;
+            }
+
+            const idh = document.getElementById('ListaIDHS').value;
+            const bodega = document.getElementById('txtBodegaINP').value;
+
+            Swal.fire({
+                title: '¿Recalcular ubicaciones?',
+                text: 'Se recalcularán las ubicaciones del IDH ' + idh +
+                    (bodega ? ' utilizando la bodega ' + bodega + '.' : '.') +
+                    ' ¿Desea continuar?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, continuar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then(function (result) {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                form.dataset.submitting = 'true';
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+                button.setAttribute('aria-busy', 'true');
+
+                const processingMessages = [
+                    'Contando pallets...',
+                    'Determinando Piking...',
+                    'Buscando productos en bodegas...',
+                    'Revisando estado de los productos....',
+                    'Revisando cuarentenas ....',
+                    'Revisando disponibilidad de IDHs...',
+                    'Ya casi terminamos ...',
+                    'Afinando últimos cálculos'
+                ];
+                let messageIndex = 0;
+                let messageInterval = null;
+
+                Swal.fire({
+                    title: 'Recalculando ubicaciones',
+                    html: '<p id="recalculation-progress-message" class="mb-0"></p>',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    allowEnterKey: false,
+                    showConfirmButton: false,
+                    didOpen: function () {
+                        const messageElement = document.getElementById('recalculation-progress-message');
+
+                        Swal.showLoading();
+
+                        function showNextMessage() {
+                            messageElement.textContent = processingMessages[messageIndex];
+                            messageIndex = (messageIndex + 1) % processingMessages.length;
+                        }
+
+                        showNextMessage();
+                        messageInterval = window.setInterval(showNextMessage, 1800);
+                    },
+                    willClose: function () {
+                        if (messageInterval) {
+                            window.clearInterval(messageInterval);
+                        }
+                    }
+                });
+
+                window.setTimeout(function () {
+                    form.submit();
+                }, 75);
+            });
         });
     });
 </script>

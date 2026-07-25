@@ -13,6 +13,25 @@ $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
+$alertaValidacion = $_SESSION['guias_alerta_validacion'] ?? null;
+unset($_SESSION['guias_alerta_validacion']);
+
+$guiasExistentes = [];
+try {
+    $sqlGuiasExistentes = "
+        SELECT DISTINCT d.Transporte, d.Estatus
+        FROM dbs9098416.detalleguias AS d
+        INNER JOIN dbs9098416.Guia_PreCarga AS p
+            ON p.Transporte = d.Transporte
+        ORDER BY d.Transporte
+    ";
+    $consultaGuiasExistentes = $conn->query($sqlGuiasExistentes);
+    if ($consultaGuiasExistentes !== false) {
+        $guiasExistentes = $consultaGuiasExistentes->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $ex) {
+    error_log('Error al validar guias existentes: ' . $ex->getMessage());
+}
 
 
 // Fin de la conexion
@@ -403,6 +422,7 @@ ob_end_flush();
                                     </div>
                                     <!-- Start First Cards -->
                                     <form class="js-confirm-form" action="CargarGuias.php" method="POST" data-action="save">
+                                        <input type="hidden" name="ContinuarPendiente" value="0">
                                         <div class="form-actions">
                                             <div class="text-center">
                                                 <br>
@@ -594,6 +614,14 @@ ob_end_flush();
                 const selectedFile = document.getElementById('selected-file');
                 const maxFileSize = 10 * 1024 * 1024;
                 const hasPendingGuides = <?php echo $hayGuiasPendientes ? 'true' : 'false'; ?>;
+                const existingGuides = <?php echo json_encode(
+                    $guiasExistentes,
+                    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+                ); ?>;
+                const serverValidationAlert = <?php echo json_encode(
+                    $alertaValidacion,
+                    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+                ); ?>;
 
                 const actions = {
                     upload: {
@@ -680,6 +708,67 @@ ob_end_flush();
                     }
                 }
 
+                function existingGuideMessage(guide) {
+                    return 'La gu\u00eda ' + guide.Transporte + ' ya existe y est\u00e1 en estatus ' + guide.Estatus + '.';
+                }
+
+                function validateExistingGuides(form, action) {
+                    const blockedGuides = existingGuides.filter(function (guide) {
+                        return String(guide.Estatus).trim().toLowerCase() !== 'pendiente';
+                    });
+
+                    if (blockedGuides.length) {
+                        const message = blockedGuides.map(existingGuideMessage).join('\n') +
+                            '\nNo se puede cargar m\u00e1s informaci\u00f3n de esta gu\u00eda en el estado actual.';
+
+                        return showAlert({
+                            title: 'Gu\u00eda existente',
+                            text: message,
+                            icon: 'error',
+                            confirmButtonText: 'Cerrar',
+                            confirmButtonColor: '#ed3131',
+                            allowOutsideClick: false
+                        }).then(function () {
+                            return false;
+                        });
+                    }
+
+                    if (existingGuides.length) {
+                        const message = existingGuides.map(existingGuideMessage).join('\n') +
+                            '\n\u00bfDesea continuar?';
+
+                        return showAlert({
+                            title: 'Gu\u00eda pendiente',
+                            text: message,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: '\u00bfDesea continuar?',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: '#28a745',
+                            cancelButtonColor: '#6c757d',
+                            reverseButtons: true
+                        }).then(function (result) {
+                            if (!result.isConfirmed) return false;
+                            form.querySelector('[name="ContinuarPendiente"]').value = '1';
+                            setSubmitting(form, action.loadingText);
+                            form.submit();
+                            return true;
+                        });
+                    }
+
+                    return Promise.resolve(null);
+                }
+
+                if (serverValidationAlert) {
+                    showAlert({
+                        title: serverValidationAlert.title,
+                        text: serverValidationAlert.text,
+                        icon: serverValidationAlert.icon || 'error',
+                        confirmButtonText: 'Cerrar',
+                        confirmButtonColor: '#ed3131'
+                    });
+                }
+
                 fileInput.addEventListener('change', updateFileState);
                 ['dragenter', 'dragover'].forEach(function (eventName) {
                     uploadZone.addEventListener(eventName, function (event) {
@@ -748,25 +837,39 @@ ob_end_flush();
                         form.dataset.pending = 'true';
                         if (submitButton) submitButton.disabled = true;
 
-                        showAlert({
-                            title: action.title,
-                            text: action.text,
-                            icon: action.icon,
-                            showCancelButton: true,
-                            confirmButtonText: action.confirmText,
-                            cancelButtonText: 'Cancelar',
-                            confirmButtonColor: action.danger ? '#dc3545' : '#28a745',
-                            cancelButtonColor: '#6c757d',
-                            reverseButtons: true,
-                            focusCancel: action.danger
-                        }).then(function (result) {
-                            if (!result.isConfirmed) {
-                                form.dataset.pending = 'false';
-                                if (submitButton) submitButton.disabled = false;
+                        const validation = actionName === 'save'
+                            ? validateExistingGuides(form, action)
+                            : Promise.resolve(null);
+
+                        validation.then(function (validationResult) {
+                            if (validationResult !== null) {
+                                if (!validationResult) {
+                                    form.dataset.pending = 'false';
+                                    if (submitButton) submitButton.disabled = false;
+                                }
                                 return;
                             }
-                            setSubmitting(form, action.loadingText);
-                            form.submit();
+
+                            showAlert({
+                                title: action.title,
+                                text: action.text,
+                                icon: action.icon,
+                                showCancelButton: true,
+                                confirmButtonText: action.confirmText,
+                                cancelButtonText: 'Cancelar',
+                                confirmButtonColor: action.danger ? '#dc3545' : '#28a745',
+                                cancelButtonColor: '#6c757d',
+                                reverseButtons: true,
+                                focusCancel: action.danger
+                            }).then(function (result) {
+                                if (!result.isConfirmed) {
+                                    form.dataset.pending = 'false';
+                                    if (submitButton) submitButton.disabled = false;
+                                    return;
+                                }
+                                setSubmitting(form, action.loadingText);
+                                form.submit();
+                            });
                         });
                     });
                 });

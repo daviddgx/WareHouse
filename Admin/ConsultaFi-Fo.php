@@ -51,6 +51,11 @@ function validarCadena($cadena)
     return preg_match($patron, $cadena) === 0;
 }
 
+function escaparHtml($valor)
+{
+    return htmlspecialchars((string)$valor, ENT_QUOTES, 'UTF-8');
+}
+
 
 // Nueva forma de evaluar los datos
 if (isset($_GET['Ubicacion'])) {
@@ -157,7 +162,16 @@ switch ($accion) {
 
     case 'btnConsultarIDH':
 
-        $txtBuscarIDH = (isset($_POST['txtBuscarIDH'])) ? $_POST['txtBuscarIDH'] : "";
+        $txtBuscarIDH = isset($_POST['txtBuscarIDH']) ? trim($_POST['txtBuscarIDH']) : "";
+        if ($txtBuscarIDH !== '' && !ctype_digit($txtBuscarIDH)) {
+            $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-danger text-white border-0 fade show" role="alert">
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">Ã—</span>
+                                </button>
+                                <strong>Seleccione un IDH válido de la lista.</strong>
+                            </div>';
+            $txtBuscarIDH = '';
+        }
         break;
     default:
         break;
@@ -226,6 +240,20 @@ ob_end_flush();
     <style>
         .monospace-font {
             font-family: 'Courier New', Courier, monospace; /* Puedes cambiar 'Courier New' por la fuente que prefieras */
+        }
+
+        .linea-cuarentena .form-control {
+            background-color: #dc3545;
+            border-color: #bd2130;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .linea-calidad .form-control {
+            background-color: #721c24;
+            border-color: #491217;
+            color: #ffffff;
+            font-weight: 600;
         }
     </style>
 
@@ -403,10 +431,16 @@ ob_end_flush();
                                         <h4 class="card-title">1. Seleccione IDH a consultar </h4>
                                         <div class="form-group">
                                         <label>IDH</label>
-                                        <select  required class="funy form-control ng-pristine ng-valid ng-valid-required ng-touched  monospace-font" name="txtBuscarIDH" id="txtBuscarIDH" ng-model="properties.value" ng-options="ctrl.getValue(option) as (ctrl.getLabel(option) | uiTranslate) for option in properties.availableValues" ng-required="properties.required" ng-disabled="properties.disabled">
-                                            <option style="display:none; height:50px;" value="" class="ng-binding">
-                                                --- IDH ---
-                                            </option>
+                                        <input type="text"
+                                               required
+                                               autocomplete="off"
+                                               class="funy form-control monospace-font"
+                                               name="txtBuscarIDH"
+                                               id="txtBuscarIDH"
+                                               list="listaIDH"
+                                               value="<?php echo htmlspecialchars($txtBuscarIDH, ENT_QUOTES, 'UTF-8'); ?>"
+                                               placeholder="Digite para buscar un IDH">
+                                        <datalist id="listaIDH">
 
                                             <?php
                                             $conn = new mysqli($servername, $username, $password, $dbname);
@@ -415,12 +449,14 @@ ob_end_flush();
                                             $result = $conn->query($cargos);
                                             if ($result->num_rows > 0) {
                                                 while ($row = $result->fetch_assoc()) {
-
-                                                    echo '<option value="' . $row['IDH'] . '">' . $row['IDH'] . ' --- ' . $row['Descripcion'] . ' --- ' . $row['Pallets'] . ' Pallets</option>';
+                                                    $idh = htmlspecialchars($row['IDH'], ENT_QUOTES, 'UTF-8');
+                                                    $detalle = htmlspecialchars($row['Descripcion'] . ' --- ' . $row['Pallets'] . ' Pallets', ENT_QUOTES, 'UTF-8');
+                                                    echo '<option value="' . $idh . '" label="' . $detalle . '"></option>';
                                                 }
                                             }
                                             ?>
-                                        </select>
+                                        </datalist>
+                                        <small class="form-text text-muted">Escriba el IDH para filtrar la lista.</small>
                                         </div>
 
                                     </div>
@@ -490,7 +526,19 @@ ob_end_flush();
                                         // Listado de Carriles por cada fecha
                                         try {
                                             $conn2  = new PDO('mysql:host='.$servername.';dbname='.$dbname, $username, $password);
-                                            $sqlDatos2 = " select concat(Bodega,'-',Carril) as Carril, productos.descripcion, IFNULL(posiciones.EstatusUbicacion, 'Libre') as Estado, Count(*) as Pallets from posiciones inner join productos on posiciones.IDH = productos.IDH where posiciones.IDH = $txtBuscarIDH and date(fechaProduccion) = '$FechaProduccion' group by bodega, Carril, productos.descripcion, posiciones.EstatusUbicacion";
+                                            $sqlDatos2 = " select posiciones.Bodega,
+                                                posiciones.Carril as NumeroCarril,
+                                                concat(posiciones.Bodega,'-',posiciones.Carril) as Carril,
+                                                productos.descripcion,
+                                                IFNULL(posiciones.EstatusUbicacion, 'Libre') as Estado,
+                                                Count(*) as Pallets,
+                                                MAX(CASE WHEN posiciones.FechaCuarentena > CURDATE() THEN 1 ELSE 0 END) as EnCuarentena,
+                                                MAX(CASE WHEN posiciones.EstatusProducto = 'Calidad' THEN 1 ELSE 0 END) as EsCalidad
+                                                from posiciones
+                                                inner join productos on posiciones.IDH = productos.IDH
+                                                where posiciones.IDH = $txtBuscarIDH
+                                                and date(fechaProduccion) = '$FechaProduccion'
+                                                group by posiciones.Bodega, posiciones.Carril, productos.descripcion, posiciones.EstatusUbicacion";
                                             $ejecutar_sentencia_Guias2 = $conn2->query($sqlDatos2);
                                             // Verifica si la consulta retorna resultados
                                             // Obtiene los datos en forma de un arreglo
@@ -510,15 +558,110 @@ ob_end_flush();
 
                                         for ($j = 0; $j < $lista_Guias2; $j++) {
 
-                                            echo '<div class="row linea">';
+                                            $claseEstadoProducto = '';
+                                            if ((int)$lista_Guias2['EsCalidad'] === 1) {
+                                                $claseEstadoProducto = ' linea-calidad';
+                                            } elseif ((int)$lista_Guias2['EnCuarentena'] === 1) {
+                                                $claseEstadoProducto = ' linea-cuarentena';
+                                            }
+
+                                            $modalId = 'detallePosiciones_' . $i . '_' . $j;
+                                            $sqlDetalle = "SELECT Bodega, Carril, Posicion, Nivel, Ubicacion, Estado, IDH,
+                                                Origen,
+                                                DATE_FORMAT(FechaProduccion, '%d-%m-%Y - %H:%i:%s') as FechaProduccion,
+                                                DATE_FORMAT(FechaIngreso, '%d-%m-%Y - %H:%i:%s') as FechaIngreso,
+                                                DATE_FORMAT(FechaVencimiento, '%d-%m-%Y - %H:%i:%s') as FechaVencimiento,
+                                                DATE_FORMAT(FechaCuarentena, '%d-%m-%Y - %H:%i:%s') as FechaCuarentena,
+                                                EstatusProducto, Verificador, UsuarioMontaCargas, EstatusUbicacion,
+                                                Observaciones
+                                                FROM posiciones
+                                                WHERE IDH = :idh
+                                                AND DATE(FechaProduccion) = :fechaProduccion
+                                                AND Bodega = :bodega
+                                                AND Carril = :carril
+                                                AND IFNULL(EstatusUbicacion, 'Libre') = :estatusUbicacion
+                                                ORDER BY Posicion, Nivel";
+                                            $sentenciaDetalle = $conn2->prepare($sqlDetalle);
+                                            $sentenciaDetalle->execute([
+                                                ':idh' => $txtBuscarIDH,
+                                                ':fechaProduccion' => $FechaProduccion,
+                                                ':bodega' => $lista_Guias2['Bodega'],
+                                                ':carril' => $lista_Guias2['NumeroCarril'],
+                                                ':estatusUbicacion' => $lista_Guias2['Estado']
+                                            ]);
+                                            $posicionesDetalle = $sentenciaDetalle->fetchAll(PDO::FETCH_ASSOC);
+
+                                            echo '<div class="row linea' . $claseEstadoProducto . '">';
                                             //echo '<div class="col-md-2 mb-2 text-center"><label> </label><input type="text" class="form-control form-control-sm text-center" value="" readonly></div>';
                                             echo '<div class="col-md-2 mb-2 text-center"><label> </label></div>';
                                             echo '<div class="col-md-2 mb-2 text-center"><label>Carril: </label><input type="text" class="form-control form-control-sm text-center" value="' . $lista_Guias2['Carril'] . '" readonly></div>';
                                             echo '<div class="col-md-4 mb-4 text-center" data-toggle="tooltip" data-placement="top" title="' . $lista_Guias2['descripcion'] . '"><label>Descripción: </label><input type="text" class="form-control form-control-sm text-center" value="' . $lista_Guias2['descripcion'] . '" readonly></div>';
                                             echo '<div class="col-md-2 mb-2 text-center"><label>Pallets: </label><input type="text" class="form-control form-control-sm text-center" value="' . $lista_Guias2['Pallets'] . '" readonly></div>';
                                             echo '<div class="col-md-2 mb-2 text-center"><label>Estado: </label><input type="text" class="form-control form-control-sm text-center" value="' . $lista_Guias2['Estado'] . '" readonly></div>';
-                                            
+                                            echo '<div class="col-md-12 mb-3 text-right">
+                                                <button type="button" class="btn btn-outline-info btn-sm" data-toggle="modal" data-target="#' . $modalId . '">
+                                                    Consultar más información
+                                                </button>
+                                            </div>';
                                             echo '</div>';
+
+                                            echo '<div class="modal fade" id="' . $modalId . '" tabindex="-1" role="dialog" aria-labelledby="' . $modalId . '_titulo" aria-hidden="true">
+                                                <div class="modal-dialog modal-xl" role="document">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="' . $modalId . '_titulo">Detalle de posiciones — ' . escaparHtml($lista_Guias2['Carril']) . '</h5>
+                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                                                                <span aria-hidden="true">&times;</span>
+                                                            </button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm table-striped table-bordered">
+                                                                    <thead class="thead-light">
+                                                                        <tr>
+                                                                            <th>Bodega</th>
+                                                                            <th>Carril</th>
+                                                                            <th>Posición</th>
+                                                                            <th>Nivel</th>
+                                                                            <th>Ubicación</th>
+                                                                            <th>Estado</th>
+                                                                            <th>IDH</th>
+                                                                            <th>Origen</th>
+                                                                            <th>Fecha producción</th>
+                                                                            <th>Fecha ingreso</th>
+                                                                            <th>Fecha vencimiento</th>
+                                                                            <th>Fecha cuarentena</th>
+                                                                            <th>Estatus producto</th>
+                                                                            <th>Verificador</th>
+                                                                            <th>Usuario montacargas</th>
+                                                                            <th>Estatus ubicación</th>
+                                                                            <th>Observaciones</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>';
+
+                                            if (count($posicionesDetalle) === 0) {
+                                                echo '<tr><td colspan="17" class="text-center">No se encontraron posiciones.</td></tr>';
+                                            } else {
+                                                foreach ($posicionesDetalle as $posicionDetalle) {
+                                                    echo '<tr>';
+                                                    foreach ($posicionDetalle as $valorDetalle) {
+                                                        echo '<td>' . escaparHtml($valorDetalle) . '</td>';
+                                                    }
+                                                    echo '</tr>';
+                                                }
+                                            }
+
+                                            echo '                  </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>';
 
                                             $lista_Guias2 = $ejecutar_sentencia_Guias2->fetch(PDO::FETCH_ASSOC);
 
@@ -578,6 +721,12 @@ ob_end_flush();
 
 <script src="../assets/libs/popper.js/dist/umd/popper.min.js"></script>
 <script src="../assets/libs/bootstrap/dist/js/bootstrap.min.js"></script>
+<script>
+    $(function () {
+        // Evita que los contenedores de la plantilla dejen el backdrop por encima del modal.
+        $('.modal[id^="detallePosiciones_"]').appendTo(document.body);
+    });
+</script>
 <!-- apps -->
 <!-- apps -->
 <script src="../dist/js/app-style-switcher.js"></script>

@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'ValidarSesion.php';
 
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
@@ -12,8 +13,10 @@ if ($_SESSION['Usuario'] == '') {
 
 include '../LQS_EUQ/Connect.php';
 
-$GuiaDeCarga = $_GET["Guia"];
-$Entrega = $_GET["Entrega"];
+$GuiaDeCarga = isset($_GET["Guia"]) ? $_GET["Guia"] : '';
+$Entrega = isset($_GET["Entrega"]) ? $_GET["Entrega"] : '';
+$tokenDespacho = bin2hex(random_bytes(32));
+$_SESSION['token_despacho'] = $tokenDespacho;
 
 include '../LQS_EUQ/ListarDespachos.php';
 include "../Innet_MTC/Innet_MTC.php";
@@ -72,6 +75,8 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
+    <link href="tablet.css" rel="stylesheet">
+    <script src="sesion-montacargas.js" defer></script>
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -405,15 +410,14 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                     </thead>
                                     <tbody>
                                     <?php
-                                    for ($i = 0; $i < $lista_DespachoPRODUCCION; $i++) {
-
-
+                                    while (is_array($lista_DespachoPRODUCCION)) {
                                         $IDGUIA = $lista_DespachoPRODUCCION['Movimiento'];
                                         $IDIDH = $lista_DespachoPRODUCCION['IDH'];
                                         $Posicion = $lista_DespachoPRODUCCION['Posicion'];
                                         $Transporte = $lista_DespachoPRODUCCION['Guia_Carga'];
                                         $Entrega = $lista_DespachoPRODUCCION['Entrega'];
 
+                                        echo "<tr>";
                                         echo '<td >';
                                         echo $lista_DespachoPRODUCCION['IDH'];
                                         echo "</td>";
@@ -443,7 +447,13 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                         echo "</td>";
 
                                         echo "<td>";
-                                        echo '<a href="DespacharProducto.php?Guia='.$IDGUIA .'&IDH='.$IDIDH.'&Ubicacion='.$Posicion.'&Transporte='.$Transporte.'&Entrega='.$Entrega.'" class="	btn btn-primary ">Despachar</a>';
+                                        echo '<form method="post" action="DespacharProducto.php" class="form-despachar mb-0">';
+                                        echo '<input type="hidden" name="token" value="' . htmlspecialchars($tokenDespacho, ENT_QUOTES, 'UTF-8') . '">';
+                                        echo '<input type="hidden" name="Guia" value="' . htmlspecialchars($IDGUIA, ENT_QUOTES, 'UTF-8') . '">';
+                                        echo '<input type="hidden" name="Transporte" value="' . htmlspecialchars($Transporte, ENT_QUOTES, 'UTF-8') . '">';
+                                        echo '<input type="hidden" name="Entrega" value="' . htmlspecialchars($Entrega, ENT_QUOTES, 'UTF-8') . '">';
+                                        echo '<button type="submit" class="btn btn-primary btn-despachar">Despachar</button>';
+                                        echo '</form>';
                                         echo "</td>";
 
                                         echo "</tr>";
@@ -508,6 +518,7 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 <script src="../dist/js/OnLine.js"></script>
 <script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
 <script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready(function() {
@@ -519,6 +530,80 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
             }
         });
     });
+</script>
+
+<script>
+    (function () {
+        var despachoEnProceso = false;
+        var mensajesDespacho = [
+            'Actualizando estado ...',
+            'Llevando pallet a su destino ...',
+            'Casi terminamos ...',
+            'Actualizando ubicación ...',
+            'Limpiando ubicación ...',
+            'Revisando la operación ...',
+            'Casi está todo listo ...',
+            'Unos segundos más ...'
+        ];
+
+        $('.form-despachar').on('submit', function (event) {
+            event.preventDefault();
+
+            if (despachoEnProceso) {
+                return;
+            }
+
+            despachoEnProceso = true;
+            var formulario = this;
+            var indiceMensaje = 0;
+            var intervaloMensajes = null;
+
+            $('.btn-despachar')
+                .prop('disabled', true)
+                .attr('aria-disabled', 'true');
+
+            if (!window.Swal) {
+                formulario.submit();
+                return;
+            }
+
+            Swal.fire({
+                title: 'Procesando despacho',
+                html: '<p id="mensaje-proceso-despacho" class="mb-0"></p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                showConfirmButton: false,
+                didOpen: function () {
+                    var elementoMensaje = document.getElementById('mensaje-proceso-despacho');
+
+                    Swal.showLoading();
+
+                    function mostrarSiguienteMensaje() {
+                        elementoMensaje.textContent = mensajesDespacho[indiceMensaje];
+                        indiceMensaje = (indiceMensaje + 1) % mensajesDespacho.length;
+                    }
+
+                    mostrarSiguienteMensaje();
+                    intervaloMensajes = window.setInterval(mostrarSiguienteMensaje, 1800);
+                    formulario.submit();
+                },
+                willClose: function () {
+                    if (intervaloMensajes) {
+                        window.clearInterval(intervaloMensajes);
+                    }
+                }
+            });
+        });
+
+        window.addEventListener('pageshow', function (event) {
+            // Una página restaurada por "Atrás" contiene un token ya consumido.
+            // Recargar obtiene la lista y un token nuevos sin repetir el POST.
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    }());
 </script>
 
 

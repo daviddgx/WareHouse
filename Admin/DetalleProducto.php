@@ -24,15 +24,29 @@ $txtPWD = "";
 
 
 try {
-    if (isset($_GET['Guia'])) {
-    $IDH_SESION = $_GET['Guia'];
-    $sql = "SELECT * FROM dbs9098416.productos where IDH = '" . $IDH_SESION . "'";
+    $IDH_SESION = filter_input(INPUT_GET, 'Guia', FILTER_VALIDATE_INT);
+    if ($IDH_SESION === false || $IDH_SESION === null) {
+        throw new InvalidArgumentException('El identificador del producto no es válido.');
+    }
 
-    $sentencia = $pdo->prepare($sql,
-        array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true));
-    $sentencia->execute();
+    $sql = "SELECT IDH, CodigoDeBarras, Descripcion, Marca, LINEA, UNIDADESXMEDIDA,
+                   UMEDIDA, BASE, ALTURA, CAJASXPALET, PESONETOUNIDAD,
+                   PESOBRUTOUNIDAD, PESONETOCAJA, PESOBRUTOCAJA, PESOPORPALLET,
+                   FOTO, DIASCUARENTENA, DIASVENCIMIENTO, ESTADO,
+                   MINIMOPICKING, MAXIMOPICKING
+            FROM dbs9098416.productos
+            WHERE IDH = :IDH";
 
-    $Producto = $sentencia->fetch(PDO::FETCH_LAZY);
+    $sentencia = $pdo->prepare(
+        $sql,
+        array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true)
+    );
+    $sentencia->execute([':IDH' => $IDH_SESION]);
+
+    $Producto = $sentencia->fetch(PDO::FETCH_ASSOC);
+    if (!$Producto) {
+        throw new RuntimeException('El producto solicitado no existe.');
+    }
     $txtIDH = $Producto['IDH'];
     $txtCodigoDeBarras = $Producto['CodigoDeBarras'];
     $txtDescripcion = $Producto['Descripcion'];
@@ -47,6 +61,7 @@ try {
     $txtPesoBrutoUnitario = $Producto['PESOBRUTOUNIDAD'];
     $txtPesoNetoCaja = $Producto['PESONETOCAJA'];
     $txtPesoBrutoCaja = $Producto['PESOBRUTOCAJA'];
+    $txtPesoPorPallet = $Producto['PESOPORPALLET'];
     $txtFoto = $Producto['FOTO'];
     $txtDiasCuarentena = $Producto['DIASCUARENTENA'];
     $txtDiasVencimiento = $Producto['DIASVENCIMIENTO'];
@@ -54,12 +69,8 @@ try {
     $txtUnidadesMinimas = $Producto['MINIMOPICKING'];
     $txtUnidadesMaximas = $Producto['MAXIMOPICKING'];
 
-    } else {
-        // Manejo de error
-    }
-
-
 } catch (Exception $ex) {
+    error_log('Error al consultar el detalle del producto: ' . $ex->getMessage());
 
     $Mensajeerror = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
                                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -67,6 +78,9 @@ try {
                                     </button>
                                     <strong>Se encontro un error ️! -- </strong> ' . $ex . '
                                 </div>';
+    $Mensajeerror = '<div class="alert alert-secondary" role="alert">'
+        . '<strong>No fue posible cargar el producto solicitado.</strong>'
+        . '</div>';
 }
 //comprovacion de dadtos
 //fin comprovacion de datos
@@ -439,6 +453,18 @@ ob_end_flush();
                                             </div>
                                         </div>
                                         <!-- FIN Row para Elemento de formulario -->
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>Peso por Pallet</label>
+                                                    <input type="text"
+                                                           class="form-control"
+                                                           value="<?php echo htmlspecialchars($txtPesoPorPallet . ' kg', ENT_QUOTES, 'UTF-8'); ?>"
+                                                           readonly required>
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         <!--INICIO Row para Elemento de formulario -->
                                         <div class="row">

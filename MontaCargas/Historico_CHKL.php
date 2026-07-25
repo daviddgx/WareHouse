@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'ValidarSesion.php';
 include '../LQS_EUQ/Connect.php';
 include "../Innet_MTC/Innet_MTC.php";
 $Num_Despachos= '';
@@ -52,6 +53,8 @@ $Num_Asignaciones= darValorAsignaciones($_SESSION['Usuario']);
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
+    <link href="tablet.css" rel="stylesheet">
+    <script src="sesion-montacargas.js" defer></script>
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -347,7 +350,21 @@ $Num_Asignaciones= darValorAsignaciones($_SESSION['Usuario']);
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-2.0.2.min.js"></script>
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
-<script src="../dist/js/OnLine.js"></script>
+    <script src="../dist/js/OnLine.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var mainWrapper = document.getElementById('main-wrapper');
+            var pageWrapper = document.querySelector('.page-wrapper');
+
+            if (mainWrapper && pageWrapper) {
+                pageWrapper.addEventListener('click', function () {
+                    if (window.innerWidth <= 1199 && mainWrapper.classList.contains('show-sidebar')) {
+                        mainWrapper.classList.remove('show-sidebar');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

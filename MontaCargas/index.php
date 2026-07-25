@@ -2,6 +2,7 @@
 <?php
 ob_start();
 session_start();
+require_once 'ValidarSesion.php';
 
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');
@@ -12,13 +13,147 @@ date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 
 include '../Innet_ADM/Innet_AMD.php';
+include '../LQS_EUQ/Auth.php';
 
-// Variables de resumen Grafica 1
+/*
+ * Datos reales del dashboard. Las consultas se mantienen en este archivo para
+ * que las graficas reflejen exactamente las mismas tablas que opera MontaCargas.
+ */
+function dashboardRows($pdo, $sql, $params = array())
+{
+    try {
+        $statement = $pdo->prepare($sql);
+        $statement->execute($params);
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $exception) {
+        error_log('MontaCargas dashboard: ' . $exception->getMessage());
+        return array();
+    }
+}
 
-$CapacidadTotal = 300; //CapacidadTotalFIFO();
-$UbicacionesLibres = 20; //UnidadesLibresFIFO();
-$Exactitud = "99%";
-$UnidadesOcupadas = 30; //UnidadesOcupadasFIFO();
+$resumenPosiciones = dashboardRows($pdo, "
+    SELECT COUNT(*) AS total,
+           SUM(LOWER(Estado) = 'libre') AS libres,
+           SUM(LOWER(Estado) IN ('ocupada', 'ocupada-pk', 'ocp-pk')) AS ocupadas
+    FROM dbs9098416.posiciones
+");
+$resumenPosiciones = isset($resumenPosiciones[0]) ? $resumenPosiciones[0] : array();
+$CapacidadTotal = isset($resumenPosiciones['total']) ? (int) $resumenPosiciones['total'] : 0;
+$UbicacionesLibres = isset($resumenPosiciones['libres']) ? (int) $resumenPosiciones['libres'] : 0;
+$UnidadesOcupadas = isset($resumenPosiciones['ocupadas']) ? (int) $resumenPosiciones['ocupadas'] : 0;
+$Ocupacion = $CapacidadTotal > 0 ? round(($UnidadesOcupadas / $CapacidadTotal) * 100, 1) : 0;
+
+$capacidadBodegas = dashboardRows($pdo, "
+    SELECT Bodega,
+           SUM(LOWER(Estado) IN ('ocupada', 'ocupada-pk', 'ocp-pk')) AS ocupadas,
+           SUM(LOWER(Estado) = 'libre') AS libres,
+           SUM(LOWER(Estado) NOT IN ('ocupada', 'ocupada-pk', 'ocp-pk', 'libre')) AS otras
+    FROM dbs9098416.posiciones
+    GROUP BY Bodega
+    ORDER BY CAST(Bodega AS UNSIGNED), Bodega
+");
+
+$estadosPosiciones = dashboardRows($pdo, "
+    SELECT COALESCE(NULLIF(Estado, ''), 'Sin estado') AS estado, COUNT(*) AS total
+    FROM dbs9098416.posiciones
+    GROUP BY COALESCE(NULLIF(Estado, ''), 'Sin estado')
+    ORDER BY total DESC
+");
+
+$productosOcupados = dashboardRows($pdo, "
+    SELECT CAST(IDH AS CHAR) AS idh, COUNT(*) AS total
+    FROM dbs9098416.posiciones
+    WHERE IDH NOT IN (0) AND LOWER(Estado) IN ('ocupada', 'ocupada-pk', 'ocp-pk')
+    GROUP BY IDH
+    ORDER BY total DESC
+    LIMIT 10
+");
+
+$actividadSemanal = dashboardRows($pdo, "
+    SELECT DATE_FORMAT(d.fecha, '%d/%m') AS etiqueta,
+           COALESCE(i.total, 0) AS ingresos,
+           COALESCE(ds.total, 0) AS despachos,
+           COALESCE(r.total, 0) AS reubicaciones,
+           COALESCE(p.total, 0) AS picking
+    FROM (
+        SELECT CURDATE() - INTERVAL n DAY AS fecha
+        FROM (
+            SELECT 6 AS n UNION ALL SELECT 5 UNION ALL SELECT 4 UNION ALL
+            SELECT 3 UNION ALL SELECT 2 UNION ALL SELECT 1 UNION ALL SELECT 0
+        ) dias
+    ) d
+    LEFT JOIN (
+        SELECT DATE(FechaColocado) AS fecha, COUNT(*) AS total
+        FROM dbs9098416.asignaciones
+        WHERE FechaColocado >= CURDATE() - INTERVAL 6 DAY AND Estado = 'Ingresado'
+        GROUP BY DATE(FechaColocado)
+    ) i ON i.fecha = d.fecha
+    LEFT JOIN (
+        SELECT DATE(FechaRealizado) AS fecha, COUNT(*) AS total
+        FROM dbs9098416.despachos
+        WHERE FechaRealizado >= CURDATE() - INTERVAL 6 DAY AND Estado = 'Despachado'
+        GROUP BY DATE(FechaRealizado)
+    ) ds ON ds.fecha = d.fecha
+    LEFT JOIN (
+        SELECT DATE(Fecha_Movimiento) AS fecha, COUNT(*) AS total
+        FROM dbs9098416.Reubicaciones
+        WHERE Fecha_Movimiento >= CURDATE() - INTERVAL 6 DAY AND Estado = 'Reubicada'
+        GROUP BY DATE(Fecha_Movimiento)
+    ) r ON r.fecha = d.fecha
+    LEFT JOIN (
+        SELECT DATE(Fecha_Movimiento) AS fecha, COUNT(*) AS total
+        FROM dbs9098416.piking
+        WHERE Fecha_Movimiento >= CURDATE() - INTERVAL 6 DAY AND Estado = 'Reubicada'
+        GROUP BY DATE(Fecha_Movimiento)
+    ) p ON p.fecha = d.fecha
+    ORDER BY d.fecha
+");
+
+$usuarioDashboard = isset($_SESSION['Usuario']) ? $_SESSION['Usuario'] : '';
+$tareasUsuario = dashboardRows($pdo, "
+    SELECT tipo,
+           SUM(estado = 'Pendiente') AS pendientes,
+           SUM(estado <> 'Pendiente') AS completadas
+    FROM (
+        SELECT 'Ingresos' AS tipo, Estado AS estado FROM dbs9098416.asignaciones WHERE Operador = :usuario1
+        UNION ALL
+        SELECT 'Despachos', Estado FROM dbs9098416.despachos WHERE Operador = :usuario2
+        UNION ALL
+        SELECT 'Reubicaciones', Estado FROM dbs9098416.Reubicaciones WHERE Montacarguista = :usuario3
+        UNION ALL
+        SELECT 'Picking', Estado FROM dbs9098416.piking WHERE Montacarguista = :usuario4
+    ) movimientos
+    GROUP BY tipo
+    ORDER BY FIELD(tipo, 'Ingresos', 'Despachos', 'Reubicaciones', 'Picking')
+", array(
+    ':usuario1' => $usuarioDashboard,
+    ':usuario2' => $usuarioDashboard,
+    ':usuario3' => $usuarioDashboard,
+    ':usuario4' => $usuarioDashboard
+));
+
+// Contadores requeridos por Menu.php. Se inicializan siempre para evitar
+// warnings cuando el usuario no tiene tareas pendientes.
+$Num_Despachos = '';
+$Num_Asignaciones = '';
+$Num_Reubicaciones = '';
+$Num_Piking = '';
+$variableMenuPorTipo = array(
+    'Ingresos' => 'Num_Asignaciones',
+    'Despachos' => 'Num_Despachos',
+    'Reubicaciones' => 'Num_Reubicaciones',
+    'Picking' => 'Num_Piking'
+);
+
+foreach ($tareasUsuario as $tareaUsuario) {
+    $tipoTarea = isset($tareaUsuario['tipo']) ? $tareaUsuario['tipo'] : '';
+    $pendientesTarea = isset($tareaUsuario['pendientes']) ? (int) $tareaUsuario['pendientes'] : 0;
+
+    if ($pendientesTarea > 0 && isset($variableMenuPorTipo[$tipoTarea])) {
+        $nombreVariableMenu = $variableMenuPorTipo[$tipoTarea];
+        $$nombreVariableMenu = '<span class="badge badge-primary notify-no"> ' . $pendientesTarea . ' </span>';
+    }
+}
 
 ob_end_flush();
 ?>
@@ -42,6 +177,8 @@ ob_end_flush();
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
+    <link href="tablet.css" rel="stylesheet">
+    <script src="sesion-montacargas.js" defer></script>
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -436,8 +573,8 @@ ob_end_flush();
                                     <div class="col-md-6 col-lg-3 col-xlg-3 animate__animated animate__backInUp" style="animation-duration: 1.75s;">
                                         <div class="card card-hover">
                                             <div class="p-2 bg-success text-center">
-                                                <h1 id="Porcentaje-Exactitud" class="font-light text-white"><?php echo $Exactitud; ?></h1>
-                                                <h6 class="text-white">% de Exactitud</h6>
+                                                <h1 id="Porcentaje-Exactitud" class="font-light text-white"><?php echo $Ocupacion; ?>%</h1>
+                                                <h6 class="text-white">% de Ocupación</h6>
                                             </div>
                                         </div>
                                     </div>
@@ -462,7 +599,7 @@ ob_end_flush();
                                     <div class="col-lg-6 col-md-12 animate__animated  animate__backInLeft">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h4 class="card-title">% Capacidad por bodegas</h4>
+                                                <h4 class="card-title">Ocupación por bodega</h4>
                                                 <canvas id="bar-chart"  height="150"></canvas>
 
 
@@ -473,7 +610,7 @@ ob_end_flush();
                                     <div class="col-lg-6 col-md-12 animate__animated  animate__backInRight">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h4 class="card-title"> Toneladas Despachadas vs Toneladas Ingresadas</h4>
+                                                <h4 class="card-title">Actividad de ingresos y despachos (7 días)</h4>
                                                 <canvas id="Toneladas-Despachadas" height="150"> </canvas>
 
                                             </div>
@@ -486,7 +623,7 @@ ob_end_flush();
                                     <div class="col-lg-6 col-md-12 animate__animated  animate__backInLeft ">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h4 class="card-title">Tarimas Ingresadas vs Tarimas Despachadas</h4>
+                                                <h4 class="card-title">Reubicaciones y picking (7 días)</h4>
                                                 <canvas id="Tarimas-Movimientos" height="149"> </canvas>
 
                                             </div>
@@ -496,7 +633,7 @@ ob_end_flush();
                                     <div class="col-lg-6 col-md-12 animate__animated animate__backInRight">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h4 class="card-title">% Conteo Ciego</h4>
+                                                <h4 class="card-title">Estado actual de las ubicaciones</h4>
                                                 <canvas id="Conteo-Ciego" height="150"> </canvas>
 
 
@@ -509,7 +646,7 @@ ob_end_flush();
                                     <div class="col-lg-6 col-md-12">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h4 class="card-title">% de Picking</h4>
+                                                <h4 class="card-title">Mis tareas por operación</h4>
                                                 <canvas id="Picking" height="150"> </canvas>
 
                                             </div>
@@ -519,7 +656,7 @@ ob_end_flush();
                                     <div class="col-lg-6 col-md-12">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h4 class="card-title">Capacidad de Carga vs Toneladas Despachadas</h4>
+                                                <h4 class="card-title">Top 10 productos almacenados (IDH)</h4>
                                                 <canvas id="CapacidadCarga" height="150"> </canvas>
                                             </div>
                                         </div>
@@ -613,172 +750,104 @@ ob_end_flush();
         <!-- Datos de las bodegas -->
 
         <script>
-            // Capaciodad de bodegas
-            new Chart(document.getElementById("bar-chart").getContext('2d'), {
+            (function () {
+                var capacidadBodegas = <?php echo json_encode($capacidadBodegas, JSON_UNESCAPED_UNICODE); ?>;
+                var actividadSemanal = <?php echo json_encode($actividadSemanal, JSON_UNESCAPED_UNICODE); ?>;
+                var estadosPosiciones = <?php echo json_encode($estadosPosiciones, JSON_UNESCAPED_UNICODE); ?>;
+                var tareasUsuario = <?php echo json_encode($tareasUsuario, JSON_UNESCAPED_UNICODE); ?>;
+                var productosOcupados = <?php echo json_encode($productosOcupados, JSON_UNESCAPED_UNICODE); ?>;
+                var rojo = '#ed3131';
+                var gris = '#767676';
+                var cyan = '#27a9e3';
+                var verde = '#28b779';
+                var paleta = [rojo, cyan, verde, '#ffb848', '#7460ee', '#5f76e8', '#ff8c42', '#8d6e63'];
 
-                type: 'bar',
-                data: {
-                    labels: ["B1", "B2", "B3", "b4", "B5","B6","B7","B8","B9","B10","B11","B12"],
-                    datasets: [
-                        {
-                            label: "Porcentaje de ocupacion",
-                            backgroundColor: ["#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037"],
-                            data: [72,69,56,74,0,56,97,21,7,100,65,3]
-                        }
-                    ]
-                },
-                options: {
-                    legend: { display: true },
-                    title: {
-                        display: true,
-                        text: '% Capacidad por bodegas'
-                    }
+                function valores(filas, campo) {
+                    return filas.map(function (fila) { return Number(fila[campo]) || 0; });
                 }
-            });
-        </script>
 
-        <script>
-            // Toneladas despachadas
-            new Chart(document.getElementById("Toneladas-Despachadas").getContext('2d'), {
-                type: 'horizontalBar',
-                data: {
-                    labels: ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"],
-                    datasets: [
-                        {
-                            label: "Despachadas",
-                            backgroundColor: ["#ff0022", "#ff0022", "#ff0022", "#ff0022", "#ff0022"],
-                            data: [50,300,60,100,85]
-                        },
-                        {
-                            label: "Ingresadas",
-                            backgroundColor: ["#716b6b", "#716b6b", "#716b6b", "#716b6b", "#716b6b"],
-                            data: [100,60,120,45,89]
-                        }
-
-                    ]
-                },
-                options: {
-                    legend: { display: true },
-                    title: {
-                        display: true,
-                        text: 'Toneladas despachadas vs toneladas ingresadas'
-                    }
+                function etiquetas(filas, campo) {
+                    return filas.map(function (fila) { return String(fila[campo]); });
                 }
-            });
-        </script>
 
-        <script>
-            // Movimientos de tarimas
-            new Chart(document.getElementById("Tarimas-Movimientos").getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: ["Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"],
-                    datasets: [{
-                        data: [90,85,100,85,120,90],
-                        label: "Tarimas Ingresadas",
-                        borderColor: "#7d7979",
-                        fill: false
-                    }, {
-                        data: [50,300,75,60,200,90],
-                        label: "Tarimas Despachadas",
-                        borderColor: "#fa0000",
-                        fill: false
-                    }
-                    ]
-                },
-                options: {
-                    title: {
-                        display: true,
-                        text: 'Tarimas Ingresadas vs Tarimas Despachadas'
-                    }
+                function ejeEnteros() {
+                    return {
+                        ticks: { beginAtZero: true, precision: 0 },
+                        gridLines: { color: 'rgba(0,0,0,.05)' }
+                    };
                 }
-            });
-        </script>
 
-        <script>
-            // Conteo Ciego
-            new Chart(document.getElementById("Conteo-Ciego").getContext('2d'), {
-
-                type: 'bar',
-                data: {
-                    labels: ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes","Sabado"],
-                    datasets: [
-                        {
-                            label: "Guias Despachadas",
-                            backgroundColor: ["#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037"],
-                            data: [10,13,20,12,10,12]
-                        },
-                        {
-                            label: "Guias con conteo Ciego",
-                            backgroundColor: ["#716b6b", "#716b6b", "#716b6b", "#716b6b", "#716b6b", "#716b6b"],
-                            data: [2,3,4,3,2,4]
-                        }
-                    ]
-                },
-                options: {
-                    legend: { display: true },
-                    title: {
-                        display: true,
-                        text: 'Conteo Ciego'
+                new Chart(document.getElementById('bar-chart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: capacidadBodegas.map(function (fila) { return 'B' + fila.Bodega; }),
+                        datasets: [
+                            { label: 'Ocupadas', data: valores(capacidadBodegas, 'ocupadas'), backgroundColor: rojo },
+                            { label: 'Libres', data: valores(capacidadBodegas, 'libres'), backgroundColor: verde },
+                            { label: 'Otros estados', data: valores(capacidadBodegas, 'otras'), backgroundColor: gris }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { xAxes: [{ stacked: true }], yAxes: [Object.assign(ejeEnteros(), { stacked: true })] },
+                        tooltips: { mode: 'index', intersect: false }
                     }
+                });
 
-                }
-            });
-        </script>
+                new Chart(document.getElementById('Toneladas-Despachadas').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: etiquetas(actividadSemanal, 'etiqueta'),
+                        datasets: [
+                            { label: 'Ingresos', data: valores(actividadSemanal, 'ingresos'), borderColor: gris, backgroundColor: 'rgba(118,118,118,.12)', fill: false, lineTension: 0 },
+                            { label: 'Despachos', data: valores(actividadSemanal, 'despachos'), borderColor: rojo, backgroundColor: 'rgba(237,49,49,.12)', fill: false, lineTension: 0 }
+                        ]
+                    },
+                    options: { responsive: true, scales: { yAxes: [ejeEnteros()] }, tooltips: { mode: 'index', intersect: false } }
+                });
 
-        <script>
-            // Porcentaje de Picking
-            new Chart(document.getElementById("Picking").getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: ["Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"],
-                    datasets: [{
-                        data: [22,23,20,12,21,15],
-                        label: "% Picking",
-                        borderColor: "#ff0000",
-                        fill: false
-                    }
-                    ]
-                },
-                options: {
-                    title: {
-                        display: true,
-                        text: 'Porcemtaje de Picking'
-                    }
-                }
-            });
-        </script>
+                new Chart(document.getElementById('Tarimas-Movimientos').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: etiquetas(actividadSemanal, 'etiqueta'),
+                        datasets: [
+                            { label: 'Reubicaciones', data: valores(actividadSemanal, 'reubicaciones'), backgroundColor: cyan },
+                            { label: 'Picking', data: valores(actividadSemanal, 'picking'), backgroundColor: rojo }
+                        ]
+                    },
+                    options: { responsive: true, scales: { yAxes: [ejeEnteros()] }, tooltips: { mode: 'index', intersect: false } }
+                });
 
+                new Chart(document.getElementById('Conteo-Ciego').getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: etiquetas(estadosPosiciones, 'estado'),
+                        datasets: [{ data: valores(estadosPosiciones, 'total'), backgroundColor: estadosPosiciones.map(function (_, i) { return paleta[i % paleta.length]; }) }]
+                    },
+                    options: { responsive: true, cutoutPercentage: 58, legend: { position: 'right' } }
+                });
 
-        <script>
-            // Capacidad de carga
-            new Chart(document.getElementById("CapacidadCarga").getContext('2d'), {
+                new Chart(document.getElementById('Picking').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: etiquetas(tareasUsuario, 'tipo'),
+                        datasets: [
+                            { label: 'Pendientes', data: valores(tareasUsuario, 'pendientes'), backgroundColor: '#ffb848' },
+                            { label: 'Completadas', data: valores(tareasUsuario, 'completadas'), backgroundColor: verde }
+                        ]
+                    },
+                    options: { responsive: true, scales: { xAxes: [{ stacked: true }], yAxes: [Object.assign(ejeEnteros(), { stacked: true })] } }
+                });
 
-                type: 'bar',
-                data: {
-                    labels: ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes","Sabado"],
-                    datasets: [
-                        {
-                            label: "Toneladas Despachadas",
-                            backgroundColor: ["#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037", "#fa0037"],
-                            data: [44,235,65,218,263,60]
-                        },
-                        {
-                            label: "Capacidad de carga",
-                            backgroundColor: ["#716b6b", "#716b6b", "#716b6b", "#716b6b", "#716b6b", "#716b6b"],
-                            data: [100,100,100,100,100,50]
-                        }
-                    ]
-                },
-                options: {
-                    legend: { display: true },
-                    title: {
-                        display: true,
-                        text: 'Conteo Ciego'
-                    }
-
-                }
-            });
+                new Chart(document.getElementById('CapacidadCarga').getContext('2d'), {
+                    type: 'horizontalBar',
+                    data: {
+                        labels: productosOcupados.map(function (fila) { return 'IDH ' + fila.idh; }),
+                        datasets: [{ label: 'Ubicaciones ocupadas', data: valores(productosOcupados, 'total'), backgroundColor: rojo }]
+                    },
+                    options: { responsive: true, legend: { display: false }, scales: { xAxes: [ejeEnteros()] } }
+                });
+            }());
         </script>
 
         <!-- Animacion de Numeros Capacidad Total -->
@@ -884,7 +953,7 @@ ob_end_flush();
                 // Verificar si el número actual es menor o igual al número objetivo
                 if (numeroActual3 <= porcentajeExactitud) {
                     // Actualizar el contenido del elemento con el número actual
-                    UbicacionesExactitud.innerText = Math.floor(numeroActual3);
+                    UbicacionesExactitud.innerText = Math.floor(numeroActual3) + '%';
 
                     // Incrementar el número actual
                     numeroActual3 += incremento3;
@@ -893,7 +962,7 @@ ob_end_flush();
                     setTimeout(animarNumero3, intervalo);
                 } else {
                     // Establecer el número objetivo como el contenido final del elemento
-                    UbicacionesExactitud.innerText = porcentajeExactitud;
+                    UbicacionesExactitud.innerText = porcentajeExactitud + '%';
                 }
             }
 

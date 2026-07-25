@@ -1,4 +1,5 @@
 <?php
+require_once 'ValidarSesion.php';
 ob_start();
 include "../Innet_MTC/Innet_MTC.php";
 //Capturar el registro

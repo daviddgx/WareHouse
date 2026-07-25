@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'ValidarSesion.php';
 include '../LQS_EUQ/Auth.php';
 include '../LQS_EUQ/ListarAsignacionesCompletos.php';
 include "../Innet_MTC/Innet_MTC.php";
@@ -193,6 +194,8 @@ switch ($accion) {
     <link rel="stylesheet" href="../dist/css/Custom/PreLoaderStyle.css">
     <link href="../dist/css/Custom/adminContainer.css" rel="stylesheet">
     <link href="../dist/css/style.min.css" rel="stylesheet">
+    <link href="tablet.css" rel="stylesheet">
+    <script src="sesion-montacargas.js" defer></script>
     <link href="../dist/css/Custom/ConEst.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->

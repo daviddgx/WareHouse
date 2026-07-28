@@ -304,7 +304,14 @@ ob_end_flush();
                                         </li>
 
                                         <li class="nav-item active">
-                                            <a class="btn btn-outline-success" style="margin-left: 2rem" href="Crear_PosicionesBodega.php?Guia=<?php echo $BODEGA_SESION; ?>"><span > Crear Posiciones </span></a>
+                                            <a class="btn btn-outline-success" style="margin-left: 2rem" href="Crear_PosicionesBodega.php?Guia=<?php echo rawurlencode($BodegaPRM); ?>"><span > Crear Posiciones </span></a>
+                                        </li>
+
+                                        <li class="nav-item active">
+                                            <a class="btn btn-outline-info" style="margin-left: 2rem" href="PlanoBodega.php?Bodega=<?php echo rawurlencode($BodegaPRM); ?>">
+                                                <i data-feather="map" class="svg-icon mr-1"></i>
+                                                <span> Ver plano de bodega </span>
+                                            </a>
                                         </li>
 
 

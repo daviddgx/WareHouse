@@ -1,32 +1,58 @@
-
 <?php
 ob_start();
 session_start();
 require_once 'ValidarSesion.php';
-
-if ($_SESSION['Usuario'] == '') {
-    header('Location: ../Innet/505.html');
-}
 
 
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 
 include '../Innet_ADM/Innet_AMD.php';
+
+// Auth.php oculta los errores de conexión. Inicializar la variable permite que
+// el dashboard continúe con valores vacíos cuando SQL no está disponible.
+$pdo = null;
 include '../LQS_EUQ/Auth.php';
 
 /*
  * Datos reales del dashboard. Las consultas se mantienen en este archivo para
  * que las graficas reflejen exactamente las mismas tablas que opera MontaCargas.
  */
-function dashboardRows($pdo, $sql, $params = array())
+$errorDashboardMontaCargas = false;
+
+function dashboardRows($pdo, $sql, $params = array(), $nombreConsulta = 'sin nombre')
 {
+    global $errorDashboardMontaCargas;
+
+    if (!($pdo instanceof PDO)) {
+        error_log('MontaCargas dashboard: conexión SQL no disponible.');
+        $errorDashboardMontaCargas = true;
+        return array();
+    }
+
     try {
         $statement = $pdo->prepare($sql);
-        $statement->execute($params);
+
+        if ($statement === false) {
+            $error = $pdo->errorInfo();
+            error_log('MontaCargas dashboard: no se pudo preparar la consulta. ' .
+                (isset($error[2]) ? $error[2] : 'Error SQL desconocido.'));
+            $errorDashboardMontaCargas = true;
+            return array();
+        }
+
+        if (!$statement->execute($params)) {
+            $error = $statement->errorInfo();
+            error_log('MontaCargas dashboard: no se pudo ejecutar la consulta. ' .
+                (isset($error[2]) ? $error[2] : 'Error SQL desconocido.'));
+            $errorDashboardMontaCargas = true;
+            return array();
+        }
+
         return $statement->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $exception) {
+    } catch (Exception $exception) {
         error_log('MontaCargas dashboard: ' . $exception->getMessage());
+        $errorDashboardMontaCargas = true;
         return array();
     }
 }
@@ -36,7 +62,7 @@ $resumenPosiciones = dashboardRows($pdo, "
            SUM(LOWER(Estado) = 'libre') AS libres,
            SUM(LOWER(Estado) IN ('ocupada', 'ocupada-pk', 'ocp-pk')) AS ocupadas
     FROM dbs9098416.posiciones
-");
+", array(), 'Resumen de posiciones');
 $resumenPosiciones = isset($resumenPosiciones[0]) ? $resumenPosiciones[0] : array();
 $CapacidadTotal = isset($resumenPosiciones['total']) ? (int) $resumenPosiciones['total'] : 0;
 $UbicacionesLibres = isset($resumenPosiciones['libres']) ? (int) $resumenPosiciones['libres'] : 0;
@@ -51,14 +77,14 @@ $capacidadBodegas = dashboardRows($pdo, "
     FROM dbs9098416.posiciones
     GROUP BY Bodega
     ORDER BY CAST(Bodega AS UNSIGNED), Bodega
-");
+", array(), 'Capacidad por bodegas');
 
 $estadosPosiciones = dashboardRows($pdo, "
     SELECT COALESCE(NULLIF(Estado, ''), 'Sin estado') AS estado, COUNT(*) AS total
     FROM dbs9098416.posiciones
     GROUP BY COALESCE(NULLIF(Estado, ''), 'Sin estado')
     ORDER BY total DESC
-");
+", array(), 'Estados de posiciones');
 
 $productosOcupados = dashboardRows($pdo, "
     SELECT CAST(IDH AS CHAR) AS idh, COUNT(*) AS total
@@ -67,7 +93,7 @@ $productosOcupados = dashboardRows($pdo, "
     GROUP BY IDH
     ORDER BY total DESC
     LIMIT 10
-");
+", array(), 'Productos ocupados');
 
 $actividadSemanal = dashboardRows($pdo, "
     SELECT DATE_FORMAT(d.fecha, '%d/%m') AS etiqueta,
@@ -107,7 +133,7 @@ $actividadSemanal = dashboardRows($pdo, "
         GROUP BY DATE(Fecha_Movimiento)
     ) p ON p.fecha = d.fecha
     ORDER BY d.fecha
-");
+", array(), 'Actividad semanal');
 
 $usuarioDashboard = isset($_SESSION['Usuario']) ? $_SESSION['Usuario'] : '';
 $tareasUsuario = dashboardRows($pdo, "
@@ -130,7 +156,7 @@ $tareasUsuario = dashboardRows($pdo, "
     ':usuario2' => $usuarioDashboard,
     ':usuario3' => $usuarioDashboard,
     ':usuario4' => $usuarioDashboard
-));
+), 'Tareas del usuario');
 
 // Contadores requeridos por Menu.php. Se inicializan siempre para evitar
 // warnings cuando el usuario no tiene tareas pendientes.
@@ -306,8 +332,13 @@ ob_end_flush();
         <nav class="navbar top-navbar navbar-expand-md">
             <div class="navbar-header" data-logobg="skin6">
                 <!-- This is for the sidebar toggle which is visible on mobile only -->
-                <a class="nav-toggler waves-effect waves-light d-block d-md-none" href="javascript:void(0)"><i
-                        class="ti-menu ti-close"></i></a>
+                <button class="nav-toggler montacargas-menu-toggler waves-effect waves-light"
+                        type="button" aria-label="Abrir o cerrar menú" aria-controls="montacargas-sidebar"
+                        aria-expanded="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
                 <!-- ============================================================== -->
                 <!-- Logo -->
                 <!-- ============================================================== -->
@@ -439,7 +470,7 @@ ob_end_flush();
     <!-- ============================================================== -->
     <!-- Left Sidebar - style you can find in sidebar.scss  -->
     <!-- ============================================================== -->
-    <aside class="left-sidebar" data-sidebarbg="skin6">
+    <aside class="left-sidebar" id="montacargas-sidebar" data-sidebarbg="skin6">
         <!-- Sidebar scroll-->
         <div class="scroll-sidebar" data-sidebarbg="skin6">
             <!-- Sidebar navigation-->
@@ -524,6 +555,13 @@ ob_end_flush();
         <!-- Container fluid  -->
         <!-- ============================================================== -->
         <div class="container-fluid animate__animated animate__fadeIn">
+
+            <?php if ($errorDashboardMontaCargas) { ?>
+                <div class="alert alert-warning" role="alert">
+                    No fue posible consultar todos los datos del dashboard. La página continuará
+                    funcionando con valores temporales; el detalle técnico fue guardado en el registro del servidor.
+                </div>
+            <?php } ?>
 
 
 

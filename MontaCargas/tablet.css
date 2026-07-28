@@ -102,8 +102,34 @@ input[type="radio"] {
     margin-left: .35rem;
 }
 
+/* El botón se controla por ancho de pantalla sin depender de d-md-none. */
+#main-wrapper .montacargas-menu-toggler {
+    display: none;
+    flex: 0 0 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #4f5b6b;
+    cursor: pointer;
+}
+
+#main-wrapper .montacargas-menu-toggler svg {
+    width: 27px;
+    height: 27px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.25;
+    stroke-linecap: round;
+}
+
+#main-wrapper .montacargas-menu-toggler:focus {
+    outline: 2px solid #ed3131;
+    outline-offset: 2px;
+}
+
 @media (max-width: 1199.98px) {
-    #main-wrapper .nav-toggler {
+    #main-wrapper .montacargas-menu-toggler {
         display: flex !important;
         align-items: center;
         justify-content: center;

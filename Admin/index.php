@@ -40,6 +40,7 @@ include '../Innet_ADM/Innet_AMD.php';
 
 // Las tareas de mantenimiento se ejecutan desde
 // cron/actualizar_estatus_bodegas.php, no durante la carga del dashboard.
+LimpiarPiking();
 $CapacidadTotal = CapacidadTotalFIFO();
 $UbicacionesLibres = UnidadesLibresFIFO();
 $Exactitud = "99%";

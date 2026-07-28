@@ -13,6 +13,9 @@ $fecha = date('d-m-Y');
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
+$guiasRecienCargadas = $_SESSION['guias_recien_cargadas'] ?? [];
+unset($_SESSION['guias_recien_cargadas']);
+$guiasRecienCargadas = array_map('strval', (array) $guiasRecienCargadas);
 
 // Aquí puedes agregar posteriormente la validación
 // de formularios o procesamiento de información.
@@ -98,6 +101,17 @@ ob_end_flush();
     >
 
     <style>
+        #example tbody tr.guia-recien-cargada > td {
+            background-color: #fff3a6 !important;
+            box-shadow: inset 0 2px 0 #f0ad00, inset 0 -2px 0 #f0ad00;
+            transition: background-color .6s ease, box-shadow .6s ease;
+        }
+
+        #example tbody tr.guia-recien-cargada-finalizada > td {
+            background-color: transparent !important;
+            box-shadow: none;
+        }
+
 
         select {
             height: 10px !important;
@@ -624,7 +638,16 @@ ob_end_flush();
                                                  */
                                                 $transporteUrl = urlencode($transporte);
 
-                                                echo '<tr>';
+                                                $esGuiaRecienCargada = in_array(
+                                                    (string) $transporte,
+                                                    $guiasRecienCargadas,
+                                                    true
+                                                );
+                                                $atributosFila = $esGuiaRecienCargada
+                                                    ? ' class="guia-recien-cargada" data-guia-recien-cargada="1"'
+                                                    : '';
+
+                                                echo '<tr' . $atributosFila . '>';
 
                                                 echo '<td>' .
                                                     $transporteHtml .
@@ -992,6 +1015,34 @@ ob_end_flush();
             responsive: false,
             autoWidth: false
         });
+
+        const $filaRecienCargada = tabla.rows().nodes().to$()
+            .filter('[data-guia-recien-cargada="1"]')
+            .first();
+        if ($filaRecienCargada.length) {
+            const indiceFila = tabla.row($filaRecienCargada).index();
+            const informacionPagina = tabla.page.info();
+            const posicionVisible = tabla
+                .rows({order: 'current', search: 'applied'})
+                .indexes()
+                .toArray()
+                .indexOf(indiceFila);
+
+            if (posicionVisible >= 0 && informacionPagina.length > 0) {
+                tabla.page(Math.floor(posicionVisible / informacionPagina.length)).draw('page');
+            }
+
+            $filaRecienCargada[0].scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            window.setTimeout(function () {
+                tabla.rows().nodes().to$()
+                    .filter('[data-guia-recien-cargada="1"]')
+                    .addClass('guia-recien-cargada-finalizada');
+            }, 3000);
+        }
 
         /**
          * Convierte el botón seleccionado en un botón con spinner

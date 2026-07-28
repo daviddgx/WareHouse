@@ -296,6 +296,23 @@ function LiberarUnidadesCuarentena() {
     ]);
 }
 
+
+
+function LimpiarPiking()
+{
+    include '../LQS_EUQ/Auth.php';
+
+    $sentencia = $pdo->prepare(
+        'UPDATE detalle_piking
+         SET UnidadesEnPallet = 1
+         WHERE UnidadesEnPallet > 1'
+    );
+
+    $sentencia->execute();
+}
+
+
+
 function CapacidadTotalFIFO(){
 
     date_default_timezone_set('America/Guatemala');

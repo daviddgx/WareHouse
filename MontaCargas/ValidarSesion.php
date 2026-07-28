@@ -4,7 +4,9 @@
  * Protección común del módulo MontaCargas.
  * 30 minutos de inactividad + 5 minutos de cortesía.
  */
-if (session_status() !== PHP_SESSION_ACTIVE) {
+// session_id() mantiene compatibilidad con servidores anteriores a PHP 5.4,
+// donde session_status() no existe y provocaría una pantalla blanca.
+if (session_id() === '') {
     session_start();
 }
 
@@ -34,9 +36,8 @@ if (
     }
 
     session_destroy();
-    header('Location: ../Innet/logout.php');
+    header('Location: /index.php', true, 303);
     exit;
 }
 
 $_SESSION['MTC_ULTIMA_ACTIVIDAD'] = $ahoraSesionMontaCargas;
-

@@ -1,5 +1,16 @@
 <?php
 ob_start();
+
+// La cookie debe estar disponible en /MontaCargas, /Admin y demás módulos.
+$parametrosSesion = session_get_cookie_params();
+$sesionSegura = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+session_set_cookie_params(
+    $parametrosSesion['lifetime'],
+    '/',
+    $parametrosSesion['domain'],
+    $sesionSegura,
+    true
+);
 session_start();
 
 
@@ -204,61 +215,62 @@ if (!empty($_POST['Entrar'])) {
                             $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
-                            header('Location: Admin/index.php');
-                            break;
+                            header('Location: /Admin/index.php', true, 303);
+                            exit;
 
                         case '2':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
                             $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
-                            header('Location: MontaCargas/index.php');
-                            break;
+                            $_SESSION['MTC_ULTIMA_ACTIVIDAD'] = time();
+                            header('Location: /MontaCargas/index.php', true, 303);
+                            exit;
 
                         case '3':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
                             $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
-                            header('Location: Inventarios/index.php');
-                            break;
+                            header('Location: /Inventarios/index.php', true, 303);
+                            exit;
 
                         case '4':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
                             $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
-                            header('Location: Picking/index.php');
-                            break;
+                            header('Location: /Picking/index.php', true, 303);
+                            exit;
                         case '5':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
                             $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
-                            header('Location: DashBoard/index.php');
-                            break;
+                            header('Location: /DashBoard/index.php', true, 303);
+                            exit;
                         case '6':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
                             $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
-                            header('Location: InventariosPL/index.php');
-                            break;
+                            header('Location: /InventariosPL/index.php', true, 303);
+                            exit;
                         case '7':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
                             $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
-                            header('Location: InventariosDTG/index.php');
-                            break;
+                            header('Location: /InventariosDTG/index.php', true, 303);
+                            exit;
 
                             case '22':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
                             $_SESSION['UsuarioFecha'] = $sessionDate;
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
-                            header('Location: MontaCargas2/index.php');
-                            break;
+                            header('Location: /MontaCargas2/index.php', true, 303);
+                            exit;
                     }
             } else {
                 registrarIntentoLogin($conn, $LUser, 'FALLIDO', 'CREDENCIALES_INVALIDAS');
@@ -832,7 +844,7 @@ ob_end_flush();
         <section class="login-card">
             <h2>Bienvenido de nuevo</h2>
             <p class="login-intro">Ingresa tus credenciales para continuar.</p>
-            <form id="loginForm" role="form" action="" method="post">
+            <form id="loginForm" role="form" action="/index.php" method="post">
                 <div class="field">
                     <label for="UserLog">Usuario</label>
                     <input type="text" name="UserLog" placeholder="Escribe tu usuario"

@@ -46,6 +46,8 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
+$tokenIngreso = bin2hex(random_bytes(32));
+$_SESSION['token_ingreso'] = $tokenIngreso;
 
 
 ?>
@@ -434,7 +436,12 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
 
                                         echo "<td>";
-                                        echo '<a href="UbicarProducto.php?Guia='.$IDGUIA.'&IDH='.$IDIDH.'&Ubicacion='.$Posicion.'" class="btn btn-success" onclick="ocultarBoton(this)">Ingresar ✔️</a>';
+                                        echo '<form method="post" action="UbicarProducto.php" class="form-ingresar mb-0">';
+                                        echo '<input type="hidden" name="token" value="' . htmlspecialchars($tokenIngreso, ENT_QUOTES, 'UTF-8') . '">';
+                                        echo '<input type="hidden" name="Guia" value="' . htmlspecialchars($IDGUIA, ENT_QUOTES, 'UTF-8') . '">';
+                                        echo '<input type="hidden" name="IDH" value="' . htmlspecialchars($IDIDH, ENT_QUOTES, 'UTF-8') . '">';
+                                        echo '<button type="submit" class="btn btn-success btn-ingresar">Ingresar ✔️</button>';
+                                        echo '</form>';
                                         echo "</td>";
 
                                         
@@ -445,15 +452,6 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                     ?>
                                     </tbody>
                                 </table>
-
-                                <script>
-function ocultarBoton(boton) {
-    boton.style.display = 'none';
-}
-</script>
-
-
-
 
                                 <br>
                             </div>
@@ -516,6 +514,7 @@ function ocultarBoton(boton) {
 <script src="../dist/js/OnLine.js"></script>
 <script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
 <script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready( function () {
@@ -533,6 +532,67 @@ function ocultarBoton(boton) {
     } );
 </script>
 
+<script>
+    (function () {
+        var ingresoEnProceso = false;
+        var mensajesIngreso = [
+            'Buscando Ubicación...',
+            'Identificando IDH...',
+            'Revisando producción...',
+            'Moviendo datos...',
+            'Registrando ingreso...',
+            'Registrando en bitácora...',
+            'Ya casi está listo...',
+            'Asegurando la transacción...'
+        ];
+
+        $('.form-ingresar').on('submit', function (event) {
+            event.preventDefault();
+
+            if (ingresoEnProceso) {
+                return;
+            }
+
+            ingresoEnProceso = true;
+            var formulario = this;
+            var indiceMensaje = 0;
+
+            $('.btn-ingresar').prop('disabled', true).attr('aria-disabled', 'true');
+
+            if (!window.Swal) {
+                formulario.submit();
+                return;
+            }
+
+            Swal.fire({
+                title: 'Procesando ingreso',
+                html: '<p id="mensaje-proceso-ingreso" class="mb-0"></p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                showConfirmButton: false,
+                didOpen: function () {
+                    var mensaje = document.getElementById('mensaje-proceso-ingreso');
+                    Swal.showLoading();
+                    mensaje.textContent = mensajesIngreso[indiceMensaje];
+
+                    window.setInterval(function () {
+                        indiceMensaje = (indiceMensaje + 1) % mensajesIngreso.length;
+                        mensaje.textContent = mensajesIngreso[indiceMensaje];
+                    }, 1800);
+
+                    formulario.submit();
+                }
+            });
+        });
+
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    }());
+</script>
 
 </body>
 

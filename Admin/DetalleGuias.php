@@ -481,7 +481,16 @@ ob_end_flush();
                                                 echo "</td>";
 
                                                 echo "<td>";
-                                                echo '<a href="QuitarIDHDetalleGuias.php?Guia='.$lista_Guias['Transporte'].'&Entrega=' . $lista_Guias['Entrega'] .'&IDH='.$lista_Guias['Material'].'" class=" far fa-window-close  btn btn-Sertero "></a>';
+                                                $urlQuitarIDH = 'QuitarIDHDetalleGuias.php?' . http_build_query([
+                                                    'Guia' => $lista_Guias['Transporte'],
+                                                    'Entrega' => $lista_Guias['Entrega'],
+                                                    'IDH' => $lista_Guias['Material']
+                                                ]);
+                                                echo '<a href="' . htmlspecialchars($urlQuitarIDH, ENT_QUOTES, 'UTF-8') . '"'
+                                                    . ' class="far fa-window-close btn btn-Sertero js-quitar-idh"'
+                                                    . ' data-idh="' . htmlspecialchars($lista_Guias['Material'], ENT_QUOTES, 'UTF-8') . '"'
+                                                    . ' data-guia="' . htmlspecialchars($lista_Guias['Transporte'], ENT_QUOTES, 'UTF-8') . '"'
+                                                    . ' aria-label="Quitar IDH de la guía"></a>';
                                                 echo "</td>";
 
 
@@ -555,6 +564,7 @@ ob_end_flush();
     <script src="../dist/js/OnLine.js"></script>
     <script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
     <script src="../dist/js/pages/datatable/datatable-basic.init.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         $(document).ready(function() {
@@ -563,6 +573,32 @@ ob_end_flush();
                     url: 'datatables_espanol.json'
                 }
 
+            });
+        });
+    </script>
+
+    <script>
+        $(document).on('click', '.js-quitar-idh', function(event) {
+            event.preventDefault();
+
+            const enlace = this;
+            const idh = enlace.dataset.idh;
+            const guia = enlace.dataset.guia;
+
+            Swal.fire({
+                title: '¿Eliminar el IDH de la guía?',
+                text: 'Se eliminará el IDH ' + idh + ' de la guía ' + guia + '. Esta acción no se puede deshacer.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ed3131',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then(function(resultado) {
+                if (resultado.isConfirmed) {
+                    window.location.href = enlace.href;
+                }
             });
         });
     </script>

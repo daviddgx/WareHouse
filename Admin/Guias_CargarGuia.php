@@ -20,7 +20,7 @@ $guiasExistentes = [];
 try {
     $sqlGuiasExistentes = "
         SELECT DISTINCT d.Transporte, d.Estatus
-        FROM dbs9098416.detalleguias AS d
+        FROM dbs9098416.DetalleGuias AS d
         INNER JOIN dbs9098416.Guia_PreCarga AS p
             ON p.Transporte = d.Transporte
         ORDER BY d.Transporte

@@ -46,6 +46,9 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
 
+$tokenReubicacion = bin2hex(random_bytes(32));
+$_SESSION['token_reubicacion'] = $tokenReubicacion;
+
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -394,7 +397,11 @@ r
 
 
                                     echo "<td>";
-                                    echo '<a href="MoverProducto.php?Guia='.$IDGUIA.'&Origen='.$Origen.'&Destino='.$Destino.'&IDH='.$IDH.'" id="btn-mover-'.$IDH.'" class="btn btn-primary" onclick="disableButton(this)">Mover</a>';
+                                    echo '<form method="post" action="MoverProducto.php" class="form-mover mb-0">';
+                                    echo '<input type="hidden" name="token" value="' . htmlspecialchars($tokenReubicacion, ENT_QUOTES, 'UTF-8') . '">';
+                                    echo '<input type="hidden" name="Guia" value="' . htmlspecialchars($IDGUIA, ENT_QUOTES, 'UTF-8') . '">';
+                                    echo '<button type="submit" class="btn btn-primary btn-mover">Mover</button>';
+                                    echo '</form>';
                                     echo "</td>";
 
                                     echo "<script>";
@@ -492,6 +499,56 @@ r
         $(table.column(2).nodes()).addClass('bolded');
         $(table.column(3).nodes()).addClass('bolded');
     });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    (function () {
+        var movimientoEnProceso = false;
+        var mensajes = [
+            'Buscando ubicación...', 'Identificando IDH...',
+            'Revisando producción...', 'Moviendo datos...',
+            'Actualizando ubicaciones...', 'Registrando en bitácora...',
+            'Ya casi está listo...', 'Asegurando la transacción...'
+        ];
+
+        $('.form-mover').on('submit', function (event) {
+            event.preventDefault();
+            if (movimientoEnProceso) return;
+            movimientoEnProceso = true;
+
+            var formulario = this;
+            var indice = 0;
+            $('.btn-mover').prop('disabled', true).attr('aria-disabled', 'true');
+
+            if (!window.Swal) {
+                formulario.submit();
+                return;
+            }
+
+            Swal.fire({
+                title: 'Procesando reubicación',
+                html: '<p id="mensaje-reubicacion" class="mb-0"></p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                showConfirmButton: false,
+                didOpen: function () {
+                    var mensaje = document.getElementById('mensaje-reubicacion');
+                    Swal.showLoading();
+                    mensaje.textContent = mensajes[indice];
+                    window.setInterval(function () {
+                        indice = (indice + 1) % mensajes.length;
+                        mensaje.textContent = mensajes[indice];
+                    }, 1800);
+                    formulario.submit();
+                }
+            });
+        });
+
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) window.location.reload();
+        });
+    }());
 </script>
 </body>
 

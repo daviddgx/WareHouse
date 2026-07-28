@@ -17,6 +17,20 @@ if ($_SESSION['Usuario'] == '') {
 $MensajeExito = '';
 $Mensajeerror = '';
 
+if (!empty($_SESSION['mensaje_exito_piking'])) {
+    $MensajeExito = '<div class="alert alert-success">'
+        . htmlspecialchars($_SESSION['mensaje_exito_piking'], ENT_QUOTES, 'UTF-8')
+        . '</div>';
+    unset($_SESSION['mensaje_exito_piking']);
+}
+
+if (!empty($_SESSION['mensaje_error_piking'])) {
+    $Mensajeerror = '<div class="alert alert-danger">'
+        . htmlspecialchars($_SESSION['mensaje_error_piking'], ENT_QUOTES, 'UTF-8')
+        . '</div>';
+    unset($_SESSION['mensaje_error_piking']);
+}
+
 
 //Variables para Resumen
 $TotalMovimientos = "";
@@ -50,6 +64,9 @@ $Num_Piking = darValorPiking($_SESSION['Usuario']);
 
 $Num_Asignaciones = '';
 $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
+
+$tokenPiking = bin2hex(random_bytes(32));
+$_SESSION['token_piking'] = $tokenPiking;
 
 ?>
 <!DOCTYPE html>
@@ -403,7 +420,11 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
                                     echo "</td>";
 
                                     echo "<td>";
-                                    echo '<a href="MoverProductoPiking.php?Guia=' . $IDGUIA . '&Origen=' . $Origen . '&Destino=' . $Destino . '&IDH=' . $IDH . '" class="btn btn-primary mover-boton">Mover</a>';
+                                    echo '<form method="post" action="MoverProductoPiking.php" class="form-mover-piking mb-0">';
+                                    echo '<input type="hidden" name="token" value="' . htmlspecialchars($tokenPiking, ENT_QUOTES, 'UTF-8') . '">';
+                                    echo '<input type="hidden" name="Guia" value="' . htmlspecialchars($IDGUIA, ENT_QUOTES, 'UTF-8') . '">';
+                                    echo '<button type="submit" class="btn btn-primary btn-mover-piking">Mover</button>';
+                                    echo '</form>';
                                     echo "</td>";
 
                                     echo "</tr>";
@@ -507,6 +528,56 @@ $Num_Asignaciones = darValorAsignaciones($_SESSION['Usuario']);
         $(table.column(2).nodes()).addClass('bolded');
         $(table.column(3).nodes()).addClass('bolded');
     });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    (function () {
+        var movimientoEnProceso = false;
+        var mensajes = [
+            'Buscando ubicación...', 'Identificando IDH...',
+            'Revisando producción...', 'Moviendo datos...',
+            'Abasteciendo picking...', 'Registrando en bitácora...',
+            'Ya casi está listo...', 'Asegurando la transacción...'
+        ];
+
+        $('.form-mover-piking').on('submit', function (event) {
+            event.preventDefault();
+            if (movimientoEnProceso) return;
+            movimientoEnProceso = true;
+
+            var formulario = this;
+            var indice = 0;
+            $('.btn-mover-piking').prop('disabled', true).attr('aria-disabled', 'true');
+
+            if (!window.Swal) {
+                formulario.submit();
+                return;
+            }
+
+            Swal.fire({
+                title: 'Procesando abastecimiento',
+                html: '<p id="mensaje-piking" class="mb-0"></p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                showConfirmButton: false,
+                didOpen: function () {
+                    var mensaje = document.getElementById('mensaje-piking');
+                    Swal.showLoading();
+                    mensaje.textContent = mensajes[indice];
+                    window.setInterval(function () {
+                        indice = (indice + 1) % mensajes.length;
+                        mensaje.textContent = mensajes[indice];
+                    }, 1800);
+                    formulario.submit();
+                }
+            });
+        });
+
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) window.location.reload();
+        });
+    }());
 </script>
 </body>
 

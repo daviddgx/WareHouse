@@ -1,11 +1,22 @@
 <?php
-ob_start();
+session_start();
+$_SESSION = array();
 
-  session_start();
-  session_destroy();  
+if (ini_get('session.use_cookies')) {
+    $parametrosCookie = session_get_cookie_params();
+    setcookie(
+        session_name(),
+        '',
+        time() - 42000,
+        $parametrosCookie['path'],
+        $parametrosCookie['domain'],
+        $parametrosCookie['secure'],
+        $parametrosCookie['httponly']
+    );
+}
 
-  header('Location: ../index.php');
+session_destroy();
 
-
-ob_end_flush();
-?>
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Location: /index.php', true, 303);
+exit;

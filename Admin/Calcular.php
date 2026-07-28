@@ -274,7 +274,10 @@ try {
 
     if ((int) $cantidadCarga === 0) {
         throw new DomainException(
-            'No se generaron registros válidos para calcular las ubicaciones de esta guía.'
+            'No se generaron registros válidos para calcular las ubicaciones de esta guía. '
+            . 'Detalle: el procedimiento sp_insertar_detalle_guias_carga finalizó, '
+            . 'pero no creó filas en DetalleGuias_Carga para la guía ' . $transporte
+            . '. Revise que la guía tenga detalle y que sus materiales cuenten con una configuración válida.'
         );
     }
 
@@ -431,15 +434,33 @@ try {
         }
     }
 
+    $idError = date('YmdHis') . '-' . bin2hex(random_bytes(3));
+
+    registrarErrorProceso(
+        $idError,
+        'CALCULO_UBICACIONES',
+        $transporte,
+        $exception,
+        $servername,
+        $username,
+        $password,
+        $dbname
+    );
+
     error_log(
         sprintf(
-            '[CalcularUbicaciones] Validacion rechazada para guia %s: %s',
+            '[CalcularUbicaciones][%s] Validacion rechazada para guia %s: %s',
+            $idError,
             $transporte,
             $exception->getMessage()
         )
     );
 
-    redirigirConAlerta('Proceso no ejecutado', $exception->getMessage());
+    redirigirConAlerta(
+        'Proceso no ejecutado',
+        $exception->getMessage() . ' Código de error: ' . $idError,
+        'error'
+    );
 } catch (Throwable $exception) {
     if ($conexion instanceof mysqli) {
         try {

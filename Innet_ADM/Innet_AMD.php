@@ -240,12 +240,12 @@ function LiberarCuarentena(){
 
 
 
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
     $sentencia = $pdo->prepare("SELECT count(*)  as Unidades FROM dbs9098416.posiciones where FechaCuarentena < date('$fecha') and EstatusUbicacion = 'Cuarentena'; ");
     $sentencia->execute();
     $Count =  $sentencia->fetch(PDO::FETCH_LAZY);
 
-    if ($Count['Unidades'] != 0){
+    if (($Count['Unidades'] ?? 0) != 0){
         LiberarUnidadesCuarentena();
         return  $Count['Unidades'];
     }else {
@@ -256,7 +256,7 @@ function LiberarCuarentena(){
 
 function LiberarCuarentenaHoy() {
 
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
 
     $fecha = date('Y-m-d');
 
@@ -270,12 +270,14 @@ function LiberarCuarentenaHoy() {
         ':fecha' => $fecha
     ]);
 
-    return $sentencia->fetch(PDO::FETCH_ASSOC)['Unidades'];
+    $resultado = $sentencia->fetch(PDO::FETCH_ASSOC);
+
+    return (int) ($resultado['Unidades'] ?? 0);
 }
 
 function LiberarUnidadesCuarentena() {
 
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
 
     $fecha = date('Y-m-d');
     $fechaLimite = $fecha . ' 23:59:59';
@@ -285,7 +287,7 @@ function LiberarUnidadesCuarentena() {
     $sentencia = $pdo->prepare("
         UPDATE posiciones
         SET Observaciones = :obs,
-            EstatusUbicacion = 'Libre'
+            EstatusUbicacion = 'Libre',EstatusProducto = 'Libre'
         WHERE FechaCuarentena <= :fechaLimite
         AND EstatusUbicacion = 'Cuarentena'
     ");
@@ -300,7 +302,7 @@ function LiberarUnidadesCuarentena() {
 
 function LimpiarPiking()
 {
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
 
     $sentencia = $pdo->prepare(
         'UPDATE detalle_piking
@@ -320,16 +322,12 @@ function CapacidadTotalFIFO(){
 
 
 
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
     $sentencia = $pdo->prepare("SELECT Cant_CapacidadTotal FROM `gaf_capacidadbodegasdiaria` where NombreBodega = 'Todas' order by fecha desc limit 1 ");
     $sentencia->execute();
-    $Count =  $sentencia->fetch(PDO::FETCH_LAZY);
+    $Count = $sentencia->fetch(PDO::FETCH_ASSOC);
 
-    if ($Count['Cant_CapacidadTotal'] != 0){
-               return  $Count['Cant_CapacidadTotal'];
-    }else {
-        return '0';
-    }
+    return (int) ($Count['Cant_CapacidadTotal'] ?? 0);
 
 }
 
@@ -340,16 +338,12 @@ function UnidadesLibresFIFO(){
 
 
 
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
     $sentencia = $pdo->prepare("SELECT Cant_Libres FROM `gaf_capacidadbodegasdiaria` where NombreBodega = 'Todas' order by fecha desc limit 1 ");
     $sentencia->execute();
-    $Count =  $sentencia->fetch(PDO::FETCH_LAZY);
+    $Count = $sentencia->fetch(PDO::FETCH_ASSOC);
 
-    if ($Count['Cant_Libres'] != 0){
-        return  $Count['Cant_Libres'];
-    }else {
-        return '0';
-    }
+    return (int) ($Count['Cant_Libres'] ?? 0);
 
 }
 
@@ -361,16 +355,12 @@ function UnidadesOcupadasFIFO(){
 
 
 
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
     $sentencia = $pdo->prepare("SELECT Cant_Ocupadas FROM `gaf_capacidadbodegasdiaria` where NombreBodega = 'Todas' order by fecha desc limit 1 ");
     $sentencia->execute();
-    $Count =  $sentencia->fetch(PDO::FETCH_LAZY);
+    $Count = $sentencia->fetch(PDO::FETCH_ASSOC);
 
-    if ($Count['Cant_Ocupadas'] != 0){
-        return  $Count['Cant_Ocupadas'];
-    }else {
-        return '0';
-    }
+    return (int) ($Count['Cant_Ocupadas'] ?? 0);
 
 }
 
@@ -381,7 +371,7 @@ function PorcentajeOcupacion(){
 
 
 
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
     $sentencia = $pdo->prepare("SELECT
 (
   (SELECT COUNT(*)
@@ -409,19 +399,15 @@ function PorcentajeOcupacion(){
 
 ");
     $sentencia->execute();
-    $Count =  $sentencia->fetch(PDO::FETCH_LAZY);
+    $Count = $sentencia->fetch(PDO::FETCH_ASSOC);
 
-    if ($Count['Porcentaje'] != 0){
-        return  $Count['Porcentaje'];
-    }else {
-        return '0';
-    }
+    return round((float) ($Count['Porcentaje'] ?? 0), 2);
 
 }
 
 function ObtenerUltimoEstatusBodegasConsolidado(){
 
-    include '../LQS_EUQ/Auth.php';
+    include __DIR__ . '/../LQS_EUQ/Auth.php';
 
     $sentencia = $pdo->prepare("SELECT Fecha, Cant_CapacidadTotal, Cant_Libres, Cant_Ocupadas FROM `gaf_capacidadbodegasdiaria` WHERE NombreBodega = 'Todas' ORDER BY Fecha DESC LIMIT 1;");
     $sentencia->execute();

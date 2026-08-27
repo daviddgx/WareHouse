@@ -1,5 +1,6 @@
 <?php
 ob_start();
+date_default_timezone_set('America/Guatemala');
 
 // La cookie debe estar disponible en /MontaCargas, /Admin y demás módulos.
 $parametrosSesion = session_get_cookie_params();
@@ -11,6 +12,7 @@ session_set_cookie_params(
     $sesionSegura,
     true
 );
+header('Permissions-Policy: geolocation=(self)');
 session_start();
 
 
@@ -37,12 +39,96 @@ function obtenerDireccionIP()
 }
 
 /**
+ * Lee texto enviado por el navegador, elimina caracteres de control y limita
+ * su longitud antes de guardarlo en la bitácora.
+ */
+function obtenerTextoNavegador($campo, $longitudMaxima)
+{
+    if (!isset($_POST[$campo]) || is_array($_POST[$campo])) {
+        return null;
+    }
+
+    $valor = trim((string) $_POST[$campo]);
+    if ($valor === '') {
+        return null;
+    }
+
+    $valorLimpio = preg_replace('/[\x00-\x1F\x7F]/u', '', $valor);
+    if ($valorLimpio === null || $valorLimpio === '') {
+        return null;
+    }
+
+    return function_exists('mb_substr')
+        ? mb_substr($valorLimpio, 0, $longitudMaxima, 'UTF-8')
+        : substr($valorLimpio, 0, $longitudMaxima);
+}
+
+/**
+ * Valida una coordenada proporcionada por la API de geolocalización.
+ * Los valores del navegador siguen siendo datos declarados por el cliente.
+ */
+function obtenerCoordenadaNavegador($campo, $minimo, $maximo)
+{
+    $valor = obtenerTextoNavegador($campo, 30);
+    if ($valor === null || !is_numeric($valor)) {
+        return null;
+    }
+
+    $coordenada = (float) $valor;
+    return $coordenada >= $minimo && $coordenada <= $maximo
+        ? $coordenada
+        : null;
+}
+
+function obtenerDatosNavegadorLogin()
+{
+    $latitud = obtenerCoordenadaNavegador('GeoLatitud', -90, 90);
+    $longitud = obtenerCoordenadaNavegador('GeoLongitud', -180, 180);
+
+    // No se registra una ubicación parcial.
+    if ($latitud === null || $longitud === null) {
+        $latitud = null;
+        $longitud = null;
+    }
+
+    $precision = obtenerTextoNavegador('GeoPrecision', 30);
+    $precision = $precision !== null && is_numeric($precision) && (float) $precision >= 0
+        ? min((float) $precision, 100000000)
+        : null;
+
+    $estadosPermitidos = array(
+        'OBTENIDA',
+        'DENEGADA',
+        'NO_DISPONIBLE',
+        'TIEMPO_AGOTADO',
+        'ERROR',
+        'PENDIENTE'
+    );
+    $estado = obtenerTextoNavegador('GeoEstado', 30);
+    if (!in_array($estado, $estadosPermitidos, true)) {
+        $estado = 'NO_ENVIADA';
+    }
+
+    return array(
+        'latitud' => $latitud,
+        'longitud' => $longitud,
+        'precision_metros' => $precision,
+        'estado_ubicacion' => $estado,
+        'fecha_ubicacion_cliente' => obtenerTextoNavegador('GeoFecha', 50),
+        'nombre_dispositivo' => obtenerTextoNavegador('NombreDispositivoNavegador', 255),
+        'plataforma' => obtenerTextoNavegador('PlataformaNavegador', 100),
+        'tipo_dispositivo' => obtenerTextoNavegador('TipoDispositivoNavegador', 50)
+    );
+}
+
+/**
  * Registra un intento de acceso sin interrumpir el login si la bitácora falla.
  * Nunca recibe ni almacena la contraseña.
  */
 function registrarIntentoLogin($conn, $usuario, $resultado, $motivo = null)
 {
     try {
+        $datosNavegador = obtenerDatosNavegadorLogin();
         $ip = obtenerDireccionIP();
         $ipsProxy = isset($_SERVER['HTTP_X_FORWARDED_FOR'])
             ? substr((string) $_SERVER['HTTP_X_FORWARDED_FOR'], 0, 500)
@@ -53,6 +139,9 @@ function registrarIntentoLogin($conn, $usuario, $resultado, $motivo = null)
         $plataforma = isset($_SERVER['HTTP_SEC_CH_UA_PLATFORM'])
             ? trim(substr((string) $_SERVER['HTTP_SEC_CH_UA_PLATFORM'], 0, 100), '"')
             : null;
+        if ($datosNavegador['plataforma'] !== null) {
+            $plataforma = $datosNavegador['plataforma'];
+        }
         $idioma = isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])
             ? substr((string) $_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 100)
             : null;
@@ -66,27 +155,21 @@ function registrarIntentoLogin($conn, $usuario, $resultado, $motivo = null)
             ? substr((string) $_SERVER['HTTP_REFERER'], 0, 1000)
             : null;
 
-        // Cabeceras habituales de Cloudflare; quedan NULL si no están disponibles.
-        $pais = isset($_SERVER['HTTP_CF_IPCOUNTRY'])
-            ? substr((string) $_SERVER['HTTP_CF_IPCOUNTRY'], 0, 2)
-            : null;
-        $region = isset($_SERVER['HTTP_CF_REGION'])
-            ? substr((string) $_SERVER['HTTP_CF_REGION'], 0, 150)
-            : null;
-        $ciudad = isset($_SERVER['HTTP_CF_IPCITY'])
-            ? substr((string) $_SERVER['HTTP_CF_IPCITY'], 0, 150)
-            : null;
-        $latitud = isset($_SERVER['HTTP_CF_IPLATITUDE'])
-            ? (float) $_SERVER['HTTP_CF_IPLATITUDE']
-            : null;
-        $longitud = isset($_SERVER['HTTP_CF_IPLONGITUDE'])
-            ? (float) $_SERVER['HTTP_CF_IPLONGITUDE']
-            : null;
+        // La ubicación procede exclusivamente de la API del navegador, no de la
+        // IP del proxy. La API no proporciona país, región ni ciudad.
+        $pais = null;
+        $region = null;
+        $ciudad = null;
+        $latitud = $datosNavegador['latitud'];
+        $longitud = $datosNavegador['longitud'];
 
-        // Reverse DNS puede funcionar como nombre de dispositivo en una red local.
-        $nombreDispositivo = $ip ? @gethostbyaddr($ip) : null;
-        if ($nombreDispositivo === $ip) {
-            $nombreDispositivo = null;
+        $nombreDispositivo = $datosNavegador['nombre_dispositivo'];
+        if ($nombreDispositivo === null) {
+            // Respaldo para clientes sin JavaScript; puede ser NULL detrás de un proxy.
+            $nombreDispositivo = $ip ? @gethostbyaddr($ip) : null;
+            if ($nombreDispositivo === $ip) {
+                $nombreDispositivo = null;
+            }
         }
 
         $idSesionHash = session_id() !== ''
@@ -95,14 +178,31 @@ function registrarIntentoLogin($conn, $usuario, $resultado, $motivo = null)
         $datosAdicionales = json_encode(array(
             'host_solicitado' => isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : null,
             'es_https' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-            'accept' => isset($_SERVER['HTTP_ACCEPT']) ? $_SERVER['HTTP_ACCEPT'] : null
+            'accept' => isset($_SERVER['HTTP_ACCEPT']) ? $_SERVER['HTTP_ACCEPT'] : null,
+            'ubicacion_navegador' => array(
+                'fuente' => $latitud !== null && $longitud !== null
+                    ? 'navigator.geolocation'
+                    : null,
+                'estado' => $datosNavegador['estado_ubicacion'],
+                'precision_metros' => $datosNavegador['precision_metros'],
+                'fecha_cliente' => $datosNavegador['fecha_ubicacion_cliente']
+            ),
+            'dispositivo_navegador' => array(
+                'nombre_generado' => $datosNavegador['nombre_dispositivo'],
+                'plataforma' => $datosNavegador['plataforma'],
+                'tipo' => $datosNavegador['tipo_dispositivo']
+            )
         ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $fechaHoraGuatemala = (new DateTimeImmutable(
+            'now',
+            new DateTimeZone('America/Guatemala')
+        ))->format('Y-m-d H:i:s.u');
 
         $sqlAuditoria = "INSERT INTO dbs9098416.AuditoriaIntentosLogin
-            (Usuario, Resultado, Motivo, DireccionIP, IPsProxy, NombreDispositivo,
+            (Usuario, Resultado, Motivo, FechaHora, DireccionIP, IPsProxy, NombreDispositivo,
              AgenteUsuario, Plataforma, Idioma, MetodoHTTP, URI, Referente,
              PaisCodigo, Region, Ciudad, Latitud, Longitud, IdSesionHash, DatosAdicionales)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmtAuditoria = $conn->prepare($sqlAuditoria);
         if (!$stmtAuditoria) {
@@ -111,10 +211,11 @@ function registrarIntentoLogin($conn, $usuario, $resultado, $motivo = null)
         }
 
         $stmtAuditoria->bind_param(
-            'sssssssssssssssddss',
+            'ssssssssssssssssddss',
             $usuario,
             $resultado,
             $motivo,
+            $fechaHoraGuatemala,
             $ip,
             $ipsProxy,
             $nombreDispositivo,
@@ -845,6 +946,15 @@ ob_end_flush();
             <h2>Bienvenido de nuevo</h2>
             <p class="login-intro">Ingresa tus credenciales para continuar.</p>
             <form id="loginForm" role="form" action="/index.php" method="post">
+                <input type="hidden" name="Entrar" value="Entrar">
+                <input type="hidden" name="GeoLatitud" id="GeoLatitud">
+                <input type="hidden" name="GeoLongitud" id="GeoLongitud">
+                <input type="hidden" name="GeoPrecision" id="GeoPrecision">
+                <input type="hidden" name="GeoFecha" id="GeoFecha">
+                <input type="hidden" name="GeoEstado" id="GeoEstado" value="PENDIENTE">
+                <input type="hidden" name="NombreDispositivoNavegador" id="NombreDispositivoNavegador">
+                <input type="hidden" name="PlataformaNavegador" id="PlataformaNavegador">
+                <input type="hidden" name="TipoDispositivoNavegador" id="TipoDispositivoNavegador">
                 <div class="field">
                     <label for="UserLog">Usuario</label>
                     <input type="text" name="UserLog" placeholder="Escribe tu usuario"
@@ -855,11 +965,12 @@ ob_end_flush();
                     <input type="password" name="ClaveLog" placeholder="Contraseña" class="form-control" id="ClaveLog" required>
                 </div>
                 <div class="message-container" role="alert" aria-live="polite"><?php echo $error . $mensajeExito; ?></div>
-                <button type="submit" name="Entrar" value="Entrar" class="effect-button" id="submitButton">
+                <p class="privacy" id="locationStatus" aria-live="polite">La ubicación se solicitará al ingresar.</p>
+                <button type="submit" class="effect-button" id="submitButton">
                     <span id="submitText">Entrar al sistema</span>
                     <span aria-hidden="true">→</span>
                 </button>
-                <p class="privacy">Acceso exclusivo para personal autorizado. Los intentos de ingreso son auditados.</p>
+                <p class="privacy">Acceso exclusivo para personal autorizado. Los intentos, la ubicación compartida y los datos del dispositivo son auditados.</p>
             </form>
         </section>
     </main>
@@ -888,6 +999,78 @@ ob_end_flush();
         const passwordInput = document.getElementById('ClaveLog');
         const passwordContainer = passwordInput.parentElement;
         const togglePassword = document.createElement('button');
+        const submitButton = document.getElementById('submitButton');
+        const submitText = document.getElementById('submitText');
+        const locationStatus = document.getElementById('locationStatus');
+        const geoLatitud = document.getElementById('GeoLatitud');
+        const geoLongitud = document.getElementById('GeoLongitud');
+        const geoPrecision = document.getElementById('GeoPrecision');
+        const geoFecha = document.getElementById('GeoFecha');
+        const geoEstado = document.getElementById('GeoEstado');
+        const nombreDispositivo = document.getElementById('NombreDispositivoNavegador');
+        const plataformaNavegador = document.getElementById('PlataformaNavegador');
+        const tipoDispositivoNavegador = document.getElementById('TipoDispositivoNavegador');
+        let enviandoFormulario = false;
+
+        const obtenerNombreNavegador = () => {
+            const ua = navigator.userAgent;
+            if (/Edg\/|EdgA\/|EdgiOS\//.test(ua)) return 'Microsoft Edge';
+            if (/OPR\/|OPiOS\//.test(ua)) return 'Opera';
+            if (/Firefox\/|FxiOS\//.test(ua)) return 'Firefox';
+            if (/Chrome\/|CriOS\//.test(ua)) return 'Chrome';
+            if (/Safari\//.test(ua)) return 'Safari';
+            return 'Navegador';
+        };
+
+        const obtenerTipoDispositivo = () => {
+            const ua = navigator.userAgent;
+            if (/iPad|Tablet|PlayBook|Silk/i.test(ua)
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+                return 'Tableta';
+            }
+            if (/Mobi|Android|iPhone|iPod/i.test(ua)) return 'Móvil';
+            return 'Escritorio';
+        };
+
+        const normalizarPlataforma = (plataformaDetectada) => {
+            const referencia = `${plataformaDetectada || ''} ${navigator.userAgent}`;
+            if (/Android/i.test(referencia)) return 'Android';
+            if (/iPhone|iPad|iPod/i.test(referencia)) return 'iOS/iPadOS';
+            if (/CrOS/i.test(referencia)) return 'ChromeOS';
+            if (/Windows|Win32|Win64/i.test(referencia)) return 'Windows';
+            if (/Mac/i.test(referencia)) return 'macOS';
+            if (/Linux/i.test(referencia)) return 'Linux';
+            return plataformaDetectada || 'Plataforma desconocida';
+        };
+
+        const actualizarDatosDispositivo = (datosAvanzados = {}) => {
+            const plataforma = normalizarPlataforma(datosAvanzados.platform
+                || (navigator.userAgentData && navigator.userAgentData.platform)
+                || navigator.platform
+                || '');
+            const modelo = datosAvanzados.model ? datosAvanzados.model.trim() : '';
+            const tipo = obtenerTipoDispositivo();
+            const partesNombre = [
+                modelo || plataforma,
+                obtenerNombreNavegador(),
+                tipo
+            ];
+
+            nombreDispositivo.value = partesNombre.join(' · ').slice(0, 255);
+            plataformaNavegador.value = plataforma.slice(0, 100);
+            tipoDispositivoNavegador.value = tipo.slice(0, 50);
+        };
+
+        actualizarDatosDispositivo();
+
+        // En navegadores Chromium, el modelo está disponible principalmente en
+        // dispositivos móviles. Si no existe, se conserva sistema + navegador + tipo.
+        if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+            navigator.userAgentData
+                .getHighEntropyValues(['model', 'platform', 'platformVersion'])
+                .then(actualizarDatosDispositivo)
+                .catch(() => {});
+        }
 
         passwordContainer.classList.add('field', 'password-wrap');
         passwordInput.setAttribute('autocomplete', 'current-password');
@@ -907,12 +1090,56 @@ ob_end_flush();
             passwordInput.focus();
         });
 
-        loginForm.addEventListener('submit', () => {
-            if (!loginForm.checkValidity()) return;
-            const submitButton = document.getElementById('submitButton');
+        const enviarLogin = () => {
+            enviandoFormulario = true;
+            submitText.textContent = 'Validando acceso…';
+            HTMLFormElement.prototype.submit.call(loginForm);
+        };
+
+        loginForm.addEventListener('submit', (event) => {
+            if (enviandoFormulario || !loginForm.checkValidity()) return;
+
+            event.preventDefault();
             submitButton.setAttribute('aria-busy', 'true');
-            submitButton.style.pointerEvents = 'none';
-            document.getElementById('submitText').textContent = 'Validando acceso…';
+            submitButton.disabled = true;
+            submitText.textContent = 'Solicitando ubicación…';
+            locationStatus.textContent = 'Acepta el permiso del navegador para compartir tu ubicación.';
+
+            if (!navigator.geolocation) {
+                geoEstado.value = 'NO_DISPONIBLE';
+                locationStatus.textContent = 'Este navegador no permite obtener la ubicación. Se registrará como no disponible.';
+                enviarLogin();
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (posicion) => {
+                    geoLatitud.value = String(posicion.coords.latitude);
+                    geoLongitud.value = String(posicion.coords.longitude);
+                    geoPrecision.value = String(posicion.coords.accuracy);
+                    geoFecha.value = new Date(posicion.timestamp).toISOString();
+                    geoEstado.value = 'OBTENIDA';
+                    locationStatus.textContent = 'Ubicación compartida correctamente.';
+                    enviarLogin();
+                },
+                (errorUbicacion) => {
+                    const estadosError = {
+                        1: 'DENEGADA',
+                        2: 'NO_DISPONIBLE',
+                        3: 'TIEMPO_AGOTADO'
+                    };
+                    geoEstado.value = estadosError[errorUbicacion.code] || 'ERROR';
+                    locationStatus.textContent = errorUbicacion.code === 1
+                        ? 'No se compartió la ubicación. El acceso continuará y se registrará el permiso denegado.'
+                        : 'No fue posible obtener la ubicación. El acceso continuará y se registrará el estado.';
+                    enviarLogin();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 60000
+                }
+            );
         });
 
         const weatherStatus = document.getElementById('weather-status');

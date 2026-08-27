@@ -12,45 +12,61 @@ $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
-$lista_Guias;
+$lista_Guias = array();
+$txtBodega = '';
+$txtCarril = '';
 
+if (!isset($_SESSION['csrf_invent_eliminar'])) {
+    $_SESSION['csrf_invent_eliminar'] = bin2hex(random_bytes(32));
+}
+$csrfInventEliminar = $_SESSION['csrf_invent_eliminar'];
 
-if(isset($_GET['MSG'])) {
-    
-    $Mensajeerror = '<div class="alert alert-success alert-dismissible bg-success text-white border-0 fade show" role="alert">
-    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-        <span aria-hidden="true">×</span>
-    </button>
-    <strong>Exelente! -- </strong> La ubicacion fue limpiada correctamente.
-</div>';
+if (isset($_GET['MSG']) && $_GET['MSG'] === 'SCS') {
+    $cantidadEliminada = isset($_GET['eliminadas']) ? (int) $_GET['eliminadas'] : 0;
+    $cantidadOmitida = isset($_GET['omitidas']) ? (int) $_GET['omitidas'] : 0;
+    $detalleOmitidas = $cantidadOmitida > 0
+        ? ' ' . $cantidadOmitida . ' ubicación(es) ya no estaban ocupadas y se omitieron.'
+        : '';
+    $MensajeExito = '<div class="alert alert-success alert-dismissible bg-success text-white border-0 fade show" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        <strong>Operación completada.</strong> Se eliminaron ' . $cantidadEliminada . ' ubicación(es).' . $detalleOmitidas . '
+    </div>';
+}
 
-} 
+$erroresEliminacion = array(
+    'METODO' => 'La eliminación debe confirmarse desde esta página.',
+    'SESION' => 'La sesión del formulario venció. Intente nuevamente.',
+    'SIN_SELECCION' => 'Seleccione al menos una ubicación para eliminar.',
+    'SIN_MOTIVO' => 'Debe indicar el motivo de la eliminación.',
+    'MOTIVO_LARGO' => 'El motivo no puede exceder 500 caracteres.',
+    'SIN_CAMBIOS' => 'Las ubicaciones seleccionadas ya no estaban ocupadas. No se realizó ningún cambio.',
+    'ERROR' => 'No fue posible completar la eliminación. No se aplicó ningún cambio.'
+);
 
-// Fin de la conexion
+if (isset($_GET['ERR']) && isset($erroresEliminacion[$_GET['ERR']])) {
+    $Mensajeerror = '<div class="alert alert-danger" role="alert">'
+        . htmlspecialchars($erroresEliminacion[$_GET['ERR']], ENT_QUOTES, 'UTF-8')
+        . '</div>';
+}
 
+$accion = isset($_POST['accion']) ? $_POST['accion'] : '';
 
-// Validar formulario y grabar informacion
+if ($accion === 'btnBuscar') {
+    $txtBodega = isset($_POST['ListaBodegasDestino']) && is_scalar($_POST['ListaBodegasDestino'])
+        ? trim((string) $_POST['ListaBodegasDestino'])
+        : '';
+    $txtCarril = isset($_POST['txtCarrilOrigen']) && is_scalar($_POST['txtCarrilOrigen'])
+        ? trim((string) $_POST['txtCarrilOrigen'])
+        : '';
+} elseif (isset($_GET['Bodega'], $_GET['Carril'])) {
+    $txtBodega = is_scalar($_GET['Bodega']) ? trim((string) $_GET['Bodega']) : '';
+    $txtCarril = is_scalar($_GET['Carril']) ? trim((string) $_GET['Carril']) : '';
+}
 
-// Validar formulario y grabar informacion
-$accion = (isset($_POST['accion'])) ? $_POST['accion'] : "";
-
-switch ($accion) {
-
-    case 'btnBuscar' :
-
-    $txtBodega = (isset($_POST['ListaBodegasDestino'])) ? $_POST['ListaBodegasDestino'] : "";
-    $txtCarril = (isset($_POST['txtCarrilOrigen'])) ? $_POST['txtCarrilOrigen'] : "";
-
-   // echo $txtBodega. "   " . $txtCarril;
-   
-      include '../LQS_EUQ/UbicacionesOcupadas.php';
-
-    break;
-
-       
-    default:
-
-    break;
+if ($txtBodega !== '' && $txtCarril !== '') {
+    include '../LQS_EUQ/UbicacionesOcupadas.php';
 }
 
 
@@ -292,7 +308,14 @@ ob_end_flush();
                                                                 if ($result->num_rows > 0) {
                                                                     while ($row = $result->fetch_assoc()) {
 
-                                                                        echo '<option value="' . $row['Nombre_Bodega'] . '">' . $row['Descripcion'] . '</option>';
+                                                                        $bodegaSeleccionada = ((string) $row['Nombre_Bodega'] === (string) $txtBodega)
+                                                                            ? ' selected'
+                                                                            : '';
+                                                                        echo '<option value="'
+                                                                            . htmlspecialchars($row['Nombre_Bodega'], ENT_QUOTES, 'UTF-8')
+                                                                            . '"' . $bodegaSeleccionada . '>'
+                                                                            . htmlspecialchars($row['Descripcion'], ENT_QUOTES, 'UTF-8')
+                                                                            . '</option>';
                                                                     }
                                                                 }
                                                                 ?>
@@ -326,72 +349,95 @@ ob_end_flush();
                                 <!-- Tabla de resultado con las ubicaciones  -->
                                 <br>
                                 <br>
-                                <h4 class="card-title">  Detalle de ubicaciones a corregir </h4>
-                            
-                                <div >
-                                <table id="example" class="table table-striped  " cellspacing="0" width="100%" style="text-align: center;">
-                                <thead>
-                                <th>Ubicacion</th>
-                                <th>IDH</th>
-                                <th>Unidades en Pallet</th>
-                                <th>Origen</th>
-                                <th>Fecha de Ingreso</th>
-                                <th>Fecha de Produccion</th>
-                                <th>Lote</th>
-                                <th>Borrar</th>
+                                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+                                    <div>
+                                        <h4 class="card-title mb-1">Detalle de ubicaciones a corregir</h4>
+                                        <span id="contadorSeleccionadas" class="text-muted">0 ubicaciones seleccionadas</span>
+                                    </div>
+                                    <button type="button" id="btnAbrirModalEliminar"
+                                            class="btn btn-outline-danger" data-toggle="modal"
+                                            data-target="#modalEliminarSeleccionadas" disabled>
+                                        Borrar seleccionadas
+                                    </button>
+                                </div>
 
-                                </thead>
-                                <tbody>
-                                <?php
-                                for ($i = 0; $i < $lista_Guias; $i++) {
-                                    echo "<tr>";
+                                <div class="table-responsive">
+                                    <table id="example" class="table table-striped" cellspacing="0" width="100%" style="text-align: center;">
+                                        <thead>
+                                            <tr>
+                                                <th>
+                                                    <input type="checkbox" id="seleccionarTodas"
+                                                           aria-label="Seleccionar todas las ubicaciones filtradas"
+                                                           title="Seleccionar todas las ubicaciones filtradas">
+                                                </th>
+                                                <th>Ubicación</th>
+                                                <th>IDH</th>
+                                                <th>Unidades en Pallet</th>
+                                                <th>Origen</th>
+                                                <th>Fecha de Ingreso</th>
+                                                <th>Fecha de Producción</th>
+                                                <th>Lote</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($lista_Guias as $guia) { ?>
+                                                <tr>
+                                                    <td>
+                                                        <input type="checkbox" class="seleccionar-ubicacion"
+                                                               value="<?php echo htmlspecialchars((string) $guia['Ubicacion'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                               aria-label="Seleccionar ubicación <?php echo htmlspecialchars((string) $guia['Ubicacion'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                    </td>
+                                                    <td><?php echo htmlspecialchars((string) $guia['Ubicacion'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string) $guia['IDH'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string) $guia['UnidadesEnPallet'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string) $guia['Origen'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string) $guia['FechaIngreso'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string) $guia['FechaProduccion'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string) $guia['LoteProduccion'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                </tr>
+                                            <?php } ?>
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                                    echo "<td>";
-                                    echo $lista_Guias['Ubicacion'];
-                                    echo "</td>";
-
-
-
-                                    echo "<td>";
-                                    echo $lista_Guias['IDH'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Guias['UnidadesEnPallet'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Guias['Origen'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Guias['FechaIngreso'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Guias['FechaProduccion'];
-                                    echo "</td>";
-
-                                    echo "<td>";
-                                    echo $lista_Guias['LoteProduccion'];
-                                    echo "</td>";
-                                    
-                                    echo "<td>";
-echo '<a href="Invent_BorrarDetalle.php?Posicion=' . $lista_Guias['Ubicacion'] . '" class="btn btn-outline-danger" onclick="return confirm(\'¿Está seguro de que quiere borrar los datos de esta ubicación?\')">Limpiar ' . $lista_Guias['Ubicacion'] . '</a>';
-echo "</td>";
-                                    
-                                    echo "</tr>";
-
-                                    $lista_Guias = $ejecutar_sentencia_Guias->fetch(PDO::FETCH_ASSOC);
-                                }
-                                ?>
-                                </tbody>
-                            </table>
-
-
-
-
-                        </div>
+                                <div class="modal fade" id="modalEliminarSeleccionadas" tabindex="-1" role="dialog"
+                                     aria-labelledby="tituloModalEliminar" aria-hidden="true">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <form id="formEliminarSeleccionadas" action="Invent_BorrarDetalle.php" method="post">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="tituloModalEliminar">Confirmar eliminación</h5>
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p id="resumenEliminacion" class="mb-3"></p>
+                                                    <div class="form-group">
+                                                        <label for="motivoEliminacion">Motivo de eliminación</label>
+                                                        <textarea id="motivoEliminacion" name="motivo" class="form-control"
+                                                                  rows="4" maxlength="500" required
+                                                                  placeholder="Explique por qué se eliminarán estas líneas"></textarea>
+                                                        <small class="form-text text-muted">Este motivo se guardará en la bitácora de cada ubicación.</small>
+                                                    </div>
+                                                    <input type="hidden" name="csrf_token"
+                                                           value="<?php echo htmlspecialchars($csrfInventEliminar, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="hidden" name="bodega"
+                                                           value="<?php echo htmlspecialchars($txtBodega, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="hidden" name="carril"
+                                                           value="<?php echo htmlspecialchars($txtCarril, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <div id="posicionesSeleccionadasFormulario"></div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" id="btnConfirmarEliminacion" class="btn btn-danger">
+                                                        Eliminar ubicaciones
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
 
 
 
@@ -453,12 +499,109 @@ echo "</td>";
 
 <script>
     $(document).ready(function () {
-        $('#example').DataTable({
+        var ubicacionesSeleccionadas = new Set();
+        // El backdrop de Bootstrap se agrega directamente a <body>. Si el modal
+        // permanece dentro de page-wrapper/animate__animated, queda atrapado en
+        // un contexto de apilamiento inferior y el backdrop bloquea sus campos.
+        var $modalEliminar = $('#modalEliminarSeleccionadas').appendTo(document.body);
+        var tabla = $('#example').DataTable({
+            columnDefs: [
+                { targets: 0, orderable: false, searchable: false }
+            ],
             language: {
                 url: 'datatables_espanol.json'
             }
-
         });
+
+        function cajasFiltradas() {
+            return $(tabla.rows({ search: 'applied' }).nodes()).find('.seleccionar-ubicacion');
+        }
+
+        function actualizarControles() {
+            var cantidad = ubicacionesSeleccionadas.size;
+            $('#contadorSeleccionadas').text(
+                cantidad + (cantidad === 1 ? ' ubicación seleccionada' : ' ubicaciones seleccionadas')
+            );
+            $('#btnAbrirModalEliminar').prop('disabled', cantidad === 0);
+
+            var $cajas = cajasFiltradas();
+            var seleccionadasEnFiltro = 0;
+
+            $cajas.each(function () {
+                var seleccionada = ubicacionesSeleccionadas.has(this.value);
+                this.checked = seleccionada;
+                if (seleccionada) {
+                    seleccionadasEnFiltro++;
+                }
+            });
+
+            var todasSeleccionadas = $cajas.length > 0 && seleccionadasEnFiltro === $cajas.length;
+            $('#seleccionarTodas')
+                .prop('checked', todasSeleccionadas)
+                .prop('indeterminate', seleccionadasEnFiltro > 0 && !todasSeleccionadas);
+        }
+
+        $('#example').on('change', '.seleccionar-ubicacion', function () {
+            if (this.checked) {
+                ubicacionesSeleccionadas.add(this.value);
+            } else {
+                ubicacionesSeleccionadas.delete(this.value);
+            }
+            actualizarControles();
+        });
+
+        $('#seleccionarTodas').on('change', function () {
+            var seleccionar = this.checked;
+            cajasFiltradas().each(function () {
+                if (seleccionar) {
+                    ubicacionesSeleccionadas.add(this.value);
+                } else {
+                    ubicacionesSeleccionadas.delete(this.value);
+                }
+                this.checked = seleccionar;
+            });
+            actualizarControles();
+        });
+
+        tabla.on('draw', actualizarControles);
+
+        $modalEliminar.on('show.bs.modal', function (evento) {
+            if (ubicacionesSeleccionadas.size === 0) {
+                evento.preventDefault();
+                return;
+            }
+
+            var cantidad = ubicacionesSeleccionadas.size;
+            $('#resumenEliminacion').text(
+                'Se eliminarán definitivamente ' + cantidad
+                + (cantidad === 1 ? ' ubicación seleccionada.' : ' ubicaciones seleccionadas.')
+            );
+
+            var $contenedor = $('#posicionesSeleccionadasFormulario').empty();
+            ubicacionesSeleccionadas.forEach(function (posicion) {
+                $('<input>', {
+                    type: 'hidden',
+                    name: 'posiciones[]',
+                    value: posicion
+                }).appendTo($contenedor);
+            });
+        }).on('shown.bs.modal', function () {
+            $('#motivoEliminacion').trigger('focus');
+        });
+
+        $('#formEliminarSeleccionadas').on('submit', function (evento) {
+            var motivo = $('#motivoEliminacion').val().trim();
+            if (ubicacionesSeleccionadas.size === 0 || motivo === '') {
+                evento.preventDefault();
+                return;
+            }
+
+            $('#btnConfirmarEliminacion')
+                .prop('disabled', true)
+                .text('Eliminando...');
+        });
+
+        actualizarControles();
     });
 </script>
 
@@ -466,10 +609,14 @@ echo "</td>";
 
 <!--Scripts para recargar Carriles Origen Ocupados -->
 <script type="text/javascript">
+    var carrilSeleccionado = <?php echo json_encode($txtCarril); ?>;
+
     $(document).ready(function(){
 
         recargarLista();
         $('#ListaBodegasOrigen').change(function(){
+            carrilSeleccionado = '';
+            $('#txtCarrilOrigen').val('');
             recargarLista();
 
         });
@@ -483,9 +630,15 @@ echo "</td>";
         $.ajax({
             type: "POST",
             url: "CarrilesOriginales.php",
-            data: "Bodega=" + $('#ListaBodegasOrigen').val(),
+            data: {
+                Bodega: $('#ListaBodegasOrigen').val(),
+                CarrilSeleccionado: carrilSeleccionado
+            },
             success:function(r) {
                 $('#AreaOrigen').html(r);
+                if (carrilSeleccionado !== '') {
+                    $('#txtCarrilOrigen').val(carrilSeleccionado);
+                }
             }
         });
     }
@@ -496,6 +649,7 @@ echo "</td>";
         var select = document.getElementById("ListaCarril");
         var input = document.getElementById("txtCarrilOrigen");
         input.value = select.value;
+        carrilSeleccionado = select.value;
     }
 </script>
 

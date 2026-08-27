@@ -369,7 +369,6 @@ function CorregirEstatusUbicacion($Ubicacion){
 
     include '../LQS_EUQ/Auth.php';
 
-    //$sentencia = $pdo->prepare("Update  dbs9098416.posiciones set Estado ='Libre',IDH=null,PaletCompleto =null,UnidadesEnPallet = null,Origen = null, FechaProduccion = null, LoteProduccion=null,fechaIngreso=null,FechaVencimiento = null, FechaCuarentena=null, Cantidad =null,EstatusProducto = null, Verificador=null,UsuarioMontaCargas=null,turno=null,EstatusUbicacion= null, observaciones =null where Ubicacion='".$Ubicacion."'");
     $sentencia = $pdo->prepare("UPDATE dbs9098416.posiciones SET Estado = 'Ocupada' WHERE Ubicacion = ?");
     $sentencia->execute([$Ubicacion]);
 

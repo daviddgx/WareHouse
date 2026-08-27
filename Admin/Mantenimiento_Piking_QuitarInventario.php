@@ -5,96 +5,8 @@ ob_start();
 
 include '../LQS_EUQ/Auth.php';
 date_default_timezone_set('America/Guatemala');
-$fecha = date("d") . '-' . date("m") . '-' . date("Y");
+require_once __DIR__ . '/Mantenimiento_Piking_QuitarInventario_Procesar.php';
 
-// Variables de entorno
-$MensajeExito = '';
-$Mensajeerror = '';
-
-$txtIDH =           '';
-$txtNombreBodega =  '';
-$txtDescripcion =    '';
-$txtUbicacion =      '';
-$txtDireccion =      '';
-$txtEstado =         '';
-// Cargar datos a mostrar
-
-
-// Creamos la conexion
-
-if(isset($_GET['IDH'])) {
-    $txtIDH = $_GET['IDH'];
-    // Ahora puedes usar la variable $idh que contiene el valor del parámetro IDH
-    
-} else {
-    header('Location: ../Innet/505.html');
-}
-
-
-
-
-// Validar formulario y grabar informacion
-$accion = (isset($_POST['accion'])) ? $_POST['accion'] : "";
-
-switch ($accion) {
-
-    case "btnAbregarPiking":
-        $txtIDH =  (isset($_POST['txtIDH'])) ? $_POST['txtIDH'] : "";
-        $txtLote =   (isset($_POST['txtLote'])) ? $_POST['txtLote'] : "";
-        $txtBultos =   (isset($_POST['txtBultos'])) ? $_POST['txtBultos'] : "";
-  
-        
-            $sentencia = $pdo->prepare("delete FROM `detalle_piking` where Estatus is null and IDH = $txtIDH and LoteProduccion = '$txtLote' Limit $txtBultos;");
-            $sentencia->execute();
-        
-
-        header('Location: DetallePiking.php?Guia='.$txtIDH);
-        
-    break;
-
-    case "btnModificar":
-
-        try{
-
-        $txtIDH =  (isset($_POST['txtIDH'])) ? $_POST['txtIDH'] : "";
-        $txtUbicacion =   (isset($_POST['txtUbicacion'])) ? $_POST['txtUbicacion'] : "";
-
-        // esta parte se debe extraer de la variable de Ubicacion
-            $txtBodega= '';
-            $txtCarril = '';
-            $txtPosicion = '';
-            $txtNivel = '';
-
-
-            //Actualizar datos del registro
-
-            $sentencia = $pdo->prepare("update config_piking set IDH = :PAR_IDH where Ubicacion = :PAR_Ubicacion");
-
-            $sentencia->bindParam(':PAR_IDH', $txtIDH);
-            $sentencia->bindParam(':PAR_Ubicacion', $txtUbicacion);
-
-            $sentencia->execute();
-
-                $MensajeExito = '<div class="alert alert-secondary" role="alert">
-                                    <strong>Excelente!   -- </strong> Los datos se registraron correctamente
-                                </div>';
-              //  header('Mantenimiento_Bodegas.php');
-
-        } catch (Exception $ex) {
-
-            $MensajeExito = '<div class="alert alert-secondary alert-dismissible bg-secondary text-white border-0 fade show" role="alert">
-                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                        <span aria-hidden="true">×</span>
-                                    </button>
-                                    <strong>Se encontro un error ️! -- </strong> ' . $ex . '
-                                </div>';
-        }
-
-
-
-        break;
-    default : break;
-}
 ob_end_flush();
 ?>
 <!DOCTYPE html>
@@ -320,9 +232,8 @@ ob_end_flush();
                             <br>
 <!-- Formulario de datos -->
                             <div class="my-content formulario">
-                                <form role="form" action="" method="post" enctype="multipart/form-data">
+                                <form id="formQuitarInventarioPiking" role="form" action="" method="post">
                                     <div class="form-body">
-                                    <form>
                                     <div class="row">
                                             <div class="col-md-3">
                                                 <div class="form-group">
@@ -330,7 +241,7 @@ ob_end_flush();
                                                     <input name="txtIDH" type="text"
                                                            class="form-control"
                                                            placeholder="1234567..."
-                                                           value="<?php echo $txtIDH; ?>" readonly required>
+                                                           value="<?php echo htmlspecialchars((string) $txtIDH, ENT_QUOTES, 'UTF-8'); ?>" readonly required>
                                                 </div>
                                             </div>
 
@@ -341,19 +252,18 @@ ob_end_flush();
                                                         <option style="display:none; height:50px;" value="" class="ng-binding">
                                                             --- Lote ---
                                                         </option>
-
-                                                        <?php
-                                                        $conn = new mysqli($servername, $username, $password, $dbname);
-                                                        $cargos = "SELECT LoteProduccion, count(*) as Bultos FROM `detalle_piking` where Estatus is null and IDH = $txtIDH group by LoteProduccion; ";
-
-                                                        $result = $conn->query($cargos);
-                                                        if ($result->num_rows > 0) {
-                                                            while ($row = $result->fetch_assoc()) {
-
-                                                                echo '<option value="' . $row['LoteProduccion'] . '">' . $row['LoteProduccion'] .' -- '.$row['Bultos'] . ' Bultos</option>';
-                                                            }
-                                                        }
-                                                        ?>
+                                                        <?php foreach ($lotesDisponibles as $loteDisponible) { ?>
+                                                            <?php
+                                                            $valorLote = (string) $loteDisponible['LoteProduccion'];
+                                                            $loteSeleccionado = ($valorLote === (string) $txtLote)
+                                                                ? ' selected'
+                                                                : '';
+                                                            ?>
+                                                            <option value="<?php echo htmlspecialchars($valorLote, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $loteSeleccionado; ?>>
+                                                                <?php echo htmlspecialchars($valorLote, ENT_QUOTES, 'UTF-8'); ?>
+                                                                -- <?php echo (int) $loteDisponible['Bultos']; ?> Bultos
+                                                            </option>
+                                                        <?php } ?>
 
 
                                                     </select>
@@ -365,8 +275,9 @@ ob_end_flush();
                                                     <label>Bultos / Cajas a eliminar</label>
                                                     <input name="txtBultos" type="number"
                                                            class="form-control"
+                                                           min="1" step="1"
                                                            placeholder="Cantidad de bultos / cajas"
-                                                           value=""  required>
+                                                           value="<?php echo $txtBultos > 0 ? (int) $txtBultos : ''; ?>" required>
                                                 </div>
                                             </div>
                                             
@@ -392,10 +303,51 @@ ob_end_flush();
                                 
                                     <div class="form-actions">
                                         <div class="text-center">
-                                                <a class="btn btn-outline-danger" style="margin-left: 2rem" href="DetallePiking.php?Guia=<?php echo $txtIDH?>"><span > Regresar </span></a>
-                                            <button type="submit" value="btnAbregarPiking" name="accion"
+                                                <a class="btn btn-outline-danger" style="margin-left: 2rem" href="DetallePiking.php?Guia=<?php echo rawurlencode($txtIDH); ?>"><span > Regresar </span></a>
+                                            <button type="button" id="btnAbrirModalQuitarPiking"
                                                     class="btn btn-outline-success">Eliminar Registros
                                             </button>
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" name="csrf_token"
+                                           value="<?php echo htmlspecialchars($csrfQuitarPiking, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <input type="hidden" name="accion" value="btnAbregarPiking">
+
+                                    <div class="modal fade" id="modalQuitarInventarioPiking" tabindex="-1" role="dialog"
+                                         aria-labelledby="tituloModalQuitarPiking" aria-hidden="true">
+                                        <div class="modal-dialog" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="tituloModalQuitarPiking">Confirmar eliminación de inventario</h5>
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p id="resumenQuitarPiking" class="mb-3"></p>
+                                                    <div class="form-group">
+                                                        <label for="txtDescripcionEliminacion">Descripción de la eliminación</label>
+                                                        <textarea id="txtDescripcionEliminacion"
+                                                                  name="txtDescripcionEliminacion"
+                                                                  form="formQuitarInventarioPiking"
+                                                                  class="form-control" rows="4" maxlength="1000"
+                                                                  placeholder="Explique el motivo y cualquier detalle relevante"
+                                                                  required><?php echo htmlspecialchars($txtDescripcionEliminacion, ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                                        <small class="form-text text-muted">
+                                                            La descripción y los datos eliminados se guardarán en la bitácora.
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" id="btnConfirmarQuitarPiking"
+                                                            form="formQuitarInventarioPiking"
+                                                            class="btn btn-danger">
+                                                        Confirmar eliminación
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </form>
@@ -451,6 +403,67 @@ ob_end_flush();
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
 <script src="../dist/js/JsBarcode.all.min.js"></script>
+<script>
+    $(document).ready(function () {
+        var $modal = $('#modalQuitarInventarioPiking');
+
+        // El contenedor principal usa animaciones CSS que crean un contexto de
+        // apilamiento. Mover el modal al body evita que el backdrop de Bootstrap
+        // quede por encima e impida interactuar con el formulario.
+        $modal.appendTo(document.body);
+
+        function abrirModalQuitarPiking() {
+            var lote = document.getElementById('txtLote');
+            var bultos = document.querySelector('[name="txtBultos"]');
+
+            if (!lote.checkValidity()) {
+                lote.reportValidity();
+                return;
+            }
+
+            if (!bultos.checkValidity()) {
+                bultos.reportValidity();
+                return;
+            }
+
+            $('#resumenQuitarPiking').text(
+                'Se eliminarán ' + bultos.value + ' bulto(s) del IDH '
+                + <?php echo json_encode((string) $txtIDH); ?>
+                + ', lote ' + lote.value + '.'
+            );
+            $modal.modal('show');
+        }
+
+        $('#btnAbrirModalQuitarPiking').on('click', abrirModalQuitarPiking);
+
+        $('#formQuitarInventarioPiking input, #formQuitarInventarioPiking select').on('keydown', function (evento) {
+            if (evento.key === 'Enter') {
+                evento.preventDefault();
+                abrirModalQuitarPiking();
+            }
+        });
+
+        $modal.on('shown.bs.modal', function () {
+            $('#txtDescripcionEliminacion').trigger('focus');
+        });
+
+        $('#formQuitarInventarioPiking').on('submit', function (evento) {
+            if (!$modal.hasClass('show')) {
+                evento.preventDefault();
+                abrirModalQuitarPiking();
+                return;
+            }
+
+            $('#btnConfirmarQuitarPiking')
+                .prop('disabled', true)
+                .text('Eliminando...');
+        });
+
+        <?php if ($accion === 'btnAbregarPiking' && $Mensajeerror !== '') { ?>
+        abrirModalQuitarPiking();
+        <?php } ?>
+    });
+</script>
     <script>
         // Establece el tiempo de inactividad en milisegundos (5 minutos = 300,000 milisegundos)
         const tiempoInactividad = 300000;

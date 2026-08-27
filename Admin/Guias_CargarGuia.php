@@ -357,7 +357,7 @@ ob_end_flush();
                     <div class="guide-hero">
                         <span class="guide-step">GESTI&Oacute;N DE GU&Iacute;AS</span>
                         <h2>Cargar nuevas gu&iacute;as</h2>
-                        <p>Importe el archivo CSV, revise la informaci&oacute;n detectada y confirme la carga.</p>
+                        <p>Importe el archivo CSV con una o varias gu&iacute;as, revise la informaci&oacute;n detectada y confirme la carga.</p>
                     </div>
 
                     <div class="card workflow-card">
@@ -375,7 +375,7 @@ ob_end_flush();
                                         <span class="section-icon"><i data-feather="upload-cloud"></i></span>
                                         <div>
                                             <h4>1. Seleccione el archivo</h4>
-                                            <p>Utilice el archivo CSV generado para la carga de gu&iacute;as.</p>
+                                            <p>El archivo puede contener uno o varios n&uacute;meros de transporte.</p>
                                         </div>
                                     </div>
                                     <!-- Start First Cards -->
@@ -383,12 +383,12 @@ ob_end_flush();
                                         <!-- Column -->
                                         <div class="col-md-12 text-center">
 
-                                            <form id="upload-guides-form" class="js-confirm-form" action="SubirGuiadeCarga.php" method="POST" enctype="multipart/form-data" data-action="upload">
+                                            <form id="upload-guides-form" class="js-confirm-form" action="SubirGuiadeCarga.php?debug=1" method="POST" enctype="multipart/form-data" data-action="upload">
                                                 <label class="upload-zone" id="upload-zone" for="file-input">
                                                     <input type="file" name="dataGuias" id="file-input" class="file-input__input" accept=".csv,text/csv" required>
                                                     <i data-feather="file-plus" class="upload-icon"></i>
                                                     <span class="upload-title">Arrastre el archivo aqu&iacute; o haga clic para buscarlo</span>
-                                                    <span class="upload-help">Solo se admiten archivos CSV de hasta 10 MB</span>
+                                                    <span class="upload-help">Modo diagn&oacute;stico activo: se mostrar&aacute; cada etapa de la carga</span>
                                                     <span class="selected-file" id="selected-file" aria-live="polite"></span>
                                                 </label>
                                                 <div class="guide-actions">

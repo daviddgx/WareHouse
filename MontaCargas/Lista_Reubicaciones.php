@@ -17,6 +17,20 @@ if ($_SESSION['Usuario'] == '') {
 $MensajeExito = '';
 $Mensajeerror = '';
 
+if (!empty($_SESSION['mensaje_exito_reubicacion'])) {
+    $MensajeExito = '<div class="alert alert-success">'
+        . htmlspecialchars($_SESSION['mensaje_exito_reubicacion'], ENT_QUOTES, 'UTF-8')
+        . '</div>';
+    unset($_SESSION['mensaje_exito_reubicacion']);
+}
+
+if (!empty($_SESSION['mensaje_error_reubicacion'])) {
+    $Mensajeerror = '<div class="alert alert-danger">'
+        . htmlspecialchars($_SESSION['mensaje_error_reubicacion'], ENT_QUOTES, 'UTF-8')
+        . '</div>';
+    unset($_SESSION['mensaje_error_reubicacion']);
+}
+
 
 //Variables para Resumen
 $TotalMovimientos = "";

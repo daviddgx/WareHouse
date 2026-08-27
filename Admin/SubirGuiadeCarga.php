@@ -1,29 +1,130 @@
 <?php
+$modoDiagnosticoCarga = isset($_GET['debug']) && $_GET['debug'] === '1';
+
+if ($modoDiagnosticoCarga) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    set_time_limit(120);
+    ob_start();
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    header('Content-Type: text/html; charset=utf-8');
+
+    echo '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">';
+    echo '<title>Diagnóstico de carga de guías</title>';
+    echo '<style>'
+        . 'body{font-family:Arial,sans-serif;margin:24px;background:#f5f6f8;color:#263238}'
+        . '.panel{max-width:960px;margin:auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.08)}'
+        . '.paso{padding:10px 12px;margin:8px 0;border-left:4px solid #1976d2;background:#eef6ff;white-space:pre-wrap}'
+        . '.exito{border-color:#28a745;background:#effaf2}.error{border-color:#dc3545;background:#fff1f2}'
+        . '.hora{color:#607d8b;font-size:12px;margin-right:8px}.volver{display:inline-block;margin-top:18px;padding:10px 14px;background:#ed3131;color:#fff;text-decoration:none;border-radius:6px}'
+        . '</style></head><body><main class="panel">';
+    echo '<h1>Diagnóstico de carga de guías</h1>';
+    echo '<p>Los cambios se confirman únicamente si todas las filas terminan correctamente.</p>';
+}
+
+function mostrarDiagnosticoCarga($mensaje, $tipo = 'paso')
+{
+    global $modoDiagnosticoCarga;
+
+    if (!$modoDiagnosticoCarga) {
+        return;
+    }
+
+    $clase = in_array($tipo, ['paso', 'exito', 'error'], true) ? $tipo : 'paso';
+    echo '<div class="paso ' . $clase . '"><span class="hora">'
+        . htmlspecialchars(date('H:i:s'), ENT_QUOTES, 'UTF-8')
+        . '</span>'
+        . htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8')
+        . '</div>';
+
+    if (ob_get_level() > 0) {
+        @ob_flush();
+    }
+    flush();
+}
+
+if ($modoDiagnosticoCarga) {
+    register_shutdown_function(function () {
+        global $modoDiagnosticoCarga;
+
+        if (!$modoDiagnosticoCarga) {
+            return;
+        }
+
+        $ultimoError = error_get_last();
+        $erroresFatales = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+
+        if ($ultimoError && in_array($ultimoError['type'], $erroresFatales, true)) {
+            mostrarDiagnosticoCarga(
+                'ERROR FATAL: ' . $ultimoError['message']
+                . ' | Archivo: ' . $ultimoError['file']
+                . ' | Línea: ' . $ultimoError['line'],
+                'error'
+            );
+        }
+
+        echo '<a class="volver" href="Guias_CargarGuia.php">Regresar a cargar guías</a>';
+        echo '</main></body></html>';
+
+        if (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+    });
+}
+
+mostrarDiagnosticoCarga('Paso 1: inició SubirGuiadeCarga.php.');
+
+if ($modoDiagnosticoCarga && (!isset($_SESSION['Usuario']) || $_SESSION['Usuario'] === '')) {
+    mostrarDiagnosticoCarga(
+        'La sesión administrativa no está activa. Inicie sesión nuevamente antes de cargar el archivo.',
+        'error'
+    );
+    exit;
+}
+
 require_once __DIR__ . '/session_guard.php';
+mostrarDiagnosticoCarga('Paso 2: sesión administrativa validada.');
 
+require_once '../LQS_EUQ/Auth.php';
+mostrarDiagnosticoCarga('Paso 3: archivo de conexión cargado.');
 
-ob_start();
-include '../LQS_EUQ/Auth.php';
-include '../LQS_EUQ/Connect.php';
+const GUIAS_CSV_COLUMNAS = 23;
+const GUIAS_CSV_TAMANO_MAXIMO = 10485760; // 10 MB
 
-// habilitar errores de mysqli como excepciones (opcional pero recomendado)
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+function regresarConAlertaCarga($titulo, $mensaje, $icono = 'error')
+{
+    global $modoDiagnosticoCarga;
+
+    if ($modoDiagnosticoCarga) {
+        mostrarDiagnosticoCarga(
+            $titulo . ': ' . $mensaje,
+            $icono === 'success' ? 'exito' : 'error'
+        );
+        exit;
+    }
+
+    $_SESSION['guias_alerta_validacion'] = [
+        'title' => $titulo,
+        'text' => $mensaje,
+        'icon' => $icono,
+    ];
+
+    header('Location: Guias_CargarGuia.php', true, 303);
+    exit;
+}
 
 function regresarConErrorCarga($mensaje)
 {
-    $_SESSION['guias_alerta_validacion'] = [
-        'title' => 'No se pudo cargar el archivo',
-        'text' => $mensaje,
-        'icon' => 'error',
-    ];
-
-    header('Location: Guias_CargarGuia.php');
-    exit;
+    regresarConAlertaCarga('No se pudo cargar el archivo', $mensaje, 'error');
 }
 
 function convertirCsvAUtf8($texto)
 {
-    // Si ya es UTF-8 válido, no se modifica.
+    $texto = (string) $texto;
+
     if (preg_match('//u', $texto) === 1) {
         return $texto;
     }
@@ -43,22 +144,79 @@ function convertirCsvAUtf8($texto)
     return $texto;
 }
 
-// Crear conexión
-$conexion = new mysqli($servername, $username, $password, $dbname);
-$conexion->set_charset('utf8mb4');
+function detectarSeparadorCsv($encabezado)
+{
+    $separadores = [';', ',', "\t"];
+
+    foreach ($separadores as $separador) {
+        if (count(str_getcsv($encabezado, $separador)) === GUIAS_CSV_COLUMNAS) {
+            return $separador;
+        }
+    }
+
+    return null;
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    mostrarDiagnosticoCarga('El método recibido no es POST.', 'error');
+    header('Location: Guias_CargarGuia.php', true, 303);
+    exit;
+}
+
+mostrarDiagnosticoCarga('Paso 4: solicitud POST recibida.');
 
 if (!isset($_FILES['dataGuias']) || $_FILES['dataGuias']['error'] !== UPLOAD_ERR_OK) {
-    regresarConErrorCarga('No se recibió correctamente el archivo CSV. Selecciónelo e intente nuevamente.');
+    regresarConErrorCarga(
+        'No se recibió correctamente el archivo CSV. Selecciónelo e intente nuevamente.'
+    );
 }
 
-$archivotmp = $_FILES['dataGuias']['tmp_name'];
-$lineas = file($archivotmp, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+$archivoSubido = $_FILES['dataGuias'];
+$nombreArchivo = isset($archivoSubido['name']) ? (string) $archivoSubido['name'] : '';
+$tamanoArchivo = isset($archivoSubido['size']) ? (int) $archivoSubido['size'] : 0;
+$archivoTemporal = isset($archivoSubido['tmp_name']) ? (string) $archivoSubido['tmp_name'] : '';
 
-if ($lineas === false) {
-    regresarConErrorCarga('No fue posible leer el archivo CSV. Verifique el archivo e intente nuevamente.');
+mostrarDiagnosticoCarga(
+    'Paso 5: archivo recibido: ' . $nombreArchivo . ' (' . $tamanoArchivo . ' bytes).'
+);
+
+if (strtolower((string) pathinfo($nombreArchivo, PATHINFO_EXTENSION)) !== 'csv') {
+    regresarConErrorCarga('El archivo seleccionado debe tener extensión .csv.');
 }
 
-// Columnas de la tabla
+if ($tamanoArchivo <= 0 || $tamanoArchivo > GUIAS_CSV_TAMANO_MAXIMO) {
+    regresarConErrorCarga('El archivo está vacío o supera el tamaño máximo permitido de 10 MB.');
+}
+
+$manejador = fopen($archivoTemporal, 'rb');
+if ($manejador === false) {
+    regresarConErrorCarga('No fue posible leer el archivo CSV.');
+}
+
+mostrarDiagnosticoCarga('Paso 6: archivo temporal abierto correctamente.');
+
+$encabezadoTexto = fgets($manejador);
+if ($encabezadoTexto === false) {
+    fclose($manejador);
+    regresarConErrorCarga('El archivo CSV no contiene un encabezado.');
+}
+
+$encabezadoTexto = convertirCsvAUtf8($encabezadoTexto);
+$encabezadoTexto = preg_replace('/^\xEF\xBB\xBF/', '', $encabezadoTexto);
+$separador = detectarSeparadorCsv($encabezadoTexto);
+
+if ($separador === null) {
+    fclose($manejador);
+    regresarConErrorCarga(
+        'No se reconoció el formato del CSV. Debe contener 23 columnas separadas por punto y coma, coma o tabulación.'
+    );
+}
+
+$nombreSeparador = $separador === ';'
+    ? 'punto y coma (;)'
+    : ($separador === ',' ? 'coma (,)' : 'tabulación');
+mostrarDiagnosticoCarga('Paso 7: separador detectado: ' . $nombreSeparador . '.');
+
 $columnas = [
     'Planta', 'FechaPedido', 'FechaEngrega', 'CodigoEANUPC', 'PosicionSD',
     'Material', 'Descripcion', 'Cajas', 'UnidadMedida', 'Transporte',
@@ -67,56 +225,126 @@ $columnas = [
     'Canal', 'Pais', 'Incoterms'
 ];
 
-$registros = [];
-foreach ($lineas as $i => $linea) {
-    if ($i === 0) continue; // saltar encabezado
+$columnasSql = implode(', ', array_map(function ($columna) {
+    return '`' . $columna . '`';
+}, $columnas));
+$marcadores = implode(', ', array_fill(0, count($columnas), '?'));
 
-    $linea = convertirCsvAUtf8($linea);
-    $datos = str_getcsv($linea, ','); // <-- separador CORRECTO
-
-    // validar cantidad de columnas
-    if (count($datos) !== count($columnas)) {
-        // puedes loguear o mostrar un error más claro aquí
-        continue;
-    }
-
-    $registros[] = array_combine($columnas, $datos);
-}
-
-if (empty($registros)) {
-    regresarConErrorCarga('No se encontraron registros válidos. Verifique que el CSV tenga el encabezado y las 23 columnas esperadas.');
-}
-
-$columnasSql = implode(',', $columnas);
-
-$values = [];
-foreach ($registros as $registro) {
-    $registroEscapado = array_map(function ($valor) use ($conexion) {
-        return $conexion->real_escape_string($valor);
-    }, $registro);
-
-    $values[] = "('" . implode("','", $registroEscapado) . "')";
-}
-
-$registrosSql = implode(',', $values);
-
-$consulta = "INSERT INTO dbs9098416.Guia_PreCarga ($columnasSql) VALUES $registrosSql";
+$numeroRegistro = 1;
+$filasInsertadas = 0;
+$transportes = [];
 
 try {
-    $resultado = $conexion->query($consulta);
-    header("Location: Guias_CargarGuia.php");
-    exit;
-} catch (Throwable $e) {
-    error_log('Error al importar guías desde CSV: ' . $e->getMessage());
-
-    $detalle = $e->getMessage();
-    if (stripos($detalle, 'Incorrect string value') !== false) {
-        $detalle = 'El archivo contiene uno o más caracteres que la columna indicada no admite. '
-            . 'Revise la codificación y los caracteres especiales del CSV. Detalle: ' . $detalle;
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        throw new RuntimeException('No fue posible establecer conexión con la base de datos.');
     }
 
-    regresarConErrorCarga('Se encontraron errores en los datos del archivo. ' . $detalle);
-}
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->beginTransaction();
+    mostrarDiagnosticoCarga('Paso 8: transacción iniciada.');
 
-ob_end_flush();
-?>
+    // Evita mezclar el archivo nuevo con una precarga que todavía no se ha confirmado.
+    $consultaPrecarga = $pdo->query(
+        'SELECT Transporte FROM dbs9098416.Guia_PreCarga LIMIT 1 FOR UPDATE'
+    );
+    if ($consultaPrecarga->fetch(PDO::FETCH_ASSOC)) {
+        throw new RuntimeException(
+            'Ya existe una carga pendiente. Guárdela o elimínela antes de subir otro archivo.'
+        );
+    }
+
+    mostrarDiagnosticoCarga('Paso 9: no existe otra precarga pendiente.');
+
+    $insertar = $pdo->prepare(
+        "INSERT INTO dbs9098416.Guia_PreCarga ($columnasSql) VALUES ($marcadores)"
+    );
+
+    while (($datos = fgetcsv($manejador, 0, $separador)) !== false) {
+        $numeroRegistro++;
+
+        if (count($datos) === 1 && trim((string) $datos[0]) === '') {
+            continue;
+        }
+
+        if (count($datos) !== count($columnas)) {
+            throw new RuntimeException(
+                'La fila ' . $numeroRegistro . ' contiene ' . count($datos)
+                . ' columnas; se esperaban ' . count($columnas) . '.'
+            );
+        }
+
+        $datos = array_map(function ($valor) {
+            return trim(convertirCsvAUtf8($valor));
+        }, $datos);
+
+        $material = $datos[5];
+        $cajas = $datos[7];
+        $transporte = $datos[9];
+        $entrega = $datos[10];
+
+        if ($material === '' || $cajas === '' || $transporte === '' || $entrega === '') {
+            throw new RuntimeException(
+                'La fila ' . $numeroRegistro
+                . ' debe incluir Material, Cajas, Transporte y Entrega.'
+            );
+        }
+
+        $insertar->execute($datos);
+        if ($insertar->rowCount() !== 1) {
+            throw new RuntimeException('No fue posible importar la fila ' . $numeroRegistro . '.');
+        }
+
+        $filasInsertadas++;
+        $transportes[$transporte] = true;
+        mostrarDiagnosticoCarga(
+            'Paso 10: fila ' . $numeroRegistro . ' importada; transporte ' . $transporte . '.'
+        );
+    }
+
+    fclose($manejador);
+    $manejador = null;
+
+    if ($filasInsertadas === 0) {
+        throw new RuntimeException('El archivo no contiene registros para importar.');
+    }
+
+    $pdo->commit();
+    mostrarDiagnosticoCarga(
+        'Paso 11: COMMIT completado. Se guardaron ' . $filasInsertadas . ' filas.',
+        'exito'
+    );
+
+    $listaTransportes = array_keys($transportes);
+    sort($listaTransportes, SORT_NATURAL);
+    regresarConAlertaCarga(
+        'Archivo importado correctamente',
+        'Se importaron ' . $filasInsertadas . ' filas correspondientes a '
+            . count($listaTransportes) . ' transporte(s): '
+            . implode(', ', $listaTransportes) . '.',
+        'success'
+    );
+} catch (Throwable $error) {
+    if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    if (is_resource($manejador)) {
+        fclose($manejador);
+    }
+
+    error_log('Error al importar guías desde CSV: ' . $error->getMessage());
+
+    mostrarDiagnosticoCarga(
+        'EXCEPCIÓN: ' . get_class($error) . ': ' . $error->getMessage()
+        . ' | Archivo: ' . $error->getFile()
+        . ' | Línea: ' . $error->getLine()
+        . ' | Se ejecutó ROLLBACK cuando correspondía.',
+        'error'
+    );
+
+    $mensaje = $error instanceof RuntimeException
+        ? $error->getMessage()
+        : 'Se encontraron errores en los datos. Ninguna fila del archivo fue importada.';
+
+    regresarConErrorCarga($mensaje);
+}

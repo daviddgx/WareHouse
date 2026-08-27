@@ -7,10 +7,32 @@ date_default_timezone_set('America/Guatemala');
 $TotalTarimas=0;
 $TotalPiking=0;
 
-$fecha = date("d") . '-' . date("m") . '-' . date("Y");
+function validarFechaDashboard($valor)
+{
+    if (!is_string($valor)
+        || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $valor, $partes)
+        || !checkdate((int) $partes[2], (int) $partes[3], (int) $partes[1])) {
+        return null;
+    }
 
-$fechaFinal = $fecha;
-$fechaInicial = date("d-m-Y", strtotime("-8 days"));
+    return $valor;
+}
+
+function calcularPromedioDashboard($total, $registros, $decimales = 2)
+{
+    return $registros > 0 ? round($total / $registros, $decimales) : 0;
+}
+
+function calcularPorcentajeDashboard($cantidad, $total, $decimales = 2)
+{
+    return $total > 0 ? round(($cantidad / $total) * 100, $decimales) : 0;
+}
+
+$fecha = date('d-m-Y');
+
+$fechaFinal = date('Y-m-d');
+$fechaInicial = date('Y-m-d', strtotime('-8 days'));
+$errorRangoFechas = '';
 
 
 
@@ -19,12 +41,17 @@ $accion = (isset($_POST['accion'])) ? $_POST['accion'] : "";
 switch ($accion) {
 
     case "btnConsultar":
-        $Fecha1 = (isset($_POST['txtFechaInicial'])) ? $_POST['txtFechaInicial'] : "";
-        $Fecha2 = (isset($_POST['txtFechaFinal'])) ? $_POST['txtFechaFinal'] : "";
-       
-        $fechaInicial = $Fecha1;
-        $fechaFinal = $Fecha2;
-       
+        $Fecha1 = validarFechaDashboard($_POST['txtFechaInicial'] ?? '');
+        $Fecha2 = validarFechaDashboard($_POST['txtFechaFinal'] ?? '');
+
+        if ($Fecha1 === null || $Fecha2 === null) {
+            $errorRangoFechas = 'Seleccione fechas validas en el formato solicitado.';
+        } elseif ($Fecha1 > $Fecha2) {
+            $errorRangoFechas = 'La fecha inicial no puede ser posterior a la fecha final.';
+        } else {
+            $fechaInicial = $Fecha1;
+            $fechaFinal = $Fecha2;
+        }
 
         break;
 
@@ -36,11 +63,10 @@ switch ($accion) {
 
 
 
-include '../Innet_ADM/Innet_AMD.php';
+require_once __DIR__ . '/../Innet_ADM/Innet_AMD.php';
 
 // Las tareas de mantenimiento se ejecutan desde
 // cron/actualizar_estatus_bodegas.php, no durante la carga del dashboard.
-LimpiarPiking();
 $CapacidadTotal = CapacidadTotalFIFO();
 $UbicacionesLibres = UnidadesLibresFIFO();
 $Exactitud = "99%";
@@ -413,10 +439,15 @@ ob_end_flush();
                     <div class="col-12">
                         <div class="card">
 
-                            <div class="card-body" >
-                                <h4 class="card-title">Seleccione las fechas para generar las graficas</h4>
-                                
-                                <br>
+                             <div class="card-body" >
+                                 <h4 class="card-title">Seleccione las fechas para generar las graficas</h4>
+                                 <?php if ($errorRangoFechas !== ''): ?>
+                                     <div class="alert alert-danger" role="alert">
+                                         <?php echo htmlspecialchars($errorRangoFechas, ENT_QUOTES, 'UTF-8'); ?>
+                                     </div>
+                                 <?php endif; ?>
+
+                                 <br>
 
                                 <div class="my-content formulario">
                                     <form role="form" action="" method="post" enctype="multipart/form-data">
@@ -425,7 +456,7 @@ ob_end_flush();
                                                 <div class="col-md-6">
                                                     <div class="form-group">
                                                         <label>Fecha Inicial</label>
-                                                        <input name="txtFechaInicial"  type="date" class="form-control" value="<?php echo $fechaInicial; ?>" required>
+                                                        <input name="txtFechaInicial" type="date" class="form-control" value="<?php echo htmlspecialchars($fechaInicial, ENT_QUOTES, 'UTF-8'); ?>" required>
 
                                                     </div>
 
@@ -434,7 +465,7 @@ ob_end_flush();
                                                 <div class="col-md-6">
                                                     <div class="form-group">
                                                         <label>Fecha Final</label>
-                                                        <input name="txtFechaFinal"  type="date" class="form-control" value="<?php echo $fechaFinal; ?>" required>
+                                                        <input name="txtFechaFinal" type="date" class="form-control" value="<?php echo htmlspecialchars($fechaFinal, ENT_QUOTES, 'UTF-8'); ?>" required>
 
                                                     </div>
 
@@ -1409,16 +1440,19 @@ try {
 
         while ($row = $result->fetch_assoc()) {
 
+            $capacidadDia = (float) $row['Cant_CapacidadTotal'];
+            $ocupadasDia = (float) $row['Cant_Ocupadas'];
+            $porcentajeDia = calcularPorcentajeDashboard($ocupadasDia, $capacidadDia, 0);
             $labelsG2[] = date('d/m/Y', strtotime($row['Fecha']));
-            $capacidadTotalDataG2[] = $row['Cant_CapacidadTotal'];
-            $ocupadasDataG2[] = $row['Cant_Ocupadas'];
-            $porcentajeDataG2[] = round($row['Cant_Ocupadas'] / $row['Cant_CapacidadTotal'] * 100);
-            $PromedioAlmacenes += round($row['Cant_Ocupadas'] / $row['Cant_CapacidadTotal'] * 100);
+            $capacidadTotalDataG2[] = $capacidadDia;
+            $ocupadasDataG2[] = $ocupadasDia;
+            $porcentajeDataG2[] = $porcentajeDia;
+            $PromedioAlmacenes += $porcentajeDia;
             $Registros += 1;
         }
     }
 
-    $PromedioAlmacenes = round($PromedioAlmacenes / $Registros,2);
+    $PromedioAlmacenes = calcularPromedioDashboard($PromedioAlmacenes, $Registros);
 
 } catch (Exception $e) {
     echo 'Error: ' . $e->getMessage();
@@ -1561,6 +1595,7 @@ try {
     $labelsG3 = [];
     $ToneladasProduccionG3 = [];
     $ToneladasDespachoG3 = [];
+    $ToneladasPorFechaG3 = [];
     $TotalProducion = 0;
     $TotalDespacho = 0;
     $Registros = 0;
@@ -1570,9 +1605,13 @@ try {
         // Almacena los nombres de las bodegas en un array
 
         while ($row = $result->fetch_assoc()) {
-            $ToneladasProduccionG3[] = $row['ToneladasProduccion'];
-            $TotalProducion += $row['ToneladasProduccion'];
-            $Registros +=1;
+            $fechaGrafica = $row['Fecha'];
+            $toneladasProduccion = (float) $row['ToneladasProduccion'];
+            $ToneladasPorFechaG3[$fechaGrafica] = [
+                'produccion' => $toneladasProduccion,
+                'despacho' => 0,
+            ];
+            $TotalProducion += $toneladasProduccion;
            
         }
     }
@@ -1634,7 +1673,7 @@ INNER join productos PR     on DP.IDH = PR.IDH
 INNER join config_piking CF on DP.IDH = CF.IDH
 INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
 INNER join Guias GS			on DP.Transporte = GS.Transporte
-where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' and DS.Fecha_Hora_Despacho < '$FechaFinRango'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
+where DS.FechaRealizado >= '$FechaInicioRango' and DS.FechaRealizado < '$FechaFinRango'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
 
@@ -1648,21 +1687,32 @@ where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' and DS.Fecha_Hora_Despacho <
         // Almacena los nombres de las bodegas en un array
 
         while ($row = $result->fetch_assoc()) {
-            $labelsG3[] = date('d/m/Y', strtotime($row['Fecha']));
-            $ToneladasDespachoG3[] = $row['TotalPesoDespacho'];
-            $TotalDespacho += $row['TotalPesoDespacho'];
-            $TotalTarimas += $row['TotalPesoDespacho'];
+            $fechaGrafica = $row['Fecha'];
+            $toneladasDespacho = (float) $row['TotalPesoDespacho'];
+
+            if (!isset($ToneladasPorFechaG3[$fechaGrafica])) {
+                $ToneladasPorFechaG3[$fechaGrafica] = [
+                    'produccion' => 0,
+                    'despacho' => 0,
+                ];
+            }
+
+            $ToneladasPorFechaG3[$fechaGrafica]['despacho'] = $toneladasDespacho;
+            $TotalDespacho += $toneladasDespacho;
+            $TotalTarimas += $toneladasDespacho;
         }
     }
-   // array_unshift($labelsG3, "Promedio");
 
-    $produccionPromedio = round($TotalProducion / $Registros, 2);
-    $despachoPromedio = round($TotalDespacho / $Registros, 2);
-    
+    krsort($ToneladasPorFechaG3);
+    foreach ($ToneladasPorFechaG3 as $fechaGrafica => $totalesFecha) {
+        $labelsG3[] = date('d/m/Y', strtotime($fechaGrafica));
+        $ToneladasProduccionG3[] = $totalesFecha['produccion'];
+        $ToneladasDespachoG3[] = $totalesFecha['despacho'];
+    }
 
-   
-   // array_unshift($ToneladasProduccionG3, $produccionPromedio);
-   // array_unshift($ToneladasDespachoG3, $despachoPromedio);
+    $Registros = count($ToneladasPorFechaG3);
+    $produccionPromedio = calcularPromedioDashboard($TotalProducion, $Registros);
+    $despachoPromedio = calcularPromedioDashboard($TotalDespacho, $Registros);
     
 
 } catch (Exception $e) {
@@ -1756,7 +1806,7 @@ toneladasElement2.textContent = valorToneladas2;
     // Obtener el elemento donde queremos actualizar el valor
     var toneladasElement3 = document.getElementById('PromTotalProduccion');
 // Simular un valor específico (por ejemplo, 100 Toneladas)
-var valorToneladas3 = <?php echo round($TotalProducion / $Registros,2); ?>;
+var valorToneladas3 = <?php echo $produccionPromedio; ?>;
 // Actualizar el contenido del elemento
 toneladasElement3.textContent = valorToneladas3;
 
@@ -1765,7 +1815,7 @@ toneladasElement3.textContent = valorToneladas3;
 // Obtener el elemento donde queremos actualizar el valor
 var toneladasElement4 = document.getElementById('PromTotalDespacho');
 // Simular un valor específico (por ejemplo, 100 Toneladas)
-var valorToneladas4 = <?php echo round($TotalDespacho / $Registros,2); ?>;
+var valorToneladas4 = <?php echo $despachoPromedio; ?>;
 // Actualizar el contenido del elemento
 toneladasElement4.textContent = valorToneladas4;
 
@@ -1789,7 +1839,7 @@ try {
     $FechaInicioRango = $FechaHace9Dias . ' 00:00:00';
     $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
 
-    $sql = "SELECT fecha,  SUM(total_asignaciones) AS total_asignaciones,
+    $sql = "SELECT fecha, DATE_FORMAT(fecha, '%W') AS nombre_dia, SUM(total_asignaciones) AS total_asignaciones,
     SUM(total_despachos) AS total_despachos
   FROM (
     SELECT
@@ -1916,11 +1966,11 @@ toneladasElement2.textContent = valorToneladas2;
 
 
 var toneladasElement3 = document.getElementById('totaltarimasingresadaspromedio');
-var valorToneladas3 = <?php echo round($TotalAsignacionesINF / $Registros,2); ?>;
+var valorToneladas3 = <?php echo calcularPromedioDashboard($TotalAsignacionesINF, $Registros); ?>;
 toneladasElement3.textContent = valorToneladas3;
 
 var toneladasElement4 = document.getElementById('totaltarimasdespachadaspromedio');
-var valorToneladas4 = <?php echo round($TotalDespachosINF / $Registros,2); ?>;
+var valorToneladas4 = <?php echo calcularPromedioDashboard($TotalDespachosINF, $Registros); ?>;
 toneladasElement4.textContent = valorToneladas4;
 
 
@@ -1989,7 +2039,7 @@ INNER join productos PR     on DP.IDH = PR.IDH
 INNER join config_piking CF on DP.IDH = CF.IDH
 INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
 INNER join Guias GS			on DP.Transporte = GS.Transporte
-where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' and DS.Fecha_Hora_Despacho < '$FechaFinRango'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
+where DS.FechaRealizado >= '$FechaInicioRango' and DS.FechaRealizado < '$FechaFinRango'  and DS.Operador = 'Piking'  GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
 
@@ -2112,11 +2162,11 @@ toneladasElement2.textContent = valorToneladas2;
 
 
 var toneladasElement3 = document.getElementById('PromBultosDespacho');
-var valorToneladas3 = <?php echo round(($TotalAsignacionesINF2 + $TotalDespachosINF2) / $Registros,2); ?>;
+var valorToneladas3 = <?php echo calcularPromedioDashboard($TotalAsignacionesINF2 + $TotalDespachosINF2, $Registros); ?>;
 toneladasElement3.textContent = valorToneladas3;
 
 var toneladasElement4 = document.getElementById('PromBultosPiking');
-var valorToneladas4 = <?php echo round($TotalDespachosINF2 / $Registros,2); ?>;
+var valorToneladas4 = <?php echo calcularPromedioDashboard($TotalDespachosINF2, $Registros); ?>;
 toneladasElement4.textContent = valorToneladas4;
 
 
@@ -2812,7 +2862,7 @@ toneladasElement.textContent = valorToneladas;
 
 
 var toneladasElement2 = document.getElementById('totalbultospallpromedio');
-var valorToneladas1 = <?php echo round($TotalBultosPik / $Registros,2); ?>;
+var valorToneladas1 = <?php echo calcularPromedioDashboard($TotalBultosPik, $Registros); ?>;
 toneladasElement2.textContent = valorToneladas1;
 
 </script>
@@ -2853,7 +2903,7 @@ INNER join productos PR     on DP.IDH = PR.IDH
 INNER join config_piking CF on DP.IDH = CF.IDH
 INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
 INNER join Guias GS			on DP.Transporte = GS.Transporte
-where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' AND DS.Fecha_Hora_Despacho < '$FechaFinRango' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH)
+where DS.FechaRealizado >= '$FechaInicioRango' AND DS.FechaRealizado < '$FechaFinRango' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH)
           AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
@@ -2954,7 +3004,7 @@ toneladasElement.textContent = valorToneladas;
 
 
 var toneladasElement2 = document.getElementById('totalbultospikpromedio');
-var valorToneladas1 = <?php echo round($TotalBultosPik / $Registros,2); ?>;
+var valorToneladas1 = <?php echo calcularPromedioDashboard($TotalBultosPik, $Registros); ?>;
 toneladasElement2.textContent = valorToneladas1;
 
 </script>
@@ -2991,7 +3041,7 @@ INNER join productos PR     on DP.IDH = PR.IDH
 INNER join config_piking CF on DP.IDH = CF.IDH
 INNER join despachos DS     on DP.Transporte = DS.Guia_Carga and DP.IDH = DS.IDH
 INNER join Guias GS			on DP.Transporte = GS.Transporte
-where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' AND DS.Fecha_Hora_Despacho < '$FechaFinRango' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH) AS subquery
+where DS.FechaRealizado >= '$FechaInicioRango' AND DS.FechaRealizado < '$FechaFinRango' and DS.Operador = 'PIKING' GROUP by DP.Transporte,DP.IDH) AS subquery
     GROUP BY Fecha
     ORDER BY Fecha DESC";
     $result = $conn->query($sql);
@@ -3020,7 +3070,7 @@ where DS.Fecha_Hora_Despacho >= '$FechaInicioRango' AND DS.Fecha_Hora_Despacho <
     array_unshift($labelsG7, "Promedio");
 
     
-    $PikingPromedio = round($TotalPiking / $Registros, 2);
+    $PikingPromedio = calcularPromedioDashboard($TotalPiking, $Registros);
     
     array_unshift($BultosG72, $PikingPromedio);
 
@@ -3179,7 +3229,7 @@ try {
     array_unshift($labelsG7, "Promedio");
 
     
-    $PikingPromedio = round($TotalPalletsDes / $Registros, 2);
+    $PikingPromedio = calcularPromedioDashboard($TotalPalletsDes, $Registros);
     
     array_unshift($BultosG7, $PikingPromedio);
 
@@ -3419,10 +3469,10 @@ try {
            
         }
     }
-    $Rojas = $TotalG8[0];
-    $Verdes = $TotalG8[1];
+    $Rojas = $TotalG8[0] ?? 0;
+    $Verdes = $TotalG8[1] ?? 0;
 
-    $PorcentajeConteoCiego = round($Rojas / $Verdes *100,2);
+    $PorcentajeConteoCiego = calcularPorcentajeDashboard($Rojas, $Verdes);
 
 
 
@@ -3541,10 +3591,10 @@ FROM (
            
         }
     }
-    $Rojas = $TotalG8[0];
-    $Verdes = $TotalG8[1];
+    $Rojas = $TotalG8[0] ?? 0;
+    $Verdes = $TotalG8[1] ?? 0;
 
-    $PorcentajeConteoCiego = 100 - (($Rojas + $Verdes) / $CapacidadTotal) ;
+    $PorcentajeConteoCiego = 100 - calcularPorcentajeDashboard($Rojas + $Verdes, $CapacidadTotal);
     
 
 
@@ -3724,7 +3774,7 @@ try {
     $FechaFinRango = date('Y-m-d 00:00:00', strtotime($FechaActual . ' +1 day'));
 
 
-    $sql = "SELECT  Operador, count(*) as Pallets FROM `despachos` where Fecha_hora_despacho >= '$FechaInicioRango' and Fecha_hora_despacho < '$FechaFinRango'  and Operador is not null and Operador <> 'PIKING' GROUP by Operador order by count(*) asc";
+    $sql = "SELECT Operador, count(*) as Pallets FROM `despachos` where FechaRealizado >= '$FechaInicioRango' and FechaRealizado < '$FechaFinRango' and Operador is not null and Operador <> 'PIKING' GROUP by Operador order by count(*) asc";
     $result = $conn->query($sql);
 
     // Inicializar arrays para las etiquetas y los conjuntos de datos

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 include '../LQS_EUQ/Auth.php';
 
 $Posicion = $_POST['Posicion'];

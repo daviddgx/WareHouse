@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 
 if (isset($_POST['imprimir'])) {
 

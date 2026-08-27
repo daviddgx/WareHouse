@@ -1,6 +1,6 @@
 <?php
 ob_start();
-session_start();
+require_once __DIR__ . '/_bootstrap.php';
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/LST_DespachosProduccionPL.php';
 include "../Innet_INV/Innet_INV.php";
@@ -18,6 +18,8 @@ if ($_SESSION['Usuario'] == '') {
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
+inventarios_restaurar_flash($MensajeExito, $Mensajeerror);
+inventarios_proteger_acciones(array('btnBorrarCarga', 'btnIngresosMasivos', 'btnPonerEnFirme', 'btnModificar'));
 $Turno1 = "06:00";
 $Turno2 = "18:10";
 
@@ -407,6 +409,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         break;
 }
 
+inventarios_finalizar_post($Mensajeerror . $MensajeExito);
+
 
 
 
@@ -626,6 +630,7 @@ ob_end_flush();
 
                                 <div class="my-content formulario">
                                     <form role="form" action="" method="post" enctype="multipart/form-data">
+                                        <?php echo inventarios_campo_token(); ?>
                                         <div class="form-body">
 
 
@@ -1046,6 +1051,12 @@ ob_end_flush();
                                         switch ($lista_DespachoPRODUCCION['Estado']) {
                                             case 'Pendiente':
                                                 echo "<td>";
+                                                echo '<style>a[href^="QuitarIngresosPL.php?"]{display:none!important}</style>';
+                                                echo '<form action="QuitarIngresosPL.php" method="post" style="display:inline">';
+                                                echo inventarios_campo_token('/Inventarios/QuitarIngresosPL.php');
+                                                echo '<input type="hidden" name="accion" value="quitarIngreso">';
+                                                echo '<input type="hidden" name="Guia" value="' . htmlspecialchars($lista_DespachoPRODUCCION['Numero'], ENT_QUOTES, 'UTF-8') . '">';
+                                                echo '<button type="submit" class="btn btn-outline-danger"><i class="fas fa-quidditch"></i> Eliminar</button></form>';
                                                 echo '<a href="QuitarIngresosPL.php?Guia=' . $lista_DespachoPRODUCCION['Numero'] . '"  class="btn btn-outline-danger "> <i class="fas fa-quidditch"></i> Eliminar</a>';
                                                 echo "</td>";
 
@@ -1067,6 +1078,7 @@ ob_end_flush();
                                 </table>
                                 <br>
                                 <form role="form" action="" method="post" enctype="multipart/form-data">
+                                    <?php echo inventarios_campo_token(); ?>
                                 <div class="row">
                                     <div class="col-md-12 centrado">
                                         <div class="form-group text-center" >

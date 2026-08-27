@@ -1,6 +1,6 @@
 <?php
 ob_start();
-session_start();
+require_once __DIR__ . '/_bootstrap.php';
 include '../LQS_EUQ/Connect.php';
 include '../LQS_EUQ/LST_DespachosProduccionPLFirme.php';
 include "../Innet_INV/Innet_INVPL.php";
@@ -19,6 +19,8 @@ if ($_SESSION['Usuario'] == '') {
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
+inventarios_restaurar_flash($MensajeExito, $Mensajeerror);
+inventarios_proteger_acciones(array('btnModificar'));
 $Turno1 = "06:00";
 $Turno2 = "18:10";
 
@@ -263,6 +265,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         break;
 }
+
+inventarios_finalizar_post($Mensajeerror . $MensajeExito);
 
 
 

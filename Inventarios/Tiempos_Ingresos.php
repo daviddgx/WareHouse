@@ -1,6 +1,6 @@
 <?php
 ob_start();
-session_start();
+require_once __DIR__ . '/_bootstrap.php';
 include '../LQS_EUQ/Connect.php';
 
 $txtFechaInicial="";

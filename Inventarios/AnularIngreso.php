@@ -1,16 +1,22 @@
 <?php
-
+ob_start();
+require_once __DIR__ . '/_bootstrap.php';
 include "../Innet_MTC/Innet_MTC.php";
-$Ubicacion = $_GET['Ubicacion'];
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    header('Location: Print_Cardex.php', true, 303);
+    exit;
+}
 
-AnularIngreso($Ubicacion);
-LiberarUbicacionAnulada($Ubicacion);
+inventarios_proteger_acciones(array('anularIngreso'));
+$ubicacion = isset($_POST['Ubicacion']) && !is_array($_POST['Ubicacion'])
+    ? (string) $_POST['Ubicacion']
+    : '';
 
+if ($ubicacion !== '' && ctype_digit($ubicacion)) {
+    AnularIngreso($ubicacion);
+    LiberarUbicacionAnulada($ubicacion);
+}
 
-// Regresar a la pagina 
-
-
-header('Location: Print_Cardex.php');
-
-?>
+header('Location: Print_Cardex.php', true, 303);
+exit;

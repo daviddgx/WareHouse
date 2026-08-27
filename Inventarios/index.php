@@ -1,7 +1,7 @@
 
 <?php
 ob_start();
-session_start();
+require_once __DIR__ . '/_bootstrap.php';
 
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');

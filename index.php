@@ -3,6 +3,9 @@ ob_start();
 date_default_timezone_set('America/Guatemala');
 
 // La cookie debe estar disponible en /MontaCargas, /Admin y demás módulos.
+ini_set('session.use_strict_mode', '1');
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
 $parametrosSesion = session_get_cookie_params();
 $sesionSegura = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 session_set_cookie_params(
@@ -331,6 +334,7 @@ if (!empty($_POST['Entrar'])) {
                         case '3':
                             $_SESSION['Usuario'] = $row['Nombre_Usuario'];
                             $_SESSION['UsuarioFecha'] = $sessionDate;
+                            $_SESSION['INV_ULTIMA_ACTIVIDAD'] = time();
                             $_SESSION['USR'] = $row['Nombre'] . ' ' . $row['Apellido'];
                             $_SESSION['pic'] = $row['Foto'];
                             header('Location: /Inventarios/index.php', true, 303);

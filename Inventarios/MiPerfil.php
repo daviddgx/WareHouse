@@ -1,6 +1,6 @@
 <?php
 ob_start();
-session_start();
+require_once __DIR__ . '/_bootstrap.php';
 include '../LQS_EUQ/Auth.php';
 date_default_timezone_set('America/Guatemala');
 $fecha = date("d") . '-' . date("m") . '-' . date("Y");
@@ -13,6 +13,8 @@ if ($_SESSION['Usuario'] == '') {
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
+inventarios_restaurar_flash($MensajeExito, $Mensajeerror);
+inventarios_proteger_acciones(array('btnModificar'));
 
 $txtNombre = "";
 $txtApellido = "";
@@ -162,6 +164,8 @@ switch ($accion) {
 
     default : break;
 }
+
+inventarios_finalizar_post($Mensajeerror . $MensajeExito);
 
 
 
@@ -388,6 +392,7 @@ ob_end_flush();
 
                             <div class="my-content formulario">
                                 <form role="form" action="" method="post" enctype="multipart/form-data">
+                                    <?php echo inventarios_campo_token(); ?>
                                     <div class="form-body">
 
 

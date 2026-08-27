@@ -1,6 +1,6 @@
 <?php
 ob_start();
-session_start();
+require_once __DIR__ . '/_bootstrap.php';
 
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');
@@ -29,6 +29,8 @@ if ($_SESSION['Usuario'] == '') {
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
+inventarios_restaurar_flash($MensajeExito, $Mensajeerror);
+inventarios_proteger_acciones(array('btnIngresarMovimiento', 'btnEnviarUbicaciones'));
 
 $txtBodegaOrigen = "";
 $txtCarrilOrigen = "";
@@ -114,6 +116,8 @@ switch ($accion) {
 
         break;
 }
+
+inventarios_finalizar_post($Mensajeerror . $MensajeExito);
 
 
 
@@ -343,6 +347,7 @@ ob_end_flush();
 
                                 <div class="my-content formulario">
                                     <form role="form" action="" method="post" enctype="multipart/form-data">
+                                        <?php echo inventarios_campo_token(); ?>
                                         <div class="form-body">
 
 
@@ -495,6 +500,7 @@ ob_end_flush();
                     <br>
                     <!-- Start First Cards -->
                     <form role="form" action="" method="post" enctype="multipart/form-data">
+                        <?php echo inventarios_campo_token(); ?>
                         <div class="form-actions">
                             <div class="text-center">
                                 <br>

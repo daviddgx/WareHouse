@@ -3,7 +3,8 @@ ob_start();
 require_once __DIR__ . '/_bootstrap.php';
 include "../Innet_MTC/Innet_MTC.php";
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+$metodoSolicitud = isset($_SERVER['REQUEST_METHOD']) ? (string) $_SERVER['REQUEST_METHOD'] : 'GET';
+if ($metodoSolicitud !== 'POST') {
     header('Location: Print_Cardex.php', true, 303);
     exit;
 }

@@ -1,11 +1,65 @@
-
 <?php
 ob_start();
+
+$debugInventarios = isset($_GET['debug_inventarios'])
+    && !is_array($_GET['debug_inventarios'])
+    && (string) $_GET['debug_inventarios'] === '1';
+
+function inventarios_debug_echo($mensaje)
+{
+    global $debugInventarios;
+    if (!$debugInventarios) {
+        return;
+    }
+
+    echo '<style>.preloader{display:none!important}</style>'
+        . '<pre style="position:relative;z-index:2147483647;margin:8px;padding:10px;'
+        . 'background:#fff3cd;color:#533f03;border:1px solid #ffeeba;white-space:pre-wrap">'
+        . htmlspecialchars('[Inventarios DEBUG] ' . $mensaje, ENT_QUOTES, 'UTF-8')
+        . '</pre>';
+}
+
+function inventarios_debug_shutdown()
+{
+    global $debugInventarios;
+    if (!$debugInventarios) {
+        return;
+    }
+
+    $ultimoError = error_get_last();
+    $tiposFatales = array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
+    if ($ultimoError && in_array($ultimoError['type'], $tiposFatales, true)) {
+        inventarios_debug_echo(
+            "ERROR FATAL: " . $ultimoError['message']
+            . "\nArchivo: " . $ultimoError['file']
+            . "\nLínea: " . $ultimoError['line']
+            . "\nPHP: " . PHP_VERSION
+        );
+    }
+}
+
+if ($debugInventarios) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    register_shutdown_function('inventarios_debug_shutdown');
+    inventarios_debug_echo('1/10 Iniciando index.php. PHP ' . PHP_VERSION);
+}
+
 require_once __DIR__ . '/_bootstrap.php';
+inventarios_debug_echo('2/10 Protección de sesión cargada correctamente.');
 
 if ($_SESSION['Usuario'] == '') {
     header('Location: ../Innet/505.html');
+    exit;
 }
+
+inventarios_debug_echo(
+    '3/10 Sesión válida. Fecha de sesión: '
+    . (isset($_SESSION['UsuarioFecha']) ? $_SESSION['UsuarioFecha'] : 'NO DEFINIDA')
+    . '. Última actividad: '
+    . (isset($_SESSION['INV_ULTIMA_ACTIVIDAD']) ? date('Y-m-d H:i:s', $_SESSION['INV_ULTIMA_ACTIVIDAD']) : 'NO DEFINIDA')
+);
 
 
 
@@ -17,14 +71,19 @@ $fecha = date("d") . '-' . date("m") . '-' . date("Y");
 
 
 
+inventarios_debug_echo('4/10 Cargando funciones Innet_AMD.php.');
 include '../Innet_ADM/Innet_AMD.php';
+inventarios_debug_echo('5/10 Funciones Innet_AMD.php cargadas.');
 
 // Variables de resumen Grafica 1
 
+inventarios_debug_echo('6/10 Consultando capacidad total y ubicaciones libres.');
 $CapacidadTotal = CapacidadTotalFIFO();
 $UbicacionesLibres = UnidadesLibresFIFO();
 $Exactitud = "99%";
+inventarios_debug_echo('7/10 Consultando unidades ocupadas.');
 $UnidadesOcupadas = UnidadesOcupadasFIFO();
+inventarios_debug_echo('8/10 Consultas terminadas. Se generará el HTML.');
 
 ob_end_flush();
 ?>
@@ -369,8 +428,10 @@ ob_end_flush();
             </div>
             <div class="toast-body">
 
-                <?php $Liberados = LiberarCuarentena();
+                <?php inventarios_debug_echo('9/10 Ejecutando liberación automática de cuarentena.');
+                $Liberados = LiberarCuarentena();
                 $LiberadosHoy = LiberarCuarentenaHoy();
+                inventarios_debug_echo('10/10 Liberación de cuarentena terminada.');
 
                 if($Liberados > 0){
                     echo "Se Liberaron correctamente ".$Liberados." Unidades de Cuarentena";

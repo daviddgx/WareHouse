@@ -47,7 +47,9 @@ function inventarios_cerrar_sesion()
         );
     }
 
-    session_destroy();
+    if (session_id() !== '') {
+        session_destroy();
+    }
 }
 
 $ahoraInventarios = time();
@@ -59,12 +61,33 @@ $ultimaActividadInventarios = isset($_SESSION['INV_ULTIMA_ACTIVIDAD'])
     : $ahoraInventarios;
 $limiteInactividadInventarios = 35 * 60;
 
-if (
-    empty($_SESSION['Usuario'])
-    || $fechaSesionInventarios !== date('Y-m-d')
-    || ($ahoraInventarios - $ultimaActividadInventarios) >= $limiteInactividadInventarios
-) {
+$sesionInventariosSinUsuario = empty($_SESSION['Usuario']);
+$sesionInventariosDeOtroDia = $fechaSesionInventarios !== date('Y-m-d');
+$sesionInventariosInactiva = ($ahoraInventarios - $ultimaActividadInventarios) >= $limiteInactividadInventarios;
+
+if ($sesionInventariosSinUsuario || $sesionInventariosDeOtroDia || $sesionInventariosInactiva) {
+    if (function_exists('inventarios_debug_echo') && !empty($debugInventarios)) {
+        $motivosSesion = array();
+        if ($sesionInventariosSinUsuario) {
+            $motivosSesion[] = 'no existe Usuario en $_SESSION';
+        }
+        if ($sesionInventariosDeOtroDia) {
+            $motivosSesion[] = 'UsuarioFecha no corresponde a hoy (valor: '
+                . ($fechaSesionInventarios !== '' ? $fechaSesionInventarios : 'vacío') . ')';
+        }
+        if ($sesionInventariosInactiva) {
+            $motivosSesion[] = 'superó 35 minutos de inactividad';
+        }
+        inventarios_debug_echo('SESIÓN RECHAZADA: ' . implode('; ', $motivosSesion) . '.');
+    }
+
     inventarios_cerrar_sesion();
+
+    if (function_exists('inventarios_debug_echo') && !empty($debugInventarios)) {
+        inventarios_debug_echo('La sesión fue cerrada. Inicie sesión nuevamente sin quitar debug_inventarios=1.');
+        exit;
+    }
+
     header('Location: /index.php?sesion=expirada', true, 303);
     exit;
 }
@@ -112,7 +135,15 @@ function inventarios_podar_tokens()
 function inventarios_campo_token($ambito = null)
 {
     inventarios_podar_tokens();
-    $token = bin2hex(random_bytes(32));
+    if (function_exists('random_bytes')) {
+        $bytesToken = random_bytes(32);
+    } elseif (function_exists('openssl_random_pseudo_bytes')) {
+        $bytesToken = openssl_random_pseudo_bytes(32);
+    } else {
+        // Respaldo para instalaciones PHP antiguas sin random_bytes/OpenSSL.
+        $bytesToken = hash('sha256', uniqid(mt_rand(), true), true);
+    }
+    $token = bin2hex($bytesToken);
     $hash = hash('sha256', $token);
     $_SESSION['_INV_TOKENS'][$hash] = array(
         'ambito' => $ambito !== null ? (string) $ambito : inventarios_ambito_token(),
@@ -130,7 +161,10 @@ function inventarios_guardar_flash($mensaje)
 
 function inventarios_proteger_acciones($acciones)
 {
-    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    $metodoSolicitud = isset($_SERVER['REQUEST_METHOD'])
+        ? (string) $_SERVER['REQUEST_METHOD']
+        : 'GET';
+    if ($metodoSolicitud !== 'POST') {
         return;
     }
 

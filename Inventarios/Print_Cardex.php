@@ -19,7 +19,19 @@ if ($_SESSION['Usuario'] == '') {
 // Variables de entorno
 $MensajeExito = '';
 $Mensajeerror = '';
+$UbicacionImprimir = '';
 inventarios_restaurar_flash($MensajeExito, $Mensajeerror);
+
+// La operacion de registro usa POST/Redirect/GET. La ubicacion a imprimir se
+// conserva durante la redireccion para abrir el Cardex en la respuesta GET.
+$rutaActual = inventarios_ruta_actual();
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
+    && !empty($_SESSION['_INV_CARDEX_IMPRIMIR'][$rutaActual])
+) {
+    $UbicacionImprimir = (string) $_SESSION['_INV_CARDEX_IMPRIMIR'][$rutaActual];
+    unset($_SESSION['_INV_CARDEX_IMPRIMIR'][$rutaActual]);
+}
 inventarios_proteger_acciones(array('btnModificar'));
 $Turno1 = "06:00";
 $Turno2 = "18:10";
@@ -269,7 +281,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $Mensajeerror =
                 '<div class="alert alert-success" role="alert"><br><p><strong> Se registro correctamente el ingreso en la Ubicacion '.$Ubicacion.'  </div>';
              ReservarUbicacion($Ubicacion);
-            ImprimirCardex($Ubicacion);
+            $_SESSION['_INV_CARDEX_IMPRIMIR'][inventarios_ruta_actual()] = $Ubicacion;
             include '../LQS_EUQ/LST_DespachosProduccion.php';
 
             // Dar valor a las variabes de Resumen
@@ -1167,6 +1179,18 @@ ob_end_flush();
 <script src="../assets/extra-libs/jvector/jquery-jvectormap-world-mill-en.js"></script>
 <script src="../dist/js/pages/dashboards/dashboard1.min.js"></script>
 <script src="../dist/js/OnLine.js"></script>
+<?php if ($UbicacionImprimir !== '') { ?>
+<script>
+    window.open(
+        <?php echo json_encode(
+            'Cardex.php?Ubicacion=' . rawurlencode($UbicacionImprimir),
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        ); ?>,
+        '_blank',
+        'width=1200,height=1200'
+    );
+</script>
+<?php } ?>
 <!--Scripts para DataTables-->
 <!--This page plugins -->
 <script src="../assets/extra-libs/datatables.net/js/jquery.dataTables.min.js"></script>
